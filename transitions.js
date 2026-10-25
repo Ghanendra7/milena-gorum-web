@@ -310,6 +310,9 @@ function initOsmoBoilerplate() {
                 transition: "none",
             });
         }
+        if (filterItems.length) {
+            gsap.set(filterItems, { y: 14 });
+        }
 
         // 1. Slide Projects Page in from bottom (at t = 0, matching Homepage push up)
         tl.to(
@@ -338,15 +341,17 @@ function initOsmoBoilerplate() {
             );
         }
 
-        // 3. Filters start at the exact same time as .nav-top ("hitTop")
+        // 3. Filters float in (y: 14 -> 0, opacity: 0 -> 1) in a staggered manner
         if (filterItems.length) {
             tl.to(
                 filterItems,
                 {
                     opacity: 1,
+                    y: 0,
                     duration: 0.85,
                     stagger: staggerDefault,
-                    ease: "power2.in",
+                    ease: "power2.out",
+                    force3D: true,
                 },
                 "hitTop"
             );
@@ -375,7 +380,7 @@ function initOsmoBoilerplate() {
         tl.call(
             () => {
                 if (allNavTargets.length) {
-                    gsap.set(allNavTargets, { clearProps: "opacity,transition" });
+                    gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
                 }
                 resetPage(next);
             },
