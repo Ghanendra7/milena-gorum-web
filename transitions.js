@@ -57,8 +57,9 @@ function initOsmoBoilerplate() {
 
     let staggerDefault = 0.06;
     let durationDefault = 0.8;
-    let slideDuration = 1.6; // Duration for Home -> Projects push/slide (slow & dramatic)
+    let slideDuration = 1.6; // Duration for Home -> Projects push/slide
 
+    CustomEase.create("smooth", "M0,0 C0.38,0.005 0.215,1 1,1");
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
     gsap.defaults({ ease: "power2.out", duration: durationDefault });
 
@@ -208,7 +209,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "power2.in",
+                    ease: "smooth",
                     force3D: true,
                 },
                 0
@@ -224,7 +225,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "power2.in",
+                    ease: "smooth",
                     force3D: true,
                 },
                 0
@@ -238,7 +239,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -80,
                     duration: slideDuration,
-                    ease: "power2.in",
+                    ease: "smooth",
                     force3D: true,
                 },
                 0
@@ -249,7 +250,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -80,
                     duration: slideDuration,
-                    ease: "power2.in",
+                    ease: "smooth",
                     force3D: true,
                 },
                 0
@@ -316,7 +317,7 @@ function initOsmoBoilerplate() {
             {
                 yPercent: 0,
                 duration: slideDuration,
-                ease: "power2.in",
+                ease: "smooth",
                 force3D: true,
             },
             0
