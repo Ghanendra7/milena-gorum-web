@@ -85,13 +85,12 @@ function initOsmoBoilerplate() {
 
     function initBeforeEnterFunctions(next) {
         nextPage = next || document;
+        const ns = nextPage.getAttribute("data-barba-namespace") || "";
 
-        // Ensure Projects section is visible while sliding in from bottom
-        if (nextPage.classList?.contains("projects-section")) {
-            nextPage.classList.add("is-ready");
-        } else {
-            const projSec = nextPage.querySelector?.(".projects-section");
-            if (projSec) projSec.classList.add("is-ready");
+        if (ns === "home") {
+            if (typeof window.initHome === "function") window.initHome(nextPage);
+        } else if (ns === "projects") {
+            if (typeof window.initProjects === "function") window.initProjects(nextPage);
         }
     }
 
@@ -416,6 +415,8 @@ function initOsmoBoilerplate() {
             lenis.stop();
         }
 
+
+
         // Sync Webflow <head> styles and execute incoming page's Before </body> script
         if (data.next.html) {
             await syncNextPageAssets(data.next.html, data.next.container);
@@ -425,7 +426,15 @@ function initOsmoBoilerplate() {
         applyThemeFrom(data.next.container);
     });
 
-    barba.hooks.afterLeave(() => {
+    barba.hooks.afterLeave((data) => {
+        const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
+
+        if (currentNs === "home") {
+            if (typeof window.destroyHome === "function") window.destroyHome();
+        } else if (currentNs === "projects") {
+            if (typeof window.destroyProjects === "function") window.destroyProjects();
+        }
+
         if (hasScrollTrigger) {
             ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
         }

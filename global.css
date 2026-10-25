@@ -1,0 +1,723 @@
+/**
+ * Milena Gorum - Global Stylesheet
+ * Hosted on Cloudflare Pages (global.css)
+ */
+
+/* ========================================================
+   1. GLOBAL RESETS & COMPOSITING
+   ======================================================== */
+:root {
+    --card-height: 50vh;
+}
+
+html,
+body {
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+
+
+
+
+/* ------------------------- Hide Scrollbar -------------------------------------------------- */
+
+body ::-webkit-scrollbar {
+    display: none;
+}
+
+/* Chrome, Safari, Opera */
+body {
+    -ms-overflow-style: none;
+}
+
+/* IE & Edge */
+html {
+    scrollbar-width: none;
+}
+
+
+/* Firefox */
+
+/* ------------------------- body -------------------------------------------------- */
+
+*,
+*:after,
+*:before {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: initial;
+}
+
+html,
+body {
+    -webkit-font-smoothing: antialiased;
+}
+
+svg {
+    max-width: none;
+    height: auto;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+/* Selection */
+::selection {
+    background-color: black;
+    color: white;
+    text-shadow: none;
+}
+
+::-moz-selection {
+    background-color: black;
+    color: white;
+    text-shadow: none;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+/* ========================================================
+   2. HOMEPAGE GALLERY STYLES
+   ======================================================== */
+.home-section,
+.home-gallery-stage,
+.home-track-wrapper {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+    overflow: hidden;
+}
+
+.navbar-home {
+    pointer-events: none;
+}
+
+.navbar-home a,
+.navbar-home button,
+.home-logo a,
+.home-nav-links a,
+.home-project-info {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.home-track-wrapper {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.home-track-wrapper.is-dragging {
+    cursor: grabbing;
+}
+
+.home-slide-link,
+.home-media-img {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+}
+
+.home-track-wrapper.is-dragging .home-slide-link,
+.home-track-wrapper.is-dragging .home-media-img {
+    cursor: grabbing;
+}
+
+.home-track {
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+}
+
+.home-slide,
+.home-media-wrap {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Desktop Full-Screen Toggle ON (102vw) */
+.home-slide.is-fill,
+.home-slide.is-fill .home-slide-link,
+.home-slide.is-fill .home-media-wrap,
+.home-slide .home-media-wrap.is-fill {
+    width: 102vw !important;
+}
+
+.home-slide.is-fill .home-media-img,
+.home-slide .home-media-img.is-fill {
+    width: 102vw !important;
+    max-width: none !important;
+    object-fit: cover !important;
+}
+
+.home-video-embed {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.home-slide-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 50%;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+
+.home-slide.is-video-playing .home-slide-video {
+    opacity: 1;
+}
+
+.home-client-name,
+.home-project-subtitle {
+    transition: opacity 0.2s ease;
+}
+
+.home-project-info.is-switching .home-client-name,
+.home-project-info.is-switching .home-project-subtitle {
+    opacity: 0;
+}
+
+/* Editorial Soft Curtain Reveal */
+.home-curtain {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background-color: #ffffff;
+    pointer-events: none;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.7s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.7s ease;
+    will-change: opacity;
+    z-index: 100;
+}
+
+.home-curtain.is-revealed {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Homepage: Mobile & iPad Portrait */
+@media (max-width: 767px),
+(max-width: 1024px) and (orientation: portrait) {
+    .home-track {
+        column-gap: 0px !important;
+        gap: 0px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .home-slide,
+    .home-slide.is-fill {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        flex: 0 0 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .home-slide-link,
+    .home-media-wrap,
+    .home-media-wrap.is-fill,
+    .home-media-img,
+    .home-media-img.is-fill,
+    .home-slide-video {
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        object-fit: cover !important;
+    }
+}
+
+/* ========================================================
+   3. PROJECTS OVERVIEW STYLES
+   ======================================================== */
+.project-img,
+.project-link,
+.btn-zoom-in,
+.btn-zoom-out,
+.filter-btn,
+.sub-btn {
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Curtain Reveal for Projects */
+.desktop-gallery-stage,
+.mobile-gallery-stage {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.55s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.55s ease;
+    will-change: opacity;
+}
+
+.projects-section.is-ready .desktop-gallery-stage,
+.projects-section.is-ready .mobile-gallery-stage {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Desktop Gallery */
+@media (min-width: 1025px) {
+    .mobile-gallery-stage {
+        display: none !important;
+    }
+}
+
+.projects-track-wrapper {
+    width: 100%;
+    overflow: visible;
+    cursor: grab;
+    touch-action: none;
+}
+
+.projects-track-wrapper.is-dragging {
+    cursor: grabbing;
+}
+
+.projects-track {
+    padding-top: 38px;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+}
+
+.project-card {
+    flex-shrink: 0;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    contain: layout style;
+}
+
+.projects-track.is-wheel-scrolling .project-card {
+    pointer-events: none;
+}
+
+.projects-track.is-no-loop .project-card:first-child .project-header {
+    padding-left: 16px;
+}
+
+.project-media-wrap {
+    position: relative;
+    height: var(--card-height, 50vh);
+    width: auto;
+    overflow: hidden;
+    background-color: #f7f7f7;
+}
+
+.project-img {
+    height: 100%;
+    width: auto;
+    max-width: none;
+    object-fit: cover;
+    display: block;
+}
+
+.project-video-embed {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.project-card.is-hovered.is-video-playing .project-video-embed {
+    visibility: visible;
+    opacity: 1;
+}
+
+.project-preview-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.project-media-wrap,
+.project-header,
+.project-client,
+.project-subtitle {
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-media-wrap,
+.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-header {
+    opacity: 0.25;
+}
+
+.project-card.is-hovered .project-subtitle {
+    opacity: 1;
+}
+
+.project-card.is-label-occluded .project-header {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.projects-section.is-min-size .project-client,
+.projects-section.is-min-size .project-subtitle {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+/* Zoom & Filter Buttons */
+.btn-zoom-in,
+.btn-zoom-out {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.btn-zoom-in.is-disabled,
+.btn-zoom-out.is-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.filter-btn,
+.sub-btn {
+    color: #cccccc;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.filter-btn.is-active,
+.sub-btn.is-active {
+    color: #000000;
+}
+
+.sub-filter-list {
+    display: none !important;
+}
+
+.sub-filter-list.is-visible {
+    display: flex !important;
+}
+
+/* Projects: Mobile & iPad Portrait (<= 1024px) */
+@media (max-width: 1024px) {
+    .desktop-gallery-stage {
+        display: none !important;
+    }
+
+    .mobile-gallery-stage {
+        display: flex !important;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        flex-direction: column;
+        justify-content: flex-end;
+        overflow: hidden;
+        padding-top: 60px;
+        box-sizing: border-box;
+    }
+
+    .zoom-controls,
+    .btn-zoom-in,
+    .btn-zoom-out {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    .mobile-main-stage {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .mobile-main-swiper {
+        width: 100%;
+        height: 100%;
+        overflow: hidden !important;
+        position: relative;
+    }
+
+    .mobile-main-swiper .swiper-wrapper {
+        display: flex;
+        width: 100%;
+        height: 100%;
+    }
+
+    .mobile-main-swiper .swiper-slide {
+        width: 100% !important;
+        height: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .mobile-main-swiper .mobile-main-link {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-media-box {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 100%;
+        max-height: 52dvh;
+        overflow: hidden;
+        transform: translateZ(0);
+    }
+
+    .mobile-media-box img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 52dvh;
+        object-fit: contain;
+        display: block;
+        pointer-events: none;
+    }
+
+    .mobile-main-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.22s ease;
+        z-index: 2;
+    }
+
+    .mobile-main-swiper .swiper-slide.is-video-playing .mobile-main-video {
+        opacity: 1;
+    }
+
+    .mobile-meta-bar {
+        width: 100%;
+        padding: 12px 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        flex-shrink: 0;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .mobile-thumb-stage {
+        width: 100%;
+        overflow: hidden;
+        flex-shrink: 0;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .mobile-thumb-swiper {
+        width: 100%;
+        overflow: hidden;
+        touch-action: pan-y;
+        cursor: grab;
+    }
+
+    .mobile-thumb-swiper .swiper-wrapper {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 4px;
+        width: max-content;
+        will-change: transform;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        transform: translate3d(0, 0, 0);
+    }
+
+    .mobile-thumb-item {
+        width: auto;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        opacity: 0.28;
+        transition: opacity 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+
+    .mobile-thumb-item.is-active {
+        opacity: 1;
+    }
+
+    .mobile-thumb-num {
+        line-height: 1;
+        color: #000000;
+    }
+
+    .mobile-thumb-img-wrap {
+        height: 100px;
+        width: auto;
+        overflow: hidden;
+        background-color: #f7f7f7;
+    }
+
+    .mobile-thumb-img-wrap img {
+        height: 100%;
+        width: auto;
+        max-width: none;
+        object-fit: cover;
+        display: block;
+        pointer-events: none;
+    }
+}
+
+/* ========================================================
+   4. PROJECT DETAILS PAGE STYLES
+   ======================================================== */
+.gallery-section {
+    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    overflow: hidden;
+    position: relative;
+}
+
+.top-bar {
+    pointer-events: none;
+}
+
+.top-bar a,
+.top-bar button,
+.back-link,
+.top-sequence-list {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.seek-container {
+    touch-action: none;
+}
+
+.seek-fill {
+    width: 100% !important;
+    transform-origin: left center;
+    transform: scaleX(0);
+    will-change: transform;
+    pointer-events: none;
+}
+
+.thumb-img {
+    pointer-events: none;
+}
+
+.top-seq-item,
+.thumb-swiper .swiper-slide,
+.seek-container,
+.controls-container {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.image-parallax-container.is-fill,
+.image-wrapper.is-fill,
+.video-parallax-container.is-fill,
+.video-wrapper.is-fill,
+.video-embed.is-fill {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.main-media-img.is-fill,
+.slide-video.is-fill {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover !important;
+}
+
+
+/* Fullscreen Video Mode */
+.video-container:fullscreen .slide-video,
+.video-container:-webkit-full-screen .slide-video,
+.slide-video:fullscreen,
+.slide-video:-webkit-full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    background-color: #000000;
+}
+
+/* Keyboard accessibility focus rings */
+.top-seq-item:focus-visible,
+.thumb-swiper .swiper-slide:focus-visible,
+.btn-play:focus-visible,
+.btn-sound:focus-visible,
+.btn-fullscreen:focus-visible,
+.seek-container:focus-visible {
+    outline: 1px solid #000000;
+    outline-offset: 3px;
+}
+
+.controls-container *:focus-visible,
+.seek-container:focus-visible {
+    outline-color: #ffffff;
+}
