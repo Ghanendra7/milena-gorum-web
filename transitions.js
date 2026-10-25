@@ -55,7 +55,7 @@ function initOsmoBoilerplate() {
 
     const has = (s) => !!nextPage.querySelector(s);
 
-    let staggerDefault = 0.06;
+    let staggerDefault = 0.12;
     let durationDefault = 0.8;
     let slideDuration = 1.6; // Duration for Home -> Projects push/slide
 
@@ -368,7 +368,7 @@ function initOsmoBoilerplate() {
                     {
                         opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
                         duration: 0.6,
-                        stagger: 0.08,
+                        stagger: 0.12,
                         ease: "power2.out",
                     },
                     ">-0.2"
