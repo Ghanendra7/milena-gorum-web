@@ -57,7 +57,7 @@ function initOsmoBoilerplate() {
 
     let staggerDefault = 0.06;
     let durationDefault = 0.8;
-    let slideDuration = 1.2; // Duration for Home -> Projects push/slide
+    let slideDuration = 1.6; // Duration for Home -> Projects push/slide (slow & dramatic)
 
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
     gsap.defaults({ ease: "power2.out", duration: durationDefault });
@@ -208,7 +208,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "power2.out",
+                    ease: "power2.in",
                     force3D: true,
                 },
                 0
@@ -224,7 +224,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "power2.out",
+                    ease: "power2.in",
                     force3D: true,
                 },
                 0
@@ -236,9 +236,9 @@ function initOsmoBoilerplate() {
             tl.to(
                 galleryStage,
                 {
-                    yPercent: -100,
+                    yPercent: -80,
                     duration: slideDuration,
-                    ease: "power2.out",
+                    ease: "power2.in",
                     force3D: true,
                 },
                 0
@@ -247,9 +247,9 @@ function initOsmoBoilerplate() {
             tl.to(
                 current,
                 {
-                    yPercent: -100,
+                    yPercent: -80,
                     duration: slideDuration,
-                    ease: "power2.out",
+                    ease: "power2.in",
                     force3D: true,
                 },
                 0
@@ -316,13 +316,13 @@ function initOsmoBoilerplate() {
             {
                 yPercent: 0,
                 duration: slideDuration,
-                ease: "power2.out",
+                ease: "power2.in",
                 force3D: true,
             },
             0
         );
 
-        // 2. As Projects Page hits top, fade in .nav-top
+        // 2. As Projects Page hits top, fade in .nav-top and filters together without delay
         tl.add("hitTop", slideDuration);
 
         if (navTop) {
@@ -330,28 +330,28 @@ function initOsmoBoilerplate() {
                 navTop,
                 {
                     opacity: 1,
-                    duration: 0.55,
-                    ease: "power2.out",
+                    duration: 0.85,
+                    ease: "power2.in",
                 },
                 "hitTop"
             );
         }
 
-        // 3. After .nav-top, fade in filters in a staggered manner
+        // 3. Filters start at the exact same time as .nav-top ("hitTop")
         if (filterItems.length) {
             tl.to(
                 filterItems,
                 {
                     opacity: 1,
-                    duration: 0.55,
+                    duration: 0.85,
                     stagger: staggerDefault,
-                    ease: "power2.out",
+                    ease: "power2.in",
                 },
-                ">-0.2"
+                "hitTop"
             );
         }
 
-        // 4. After filters, fade in + and - buttons in a staggered manner
+        // 4. After filters, fade in + and - buttons
         if (zoomBtns.length) {
             const validZoomBtns = zoomBtns.filter(
                 (btn) => window.getComputedStyle(btn).display !== "none"
@@ -361,7 +361,7 @@ function initOsmoBoilerplate() {
                     validZoomBtns,
                     {
                         opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
-                        duration: 0.55,
+                        duration: 0.6,
                         stagger: 0.08,
                         ease: "power2.out",
                     },
