@@ -87,6 +87,11 @@ a {
     text-decoration: none;
 }
 
+.w-webflow-badge {
+    opacity: 0 !important;
+    display: none !important;
+}
+
 
 /* ========================================================
    2. HOMEPAGE GALLERY STYLES
