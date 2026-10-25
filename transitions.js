@@ -326,8 +326,9 @@ function initOsmoBoilerplate() {
             0
         );
 
-        // 2. As Projects Page hits top, fade in .nav-top and filters together without delay
-        tl.add("hitTop", slideDuration);
+        // 2. Start navbar, filters, and zoom animations right before the page hits the top
+        const hitTopLead = 0.35; // lead time in seconds before slide completes
+        tl.add("hitTop", Math.max(0, slideDuration - hitTopLead));
 
         if (navTop) {
             tl.to(
