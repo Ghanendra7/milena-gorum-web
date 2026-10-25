@@ -57,7 +57,7 @@ function initOsmoBoilerplate() {
 
     let staggerDefault = 0.12;
     let durationDefault = 0.8;
-    let slideDuration = 1.3; // Duration for Home -> Projects push/slide
+    let slideDuration = 1.5; // Duration for Home -> Projects push/slide
 
     CustomEase.create("smooth", "M0,0 C0.38,0.005 0.215,1 1,1");
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
