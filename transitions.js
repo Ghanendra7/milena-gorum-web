@@ -377,7 +377,7 @@ function initOsmoBoilerplate() {
                         ease: "power2.out",
                         force3D: true,
                     },
-                    "hitTop+=0.25"
+                    "hitTop+=0.35"
                 );
             }
         }
