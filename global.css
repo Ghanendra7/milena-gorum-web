@@ -1,13 +1,39 @@
 /**
- * Milena Gorum - Global Stylesheet (Consolidated from working backups)
+ * Milena Gorum - Global Stylesheet
  * Hosted on Cloudflare Pages (global.css)
  */
 
 /* ========================================================
-   1. GLOBAL SYSTEM RESETS & COMPOSITING
+   1. GLOBAL ESSENTIALS, RESETS & SELECTION
    ======================================================== */
-:root {
-    --card-height: 50vh;
+
+/* Hide Scrollbar */
+body ::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
+}
+
+body {
+    -ms-overflow-style: none;
+    /* IE & Edge */
+}
+
+html {
+    scrollbar-width: none;
+    /* Firefox */
+    scroll-behavior: initial;
+}
+
+/* Box-Sizing & Typography Resets */
+*,
+*:after,
+*:before {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html,
@@ -20,44 +46,8 @@ body {
     text-size-adjust: 100%;
 }
 
-
-
-/* ------------------------- Hide Scrollbar -------------------------------------------------- */
-
-body ::-webkit-scrollbar {
-    display: none;
-}
-
-/* Chrome, Safari, Opera */
-body {
-    -ms-overflow-style: none;
-}
-
-/* IE & Edge */
-html {
-    scrollbar-width: none;
-}
-
-
-/* Firefox */
-
-/* ------------------------- body -------------------------------------------------- */
-
-*,
-*:after,
-*:before {
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: initial;
-}
-
-html,
-body {
-    -webkit-font-smoothing: antialiased;
+:root {
+    --card-height: 50vh;
 }
 
 svg {
@@ -67,7 +57,7 @@ svg {
     vertical-align: middle;
 }
 
-/* Selection */
+/* Minimal Editorial Text Selection */
 ::selection {
     background-color: black;
     color: white;
@@ -80,17 +70,18 @@ svg {
     text-shadow: none;
 }
 
+/* Base Link Reset */
 a {
     color: inherit;
     text-decoration: none;
 }
 
+/* Webflow Badge Override */
 .w-webflow-badge {
     opacity: 0 !important;
     display: none !important;
+    pointer-events: none !important;
 }
-
-
 
 
 /* ========================================================
@@ -271,6 +262,7 @@ a {
         object-fit: cover !important;
     }
 }
+
 
 /* ========================================================
    3. PROJECTS OVERVIEW STYLES
@@ -634,6 +626,7 @@ a {
         pointer-events: none;
     }
 }
+
 
 /* ========================================================
    4. PROJECT DETAILS PAGE STYLES
