@@ -361,7 +361,7 @@ function initOsmoBoilerplate() {
             );
         }
 
-        // 4. Zoom (+ and -) buttons float in sooner with same stagger and feel as filters
+        // 4. Zoom (+ and -) buttons float in slightly after filters start floating in
         if (zoomBtns.length) {
             const validZoomBtns = zoomBtns.filter(
                 (btn) => window.getComputedStyle(btn).display !== "none"
@@ -377,7 +377,7 @@ function initOsmoBoilerplate() {
                         ease: "power2.out",
                         force3D: true,
                     },
-                    "hitTop+=0.1"
+                    "hitTop+=0.25"
                 );
             }
         }
