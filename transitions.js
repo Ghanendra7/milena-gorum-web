@@ -57,16 +57,16 @@ function initOsmoBoilerplate() {
 
     let staggerDefault = 0.05;
     let durationDefault = 0.6;
+    let slideDuration = 0.85; // Duration for Home -> Projects push/slide
 
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
     gsap.defaults({ ease: "osmo", duration: durationDefault });
 
-    // Ensure body has data-barba="wrapper" if not set in Webflow Designer
+    // Ensure body has data-barba="wrapper"
     if (!document.body.hasAttribute("data-barba")) {
         document.body.setAttribute("data-barba", "wrapper");
     }
 
-    // Only run Lenis on vertical-scroll pages (Index & Information), keep stopped on 100dvh canvas pages
     function isLenisPage(container) {
         const ns = container?.getAttribute("data-barba-namespace") || "";
         return ns === "index" || ns === "information" || ns === "info";
@@ -80,23 +80,22 @@ function initOsmoBoilerplate() {
         initLenis();
         if (onceFunctionsInitialized) return;
         onceFunctionsInitialized = true;
-
-        // Runs once on first load
-        // if (has('[data-something]')) initSomething();
     }
 
     function initBeforeEnterFunctions(next) {
         nextPage = next || document;
 
-        // Runs before the enter animation
-        // if (has('[data-something]')) initSomething();
+        // Ensure Projects section is visible while sliding in from bottom
+        if (nextPage.classList?.contains("projects-section")) {
+            nextPage.classList.add("is-ready");
+        } else {
+            const projSec = nextPage.querySelector?.(".projects-section");
+            if (projSec) projSec.classList.add("is-ready");
+        }
     }
 
     function initAfterEnterFunctions(next) {
         nextPage = next || document;
-
-        // Runs after enter animation completes
-        // if (has('[data-something]')) initSomething();
 
         if (lenis) {
             if (isLenisPage(nextPage)) {
@@ -113,7 +112,7 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
-    // PAGE TRANSITIONS
+    // PAGE TRANSITIONS: DEFAULT
     // -----------------------------------------
 
     function runPageOnceAnimation(next) {
@@ -129,12 +128,12 @@ function initOsmoBoilerplate() {
     function runPageLeaveAnimation(current, next) {
         const tl = gsap.timeline({
             onComplete: () => {
+                cleanupMediaInContainer(current);
                 current.remove();
             },
         });
 
         if (reducedMotion) {
-            // Immediate swap behavior if user prefers reduced motion
             return tl.set(current, { autoAlpha: 0 });
         }
 
@@ -147,7 +146,6 @@ function initOsmoBoilerplate() {
         const tl = gsap.timeline();
 
         if (reducedMotion) {
-            // Immediate swap behavior if user prefers reduced motion
             tl.set(next, { autoAlpha: 1 });
             tl.add("pageReady");
             tl.call(resetPage, [next], "pageReady");
@@ -158,12 +156,8 @@ function initOsmoBoilerplate() {
 
         tl.fromTo(
             next,
-            {
-                autoAlpha: 0,
-            },
-            {
-                autoAlpha: 1,
-            },
+            { autoAlpha: 0 },
+            { autoAlpha: 1 },
             "startEnter"
         );
 
@@ -176,10 +170,228 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
+    // PAGE TRANSITIONS: HOME -> PROJECTS
+    // -----------------------------------------
+
+    function runHomeToProjectsLeave(current, next) {
+        const navHome = current.querySelector(".navbar-home");
+        const projectInfo = current.querySelector(".home-project-info");
+        const galleryStage = current.querySelector(".home-gallery-stage");
+
+        const tl = gsap.timeline({
+            onComplete: () => {
+                cleanupMediaInContainer(current);
+                current.remove();
+            },
+        });
+
+        if (reducedMotion) {
+            return tl.set(current, { autoAlpha: 0 });
+        }
+
+        // Keep current container fixed in viewport so children can move independently
+        gsap.set(current, {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100dvh",
+            zIndex: 1,
+        });
+
+        // 1. Move .navbar-home from center to 16px offset from top
+        if (navHome) {
+            const navRect = navHome.getBoundingClientRect();
+            const targetY = 16 - navRect.top;
+            tl.to(
+                navHome,
+                {
+                    y: targetY,
+                    duration: slideDuration,
+                    ease: "osmo",
+                    force3D: true,
+                },
+                0
+            );
+        }
+
+        // 2. Move .home-project-info from center to 16px offset from top
+        if (projectInfo) {
+            const infoRect = projectInfo.getBoundingClientRect();
+            const targetY = 16 - infoRect.top;
+            tl.to(
+                projectInfo,
+                {
+                    y: targetY,
+                    duration: slideDuration,
+                    ease: "osmo",
+                    force3D: true,
+                },
+                0
+            );
+        }
+
+        // 3. Push Homepage gallery up as Projects page slides in from bottom
+        if (galleryStage) {
+            tl.to(
+                galleryStage,
+                {
+                    yPercent: -100,
+                    duration: slideDuration,
+                    ease: "osmo",
+                    force3D: true,
+                },
+                0
+            );
+        } else {
+            tl.to(
+                current,
+                {
+                    yPercent: -100,
+                    duration: slideDuration,
+                    ease: "osmo",
+                    force3D: true,
+                },
+                0
+            );
+        }
+
+        return tl;
+    }
+
+    function runHomeToProjectsEnter(next) {
+        const navbar = next.querySelector(".navbar");
+        const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
+
+        // Collect primary filters (and secondary filters if visible)
+        const primaryFilters = Array.from(next.querySelectorAll(".primary-filter-list .filter-btn"));
+        const subFilterList = next.querySelector(".sub-filter-list");
+        const subFilters =
+            subFilterList && subFilterList.classList.contains("is-visible")
+                ? Array.from(subFilterList.querySelectorAll(".sub-btn"))
+                : [];
+        const filterItems = [...primaryFilters, ...subFilters];
+
+        // Collect + and - zoom buttons
+        const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
+
+        const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
+
+        const tl = gsap.timeline();
+
+        if (reducedMotion) {
+            tl.set(next, { autoAlpha: 1, yPercent: 0 });
+            tl.add("pageReady");
+            tl.call(resetPage, [next], "pageReady");
+            return new Promise((resolve) => tl.call(resolve, null, "pageReady"));
+        }
+
+        // Prepare incoming Projects container at bottom of viewport (100%)
+        gsap.set(next, {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            width: "100vw",
+            height: "100dvh",
+            backgroundColor: "#ffffff",
+            zIndex: 2,
+            autoAlpha: 1,
+            yPercent: 100,
+            force3D: true,
+        });
+
+        // While sliding in, all elements inside .navbar have 0 opacity
+        // Suppress CSS transitions temporarily so CSS doesn't fight GSAP opacity tweens
+        if (allNavTargets.length) {
+            gsap.set(allNavTargets, {
+                opacity: 0,
+                transition: "none",
+            });
+        }
+
+        // 1. Slide Projects Page in from bottom (at t = 0, matching Homepage push up)
+        tl.to(
+            next,
+            {
+                yPercent: 0,
+                duration: slideDuration,
+                ease: "osmo",
+                force3D: true,
+            },
+            0
+        );
+
+        // 2. As Projects Page hits top, fade in .nav-top
+        tl.add("hitTop", slideDuration);
+
+        if (navTop) {
+            tl.to(
+                navTop,
+                {
+                    opacity: 1,
+                    duration: 0.35,
+                    ease: "power2.out",
+                },
+                "hitTop"
+            );
+        }
+
+        // 3. After .nav-top, fade in filters in a staggered manner
+        if (filterItems.length) {
+            tl.to(
+                filterItems,
+                {
+                    opacity: 1,
+                    duration: 0.35,
+                    stagger: staggerDefault,
+                    ease: "power2.out",
+                },
+                ">-0.1"
+            );
+        }
+
+        // 4. After filters, fade in + and - buttons in a staggered manner
+        if (zoomBtns.length) {
+            const validZoomBtns = zoomBtns.filter(
+                (btn) => window.getComputedStyle(btn).display !== "none"
+            );
+            if (validZoomBtns.length) {
+                tl.to(
+                    validZoomBtns,
+                    {
+                        opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
+                        duration: 0.35,
+                        stagger: 0.07,
+                        ease: "power2.out",
+                    },
+                    ">-0.1"
+                );
+            }
+        }
+
+        tl.add("pageReady");
+        tl.call(
+            () => {
+                if (allNavTargets.length) {
+                    gsap.set(allNavTargets, { clearProps: "opacity,transition" });
+                }
+                resetPage(next);
+            },
+            null,
+            "pageReady"
+        );
+
+        return new Promise((resolve) => {
+            tl.call(resolve, null, "pageReady");
+        });
+    }
+
+    // -----------------------------------------
     // BARBA HOOKS + INIT
     // -----------------------------------------
 
-    barba.hooks.beforeEnter((data) => {
+    barba.hooks.beforeEnter(async (data) => {
         // Position new container on top
         gsap.set(data.next.container, {
             position: "fixed",
@@ -190,6 +402,11 @@ function initOsmoBoilerplate() {
 
         if (lenis && typeof lenis.stop === "function") {
             lenis.stop();
+        }
+
+        // Sync Webflow <head> styles and execute incoming page's Before </body> script
+        if (data.next.html) {
+            await syncNextPageAssets(data.next.html, data.next.container);
         }
 
         initBeforeEnterFunctions(data.next.container);
@@ -207,10 +424,8 @@ function initOsmoBoilerplate() {
     });
 
     barba.hooks.afterEnter((data) => {
-        // Run page functions
         initAfterEnterFunctions(data.next.container);
 
-        // Settle
         if (lenis) {
             if (isLenisPage(data.next.container)) {
                 lenis.resize();
@@ -230,23 +445,36 @@ function initOsmoBoilerplate() {
         timeout: 7000,
         preventRunning: true,
         transitions: [
+            // Specific Transition: Homepage -> Projects Page
+            {
+                name: "home-to-projects",
+                sync: true,
+                from: { namespace: ["home"] },
+                to: { namespace: ["projects"] },
+
+                async leave(data) {
+                    return runHomeToProjectsLeave(data.current.container, data.next.container);
+                },
+
+                async enter(data) {
+                    return runHomeToProjectsEnter(data.next.container);
+                },
+            },
+
+            // Default Fallback Transition
             {
                 name: "default",
                 sync: true,
 
-                // First load
                 async once(data) {
                     initOnceFunctions();
-
                     return runPageOnceAnimation(data.next.container);
                 },
 
-                // Current page leaves
                 async leave(data) {
                     return runPageLeaveAnimation(data.current.container, data.next.container);
                 },
 
-                // New page enters
                 async enter(data) {
                     return runPageEnterAnimation(data.next.container);
                 },
@@ -286,7 +514,7 @@ function initOsmoBoilerplate() {
     }
 
     function initLenis() {
-        if (lenis) return; // already created
+        if (lenis) return;
         if (!hasLenis) return;
 
         lenis = new Lenis({
@@ -307,7 +535,9 @@ function initOsmoBoilerplate() {
 
     function resetPage(container) {
         window.scrollTo(0, 0);
-        gsap.set(container, { clearProps: "position,top,left,right" });
+        gsap.set(container, {
+            clearProps: "position,top,left,right,width,height,zIndex,yPercent,transform",
+        });
 
         if (lenis) {
             if (isLenisPage(container)) {
@@ -316,6 +546,95 @@ function initOsmoBoilerplate() {
             } else {
                 lenis.stop();
             }
+        }
+    }
+
+    // Releases Safari hardware video decoders when leaving a page
+    function cleanupMediaInContainer(container) {
+        if (!container) return;
+        const videos = container.querySelectorAll("video");
+        videos.forEach((v) => {
+            try {
+                v.pause();
+                v.removeAttribute("src");
+                v.load();
+            } catch (e) { }
+        });
+    }
+
+    // Automatically syncs Webflow page-specific <head> styles and executes page scripts
+    async function syncNextPageAssets(nextHtml, nextContainer) {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(nextHtml, "text/html");
+
+            // 1. Sync <link rel="stylesheet">
+            const links = doc.head.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach((link) => {
+                const href = link.getAttribute("href");
+                if (href && !document.head.querySelector(`link[href="${href}"]`)) {
+                    document.head.appendChild(link.cloneNode(true));
+                }
+            });
+
+            // 2. Sync inline <style> blocks from <head>
+            const styles = doc.head.querySelectorAll("style");
+            styles.forEach((style) => {
+                const content = style.textContent.trim();
+                if (!content) return;
+                const exists = Array.from(document.head.querySelectorAll("style")).some(
+                    (s) => s.textContent.trim() === content
+                );
+                if (!exists) {
+                    const newStyle = document.createElement("style");
+                    newStyle.textContent = content;
+                    document.head.appendChild(newStyle);
+                }
+            });
+
+            // 3. Load any external <script src="..."> in body (e.g. Swiper CDN) except transitions.js & Webflow core
+            const externalScripts = Array.from(doc.body.querySelectorAll("script[src]"));
+            for (const scr of externalScripts) {
+                const src = scr.getAttribute("src") || "";
+                if (
+                    src.includes("transitions.js") ||
+                    src.includes("webflow.") ||
+                    src.includes("jquery")
+                ) {
+                    continue;
+                }
+                if (!document.querySelector(`script[src="${src}"]`)) {
+                    await new Promise((resolve) => {
+                        const s = document.createElement("script");
+                        s.src = src;
+                        s.onload = resolve;
+                        s.onerror = resolve;
+                        document.head.appendChild(s);
+                    });
+                }
+            }
+
+            // 4. Execute inline Before </body> page scripts (unwrap DOMContentLoaded so they run immediately)
+            const inlineScripts = Array.from(doc.body.querySelectorAll("script:not([src])"));
+            inlineScripts.forEach((scr) => {
+                let code = scr.textContent || "";
+                if (!code.trim()) return;
+
+                // Replace document.addEventListener("DOMContentLoaded", fn) so fn executes immediately
+                code = code.replace(
+                    /document\.addEventListener\(\s*["']DOMContentLoaded["']\s*,\s*/g,
+                    "((cb) => cb())("
+                );
+
+                try {
+                    const runFn = new Function(code);
+                    runFn();
+                } catch (err) {
+                    console.warn("⚠️ [Barba Page Script] Error running inline script:", err);
+                }
+            });
+        } catch (err) {
+            console.warn("⚠️ [Barba Asset Sync] Error syncing next page assets:", err);
         }
     }
 
@@ -343,7 +662,6 @@ function initOsmoBoilerplate() {
             var next = nextNodes[index];
             if (!next) return;
 
-            // Aria-current sync
             var newStatus = next.getAttribute("aria-current");
             if (newStatus !== null) {
                 curr.setAttribute("aria-current", newStatus);
@@ -351,10 +669,12 @@ function initOsmoBoilerplate() {
                 curr.removeAttribute("aria-current");
             }
 
-            // Class list sync
             var newClassList = next.getAttribute("class") || "";
             curr.setAttribute("class", newClassList);
         });
     }
 
+    // -----------------------------------------
+    // YOUR FUNCTIONS GO BELOW HERE
+    // -----------------------------------------
 }
