@@ -334,8 +334,8 @@ function initOsmoBoilerplate() {
                 navTop,
                 {
                     opacity: 1,
-                    duration: 0.85,
-                    ease: "power2.in",
+                    duration: 0.4,
+                    ease: "power2.out",
                 },
                 "hitTop"
             );
