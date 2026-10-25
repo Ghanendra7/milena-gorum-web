@@ -55,12 +55,12 @@ function initOsmoBoilerplate() {
 
     const has = (s) => !!nextPage.querySelector(s);
 
-    let staggerDefault = 0.05;
-    let durationDefault = 0.6;
-    let slideDuration = 0.85; // Duration for Home -> Projects push/slide
+    let staggerDefault = 0.06;
+    let durationDefault = 0.8;
+    let slideDuration = 1.2; // Duration for Home -> Projects push/slide
 
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
-    gsap.defaults({ ease: "osmo", duration: durationDefault });
+    gsap.defaults({ ease: "power2.out", duration: durationDefault });
 
     // Ensure body has data-barba="wrapper"
     if (!document.body.hasAttribute("data-barba")) {
@@ -208,7 +208,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "osmo",
+                    ease: "power2.out",
                     force3D: true,
                 },
                 0
@@ -224,7 +224,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "osmo",
+                    ease: "power2.out",
                     force3D: true,
                 },
                 0
@@ -238,7 +238,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -100,
                     duration: slideDuration,
-                    ease: "osmo",
+                    ease: "power2.out",
                     force3D: true,
                 },
                 0
@@ -249,7 +249,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -100,
                     duration: slideDuration,
-                    ease: "osmo",
+                    ease: "power2.out",
                     force3D: true,
                 },
                 0
@@ -316,7 +316,7 @@ function initOsmoBoilerplate() {
             {
                 yPercent: 0,
                 duration: slideDuration,
-                ease: "osmo",
+                ease: "power2.out",
                 force3D: true,
             },
             0
@@ -330,7 +330,7 @@ function initOsmoBoilerplate() {
                 navTop,
                 {
                     opacity: 1,
-                    duration: 0.35,
+                    duration: 0.55,
                     ease: "power2.out",
                 },
                 "hitTop"
@@ -343,11 +343,11 @@ function initOsmoBoilerplate() {
                 filterItems,
                 {
                     opacity: 1,
-                    duration: 0.35,
+                    duration: 0.55,
                     stagger: staggerDefault,
                     ease: "power2.out",
                 },
-                ">-0.1"
+                ">-0.2"
             );
         }
 
@@ -361,11 +361,11 @@ function initOsmoBoilerplate() {
                     validZoomBtns,
                     {
                         opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
-                        duration: 0.35,
-                        stagger: 0.07,
+                        duration: 0.55,
+                        stagger: 0.08,
                         ease: "power2.out",
                     },
-                    ">-0.1"
+                    ">-0.2"
                 );
             }
         }
