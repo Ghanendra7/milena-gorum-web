@@ -313,6 +313,9 @@ function initOsmoBoilerplate() {
         if (filterItems.length) {
             gsap.set(filterItems, { y: 14 });
         }
+        if (zoomBtns.length) {
+            gsap.set(zoomBtns, { y: 14 });
+        }
 
         // 1. Slide Projects Page in from bottom (at t = 0, matching Homepage push up)
         tl.to(
@@ -358,7 +361,7 @@ function initOsmoBoilerplate() {
             );
         }
 
-        // 4. After filters, fade in + and - buttons
+        // 4. Zoom (+ and -) buttons float in sooner with same stagger and feel as filters
         if (zoomBtns.length) {
             const validZoomBtns = zoomBtns.filter(
                 (btn) => window.getComputedStyle(btn).display !== "none"
@@ -368,11 +371,13 @@ function initOsmoBoilerplate() {
                     validZoomBtns,
                     {
                         opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
-                        duration: 0.6,
-                        stagger: 0.12,
+                        y: 0,
+                        duration: 0.85,
+                        stagger: staggerDefault,
                         ease: "power2.out",
+                        force3D: true,
                     },
-                    ">-0.2"
+                    "hitTop+=0.1"
                 );
             }
         }
