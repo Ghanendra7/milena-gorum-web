@@ -209,7 +209,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "smooth",
+                    ease: "power2.inOut",
                     force3D: true,
                 },
                 0
@@ -225,7 +225,7 @@ function initOsmoBoilerplate() {
                 {
                     y: targetY,
                     duration: slideDuration,
-                    ease: "smooth",
+                    ease: "power2.inOut",
                     force3D: true,
                 },
                 0
@@ -239,7 +239,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -80,
                     duration: slideDuration,
-                    ease: "smooth",
+                    ease: "power2.inOut",
                     force3D: true,
                 },
                 0
@@ -250,7 +250,7 @@ function initOsmoBoilerplate() {
                 {
                     yPercent: -80,
                     duration: slideDuration,
-                    ease: "smooth",
+                    ease: "power2.inOut",
                     force3D: true,
                 },
                 0
@@ -323,7 +323,7 @@ function initOsmoBoilerplate() {
             {
                 yPercent: 0,
                 duration: slideDuration,
-                ease: "smooth",
+                ease: "power2.inOut",
                 force3D: true,
             },
             0
