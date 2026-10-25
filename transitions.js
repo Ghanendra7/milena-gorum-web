@@ -357,7 +357,4 @@ function initOsmoBoilerplate() {
         });
     }
 
-    // -----------------------------------------
-    // YOUR FUNCTIONS GO BELOW HERE
-    // -----------------------------------------
 }
