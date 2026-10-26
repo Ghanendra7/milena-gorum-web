@@ -49,7 +49,7 @@ function initOsmoBoilerplate() {
 
     let staggerDefault = 0.12;
     let durationDefault = 0.8;
-    let slideDuration = 1.5;
+    let slideDuration = 1.35;
 
     CustomEase.create("smooth", "M0,0 C0.38,0.005 0.215,1 1,1");
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
@@ -298,7 +298,18 @@ function initOsmoBoilerplate() {
             let visibleCards = [];
             if (isDesktop && section) {
                 const taggedCards = Array.from(section.querySelectorAll('.desktop-gallery-stage .project-card[data-initial-visible="true"]'));
-                visibleCards = taggedCards.slice(0, 4);
+                if (taggedCards.length) {
+                    const viewportWidth = window.innerWidth;
+                    const onScreen = taggedCards.filter((card) => {
+                        const cardLeft = card.offsetLeft - (taggedCards[0]?.offsetLeft || 0);
+                        return cardLeft < viewportWidth + 120;
+                    });
+                    visibleCards = onScreen.length ? onScreen : taggedCards.slice(0, 5);
+                } else {
+                    const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
+                    const setSize = Math.floor(allCards.length / 3);
+                    visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 5) : allCards.slice(0, 5);
+                }
             }
 
             let resolved = false;
@@ -336,21 +347,21 @@ function initOsmoBoilerplate() {
             if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
             if (visibleCards.length) {
-                gsap.set(visibleCards, { opacity: 0, y: 50, force3D: true });
+                gsap.set(visibleCards, { opacity: 0, y: 55, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
 
             tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
 
-            // Stagger entrance starts early as the page rises into view
-            const cardsStart = 0.35;
+            // Stagger entrance plays as the page rises into the viewport
+            const cardsStart = 0.85;
             if (visibleCards.length) {
                 tl.to(visibleCards, {
                     opacity: 1,
                     y: 0,
-                    duration: 0.70,
-                    stagger: 0.08,
+                    duration: 0.75,
+                    stagger: 0.09,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
@@ -360,7 +371,7 @@ function initOsmoBoilerplate() {
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
-            const marqueeReleaseTime = 1.05;
+            const marqueeReleaseTime = 1.60;
             tl.add("releaseMarquee", marqueeReleaseTime);
             tl.call(() => {
                 if (section) {
@@ -395,7 +406,7 @@ function initOsmoBoilerplate() {
             }
 
             // Guaranteed resolution fallback for Safari
-            setTimeout(done, (slideDuration + 0.3) * 1000);
+            setTimeout(done, (slideDuration + 0.9) * 1000);
         });
     }
 
