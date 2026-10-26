@@ -355,7 +355,7 @@ function initOsmoBoilerplate() {
                 gsap.set(visibleCards, { opacity: 0, yPercent: 60, force3D: true });
             }
             if (mobileStage) {
-                gsap.set(mobileStage, { opacity: 0, yPercent: 40, force3D: true });
+                gsap.set(mobileStage, { opacity: 0, yPercent: 20, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
@@ -386,7 +386,7 @@ function initOsmoBoilerplate() {
                     onComplete: () => {
                         gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                     },
-                }, cardsStart);
+                }, cardsStart + 0.08); // delays mobile float-in by ~150ms
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
