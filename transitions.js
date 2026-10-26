@@ -312,6 +312,8 @@ function initOsmoBoilerplate() {
                 }
             }
 
+            const mobileStage = !isDesktop && section ? section.querySelector(".mobile-gallery-stage") : null;
+
             let resolved = false;
             const done = () => {
                 if (resolved) return;
@@ -325,6 +327,9 @@ function initOsmoBoilerplate() {
                 }
                 if (visibleCards.length) {
                     gsap.set(visibleCards, { clearProps: "opacity,transform,y,yPercent" });
+                }
+                if (mobileStage) {
+                    gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                 }
                 resetPage(next);
                 resolve();
@@ -349,6 +354,9 @@ function initOsmoBoilerplate() {
             if (visibleCards.length) {
                 gsap.set(visibleCards, { opacity: 0, yPercent: 60, force3D: true });
             }
+            if (mobileStage) {
+                gsap.set(mobileStage, { opacity: 0, yPercent: 40, force3D: true });
+            }
 
             const tl = gsap.timeline({ onComplete: done });
 
@@ -366,6 +374,17 @@ function initOsmoBoilerplate() {
                     force3D: true,
                     onComplete: () => {
                         gsap.set(visibleCards, { clearProps: "opacity,transform,y,yPercent" });
+                    },
+                }, cardsStart);
+            } else if (mobileStage) {
+                tl.to(mobileStage, {
+                    opacity: 1,
+                    yPercent: 0,
+                    duration: 0.85,
+                    ease: "power2.out",
+                    force3D: true,
+                    onComplete: () => {
+                        gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                     },
                 }, cardsStart);
             }
