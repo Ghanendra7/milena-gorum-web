@@ -1316,6 +1316,7 @@
 
                 isGalleryRevealed = true;
                 section.classList.add("is-ready");
+                section.classList.add("is-marquee-active");
             };
 
             // If section was already prepared by page transition, reveal immediately without Safari decode delay

@@ -144,14 +144,17 @@ a {
 }
 
 .home-slide {
-    contain: layout style;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
 }
 
 .home-media-wrap {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
 }
 
 /* Desktop Full-Screen Toggle ON (102vw) */
@@ -284,7 +287,7 @@ a {
 .mobile-gallery-stage {
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.55s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.55s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
     will-change: opacity;
 }
 
@@ -306,6 +309,7 @@ a {
     overflow: visible;
     cursor: grab;
     touch-action: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 .projects-track-wrapper.is-dragging {
@@ -317,6 +321,7 @@ a {
     will-change: transform;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
 }
 
@@ -324,8 +329,8 @@ a {
     flex-shrink: 0;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    transform: translateZ(0);
-    contain: layout style;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
 }
 
 .projects-track.is-wheel-scrolling .project-card {
@@ -343,6 +348,10 @@ a {
     width: auto;
     overflow: hidden;
     background-color: #f7f7f7;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
 }
 
 .project-img {
@@ -351,6 +360,8 @@ a {
     max-width: none;
     object-fit: cover;
     display: block;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
 .project-video-embed {
@@ -378,6 +389,13 @@ a {
     pointer-events: none;
 }
 
+/* Hover Dimming: Target specific classes so GSAP card opacity is never fought */
+.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-media-wrap,
+.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-header {
+    opacity: 0.25;
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
 .project-media-wrap,
 .project-header,
 .project-client,
@@ -385,9 +403,11 @@ a {
     transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-media-wrap,
-.projects-track.is-hovering-card .project-card:not(.is-hovered) .project-header {
-    opacity: 0.25;
+/* Disable transition during page enter to prevent Safari layout lags */
+.projects-section:not(.is-marquee-active) .project-card,
+.projects-section:not(.is-marquee-active) .project-media-wrap,
+.projects-section:not(.is-marquee-active) .project-header {
+    transition: none !important;
 }
 
 .project-card.is-hovered .project-subtitle {
