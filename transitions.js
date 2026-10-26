@@ -573,10 +573,10 @@ function initOsmoBoilerplate() {
             }
 
             if (navHome) {
-                gsap.set(navHome, { y: -20, opacity: 0 });
+                gsap.set(navHome, { y: -20, opacity: 1 });
             }
             if (projectInfo) {
-                gsap.set(projectInfo, { y: -20, opacity: 0 });
+                gsap.set(projectInfo, { y: -20, opacity: 1 });
             }
 
             const tl = gsap.timeline({ onComplete: done });
@@ -603,7 +603,6 @@ function initOsmoBoilerplate() {
             if (navHome) {
                 tl.to(navHome, {
                     y: 0,
-                    opacity: 1,
                     duration: 0.6,
                     ease: "power2.out",
                 }, navStartTime);
@@ -612,7 +611,6 @@ function initOsmoBoilerplate() {
             if (projectInfo) {
                 tl.to(projectInfo, {
                     y: 0,
-                    opacity: 1,
                     duration: 0.6,
                     ease: "power2.out",
                 }, navStartTime + 0.08);
