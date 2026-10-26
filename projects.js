@@ -490,7 +490,7 @@
                     if (tplIdx === 0) {
                         clone.setAttribute("data-is-first-item", "true");
                     }
-                    const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 4;
+                    const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 3;
                     if (s === 1 || (!isDesktopInfinite && s === 0)) {
                         clone.setAttribute("data-initial-visible", "true");
                     }
@@ -971,13 +971,14 @@
                     const rawVidId = validVid?.getAttribute("data-video-id") || "";
                     const previewSrc = rawVidId ? getBunnyPreviewUrl(rawVidId) : "";
 
+                    const isFirstMobile = r === 0 && idx === 0;
                     const mainSlide = document.createElement("div");
                     mainSlide.className = "swiper-slide";
                     mainSlide.setAttribute("data-project-idx", String(idx));
                     mainSlide.innerHTML = `
             <a href="${linkHref}" class="mobile-main-link">
               <div class="mobile-media-box">
-                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} decoding="async" alt="" />
+                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} loading="${isFirstMobile ? "eager" : "lazy"}" decoding="async" alt="" />
                 ${previewSrc
                             ? `<video class="mobile-main-video" playsinline webkit-playsinline="true" muted loop preload="none" data-preview-src="${previewSrc}"></video>`
                             : ""

@@ -184,11 +184,8 @@
         const clone = origSlide.cloneNode(true);
         if (s !== CENTER_SET) clone.setAttribute("aria-hidden", "true");
 
-        // ONLY eager-load the slides initially centered/visible in viewport.
-        // Offscreen slides must use lazy loading to keep Safari's 6-connection pool open.
-        const isInitialVisible =
-          (s === CENTER_SET && idx <= 1) ||
-          (s === CENTER_SET - 1 && idx === origCount - 1);
+        // Eager-load the first image (active center slide), offscreen slides lazy load
+        const isInitialVisible = (s === CENTER_SET && idx === 0);
         const img = clone.querySelector(".home-media-img") || clone.querySelector("img");
         if (img) {
           img.setAttribute("loading", isInitialVisible ? "eager" : "lazy");

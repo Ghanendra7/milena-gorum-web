@@ -48,6 +48,7 @@ body {
 
 :root {
     --card-height: 50vh;
+    --media-bg-color: #f7f7f7;
 }
 
 svg {
@@ -151,6 +152,7 @@ a {
 }
 
 .home-media-wrap {
+    background-color: var(--media-bg-color);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     -webkit-transform: translate3d(0, 0, 0);
@@ -352,7 +354,7 @@ a {
     height: var(--card-height, 50vh);
     width: auto;
     overflow: hidden;
-    background-color: #f7f7f7;
+    background-color: var(--media-bg-color);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     -webkit-transform: translate3d(0, 0, 0);
@@ -542,6 +544,7 @@ a {
         max-width: 100%;
         max-height: 52dvh;
         overflow: hidden;
+        background-color: var(--media-bg-color);
         transform: translateZ(0);
     }
 
@@ -639,7 +642,7 @@ a {
         height: 100px;
         width: auto;
         overflow: hidden;
-        background-color: #f7f7f7;
+        background-color: var(--media-bg-color);
     }
 
     .mobile-thumb-img-wrap img {
@@ -694,6 +697,14 @@ a {
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+}
+
+/* Project Details Media Wrappers */
+.image-wrapper,
+.video-wrapper,
+.image-container,
+.thumb-swiper .swiper-slide {
+    background-color: var(--media-bg-color);
 }
 
 /* Guarantee Fill Screen = ON media covers 100% so Focus Coordinates work */
