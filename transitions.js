@@ -347,7 +347,7 @@ function initOsmoBoilerplate() {
             if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
             if (visibleCards.length) {
-                gsap.set(visibleCards, { opacity: 0, yPercent: 28, force3D: true });
+                gsap.set(visibleCards, { opacity: 0, yPercent: 60, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
