@@ -138,6 +138,10 @@ a {
 
 /* 60fps / 120fps GPU Compositing */
 .home-track {
+    position: relative;
+    display: flex;
+    gap: 5px;
+    column-gap: 5px;
     will-change: transform;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
@@ -145,6 +149,7 @@ a {
 }
 
 .home-slide {
+    flex: 0 0 auto !important;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     -webkit-transform: translate3d(0, 0, 0);
@@ -152,6 +157,7 @@ a {
 }
 
 .home-media-wrap {
+    aspect-ratio: 16 / 9;
     background-color: var(--media-bg-color);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
@@ -165,11 +171,16 @@ a {
 .home-slide.is-fill .home-media-wrap,
 .home-slide .home-media-wrap.is-fill {
     width: 102vw !important;
+    min-width: 102vw !important;
+    max-width: 102vw !important;
+    flex: 0 0 102vw !important;
+    aspect-ratio: auto !important;
 }
 
 .home-slide.is-fill .home-media-img,
 .home-slide .home-media-img.is-fill {
     width: 102vw !important;
+    min-width: 102vw !important;
     max-width: none !important;
     object-fit: cover !important;
 }

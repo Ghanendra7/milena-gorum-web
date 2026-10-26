@@ -93,7 +93,7 @@
     }
 
     function lockNaturalAspect(img, mediaWrap) {
-      if (!img || !mediaWrap || mediaWrap.classList.contains("is-fill")) return;
+      if (!img || !mediaWrap || mediaWrap.classList.contains("is-fill") || (mediaWrap.closest && mediaWrap.closest(".is-fill"))) return;
       if (img.naturalWidth && img.naturalHeight) {
         mediaWrap.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
       }
@@ -101,8 +101,16 @@
 
     function revealCurtain() {
       if (!curtain || curtainRevealed) return;
+      measureGeometry();
       curtainRevealed = true;
       curtain.classList.add("is-revealed");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!userInteracted) {
+            measureGeometry();
+          }
+        });
+      });
     }
 
     if (curtain) {
@@ -116,6 +124,14 @@
       const fillFlag = slide.querySelector(".fill-screen-flag");
       const isFill = Boolean(fillFlag && !fillFlag.classList.contains("w-condition-invisible"));
       slide.classList.toggle("is-fill", isFill);
+
+      const rawMediaWrap = slide.querySelector(".home-media-wrap");
+      if (rawMediaWrap) {
+        rawMediaWrap.classList.toggle("is-fill", isFill);
+        if (isFill) {
+          rawMediaWrap.style.aspectRatio = "";
+        }
+      }
 
       const fxRaw = slide.getAttribute("data-focus-x");
       const fyRaw = slide.getAttribute("data-focus-y");
@@ -201,9 +217,30 @@
 
     allSlides.forEach((slide) => {
       const mediaWrap = slide.querySelector(".home-media-wrap");
+      const isFill = slide.classList.contains("is-fill");
+      if (mediaWrap) {
+        mediaWrap.classList.toggle("is-fill", isFill);
+        if (isFill) {
+          mediaWrap.style.aspectRatio = "";
+        }
+      }
+
       const img = slide.querySelector("img");
-      if (img && mediaWrap && img.naturalWidth) {
-        lockNaturalAspect(img, mediaWrap);
+      if (img && mediaWrap && !isFill) {
+        const applyAspect = () => {
+          if (img.naturalWidth && img.naturalHeight) {
+            mediaWrap.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
+            if (!userInteracted) {
+              measureGeometry();
+            }
+          }
+        };
+
+        if (img.complete && img.naturalWidth) {
+          applyAspect();
+        } else {
+          img.addEventListener("load", applyAspect, { once: true });
+        }
       }
 
       const video = slide.querySelector(".home-slide-video") || slide.querySelector("video");
@@ -271,7 +308,8 @@
           rawTargetX = targetX;
         }
       } else {
-        const gap = 5;
+        const computedGap = parseFloat(window.getComputedStyle(track).columnGap || window.getComputedStyle(track).gap);
+        const gap = !isNaN(computedGap) ? computedGap : 5;
         let runningLeft = 0;
 
         const prevMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
@@ -279,10 +317,10 @@
         const prevTargOffset = prevMetric ? viewportW * 0.5 - targetX - prevMetric.center : 0;
 
         slideMetrics = allSlides.map((el) => {
-          const rect = el.getBoundingClientRect();
-          let w = rect.width;
-          if (w < 40) {
-            w = el.classList.contains("is-fill") ? viewportW * 1.02 : Math.round(viewportW * 0.55);
+          const isFillSlide = el.classList.contains("is-fill");
+          let w = isFillSlide ? Math.round(viewportW * 1.02) : el.getBoundingClientRect().width;
+          if (!isFillSlide && w < 40) {
+            w = Math.round(viewportW * 0.55);
           }
           const video = el.querySelector(".home-slide-video") || el.querySelector("video");
           const videoSrc = video ? video.getAttribute("data-resolved-src") || "" : "";
@@ -314,14 +352,12 @@
 
           if (targetMetric) {
             activeCenterSlide = targetMetric.el;
-            if (!curtainRevealed) {
-              currentX = viewportW * 0.5 - targetMetric.center;
-              targetX = currentX;
-              rawTargetX = currentX;
-              track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
-              updateActiveProject(true);
-              manageVideoPlayback();
-            }
+            currentX = viewportW * 0.5 - targetMetric.center;
+            targetX = currentX;
+            rawTargetX = currentX;
+            track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
+            updateActiveProject(true);
+            manageVideoPlayback();
           }
         } else {
           const newMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
@@ -337,10 +373,11 @@
 
     if ("ResizeObserver" in window) {
       homeResizeObserver = new ResizeObserver(measureGeometry);
-      allSlides.slice(centerStartIndex, centerStartIndex + origCount).forEach((slide) => homeResizeObserver.observe(slide));
+      allSlides.slice(0, centerStartIndex + origCount).forEach((slide) => homeResizeObserver.observe(slide));
     }
 
     measureGeometry();
+    requestAnimationFrame(measureGeometry);
     window.addEventListener("resize", measureGeometry, { passive: true, signal });
 
     const initialSlideIndices = [centerStartIndex];
