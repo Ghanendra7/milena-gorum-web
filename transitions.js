@@ -430,6 +430,200 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
+    // PROJECTS -> HOME TRANSITION (REVERSE)
+    // -----------------------------------------
+    function runProjectsToHomeLeave(current, next) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                unmountPage(current);
+                cleanupMediaInContainer(current);
+                current.remove();
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            // Projects stays on top (zIndex: 2) as it slides down out of view
+            gsap.set(current, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100dvh",
+                backgroundColor: "#ffffff",
+                zIndex: 2,
+                force3D: true,
+            });
+
+            const section = current.classList?.contains("projects-section") ? current : current.querySelector(".projects-section");
+            if (section) {
+                section.classList.add("is-marquee-paused");
+            }
+
+            const navbar = current.querySelector(".navbar");
+            const navTop = navbar ? navbar.querySelector(".nav-top") : current.querySelector(".nav-top");
+            const filterList = current.querySelector(".primary-filter-list");
+            const subFilterList = current.querySelector(".sub-filter-list");
+            const zoomControls = current.querySelector(".zoom-controls");
+
+            const desktopStage = current.querySelector(".desktop-gallery-stage");
+            const mobileStage = current.querySelector(".mobile-gallery-stage");
+            const galleryStage = desktopStage || mobileStage;
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            // 1. Projects container slides downward off-screen
+            tl.to(current, {
+                yPercent: 100,
+                duration: slideDuration,
+                ease: "power2.inOut",
+                force3D: true,
+            }, 0);
+
+            // 2. Subtle internal parallax: gallery stage drifts downward slightly for momentum
+            if (galleryStage) {
+                tl.to(galleryStage, {
+                    yPercent: 15,
+                    duration: slideDuration,
+                    ease: "power2.inOut",
+                    force3D: true,
+                }, 0);
+            }
+
+            // 3. Gracefully fade out nav & filter controls as page descends
+            const navElements = [navTop, filterList, subFilterList, zoomControls].filter(Boolean);
+            if (navElements.length) {
+                tl.to(navElements, {
+                    opacity: 0,
+                    y: 12,
+                    duration: 0.45,
+                    ease: "power2.out",
+                }, 0.05);
+            }
+
+            // Guaranteed resolution fallback for Safari
+            setTimeout(done, (slideDuration + 0.3) * 1000);
+        });
+    }
+
+    function runProjectsToHomeEnter(next) {
+        return new Promise((resolve) => {
+            // Neutralize any editorial curtain overlay on the incoming home page so it appears immediately
+            const curtain = next.querySelector(".home-curtain");
+            if (curtain) {
+                curtain.classList.add("is-revealed");
+                curtain.style.display = "none";
+            }
+
+            // Position Home underneath (zIndex: 1)
+            gsap.set(next, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                width: "100vw",
+                height: "100dvh",
+                zIndex: 1,
+                autoAlpha: 1,
+                force3D: true,
+            });
+
+            // Mount home engine so infinite track is laid out & center slide is calibrated
+            mountPage(next);
+
+            const galleryStage = next.querySelector(".home-gallery-stage");
+            const navHome = next.querySelector(".navbar-home");
+            const projectInfo = next.querySelector(".home-project-info");
+
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                if (galleryStage) {
+                    gsap.set(galleryStage, { clearProps: "transform,y,yPercent" });
+                }
+                if (navHome) {
+                    gsap.set(navHome, { clearProps: "transform,y,opacity" });
+                }
+                if (projectInfo) {
+                    gsap.set(projectInfo, { clearProps: "transform,y,opacity" });
+                }
+                resetPage(next);
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(next, { autoAlpha: 1, yPercent: 0 });
+                done();
+                return;
+            }
+
+            // Homepage slides back down into view from above (-40% -> 0%)
+            if (galleryStage) {
+                gsap.set(galleryStage, { yPercent: -40, force3D: true });
+            } else {
+                gsap.set(next, { yPercent: -40, force3D: true });
+            }
+
+            if (navHome) {
+                gsap.set(navHome, { y: -20, opacity: 0 });
+            }
+            if (projectInfo) {
+                gsap.set(projectInfo, { y: -20, opacity: 0 });
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            if (galleryStage) {
+                tl.to(galleryStage, {
+                    yPercent: 0,
+                    duration: slideDuration,
+                    ease: "power2.inOut",
+                    force3D: true,
+                }, 0);
+            } else {
+                tl.to(next, {
+                    yPercent: 0,
+                    duration: slideDuration,
+                    ease: "power2.inOut",
+                    force3D: true,
+                }, 0);
+            }
+
+            const navLead = 0.45;
+            const navStartTime = Math.max(0, slideDuration - navLead);
+
+            if (navHome) {
+                tl.to(navHome, {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.6,
+                    ease: "power2.out",
+                }, navStartTime);
+            }
+
+            if (projectInfo) {
+                tl.to(projectInfo, {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.6,
+                    ease: "power2.out",
+                }, navStartTime + 0.08);
+            }
+
+            // Guaranteed resolution fallback for Safari
+            setTimeout(done, (slideDuration + 0.6) * 1000);
+        });
+    }
+
+    // -----------------------------------------
     // BARBA HOOKS & INIT
     // -----------------------------------------
     barba.hooks.beforeEnter(async (data) => {
@@ -481,6 +675,18 @@ function initOsmoBoilerplate() {
                 },
                 async enter(data) {
                     return runHomeToProjectsEnter(data.next.container);
+                },
+            },
+            {
+                name: "projects-to-home",
+                sync: true,
+                from: { namespace: ["projects"] },
+                to: { namespace: ["home"] },
+                async leave(data) {
+                    return runProjectsToHomeLeave(data.current.container, data.next.container);
+                },
+                async enter(data) {
+                    return runProjectsToHomeEnter(data.next.container);
                 },
             },
             {
