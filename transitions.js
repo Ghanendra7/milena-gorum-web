@@ -230,12 +230,34 @@ function initOsmoBoilerplate() {
         const isDesktop = window.innerWidth > 1024;
         const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
+        // 1. Immediately position next offscreen so no initial state flashes
+        gsap.set(next, {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            width: "100vw",
+            height: "100dvh",
+            backgroundColor: "#ffffff",
+            zIndex: 2,
+            autoAlpha: 1,
+            yPercent: 100,
+            force3D: true,
+        });
+
+        // 2. Suppress stage CSS transition and pause marquee during entrance
         if (isDesktop && section) {
             section.classList.add("is-marquee-paused");
             section.classList.add("is-ready");
+            const stage = section.querySelector(".desktop-gallery-stage");
+            if (stage) {
+                stage.style.opacity = "1";
+                stage.style.visibility = "visible";
+                stage.style.transition = "none";
+            }
         }
 
-        // Mount projects engine early so 3-set track and offset are established without visual jumps
+        // 3. Mount projects engine
         mountPage(next);
 
         const navbar = next.querySelector(".navbar");
@@ -252,21 +274,16 @@ function initOsmoBoilerplate() {
         const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
         const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
 
-        // Detect visible cards on desktop for staggered floating entrance
+        // 4. Detect visible Set 1 cards for staggered floating entrance
         let visibleCards = [];
         if (isDesktop && section) {
             const taggedCards = Array.from(section.querySelectorAll('.desktop-gallery-stage .project-card[data-initial-visible="true"]'));
             if (taggedCards.length) {
-                const viewportWidth = window.innerWidth;
-                const onScreen = taggedCards.filter((card) => {
-                    const cardLeft = card.offsetLeft - (taggedCards[0]?.offsetLeft || 0);
-                    return cardLeft < viewportWidth + 150;
-                });
-                visibleCards = onScreen.length ? onScreen : taggedCards.slice(0, 5);
+                visibleCards = taggedCards.slice(0, 4);
             } else {
                 const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
                 const setSize = Math.floor(allCards.length / 3);
-                visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 5) : allCards.slice(0, 5);
+                visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 4) : allCards.slice(0, 4);
             }
         }
 
@@ -280,20 +297,6 @@ function initOsmoBoilerplate() {
             return new Promise((resolve) => tl.call(resolve, null, "pageReady"));
         }
 
-        gsap.set(next, {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            width: "100vw",
-            height: "100dvh",
-            backgroundColor: "#ffffff",
-            zIndex: 2,
-            autoAlpha: 1,
-            yPercent: 100,
-            force3D: true,
-        });
-
         if (allNavTargets.length) {
             gsap.set(allNavTargets, { opacity: 0, transition: "none" });
         }
@@ -301,7 +304,7 @@ function initOsmoBoilerplate() {
         if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
         if (visibleCards.length) {
-            gsap.set(visibleCards, { opacity: 0, y: 40, force3D: true });
+            gsap.set(visibleCards, { opacity: 0, y: 45, force3D: true });
         }
 
         tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);

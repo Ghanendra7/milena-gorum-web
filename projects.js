@@ -266,6 +266,7 @@
         let cachedCardMetrics = [];
         let hoveredCardIndex = -1;
         let lastFrameTime = performance.now();
+        let renderedTrackPos = null;
 
         const getInitialScrollPos = () => {
             if (isDesktopInfinite) {
@@ -316,10 +317,17 @@
                     targetPos = initPos;
                     rawTargetPos = initPos;
                 } else if (prevSetWidth > 0 && singleSetWidth > 0 && Math.abs(singleSetWidth - prevSetWidth) > 0.5) {
-                    const ratio = singleSetWidth / prevSetWidth;
-                    scrollPos *= ratio;
-                    targetPos *= ratio;
-                    rawTargetPos *= ratio;
+                    if (userHasInteractedDesktop) {
+                        const ratio = singleSetWidth / prevSetWidth;
+                        scrollPos *= ratio;
+                        targetPos *= ratio;
+                        rawTargetPos *= ratio;
+                    } else {
+                        const initPos = getInitialScrollPos();
+                        scrollPos = initPos;
+                        targetPos = initPos;
+                        rawTargetPos = initPos;
+                    }
                 } else if (prevSetWidth === 0 && singleSetWidth > 0) {
                     const initPos = getInitialScrollPos();
                     scrollPos = initPos;
@@ -705,7 +713,10 @@
                     scrollPos += (targetPos - scrollPos) * stage2Alpha;
                 }
 
-                track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                if (renderedTrackPos === null || Math.abs(renderedTrackPos - scrollPos) > 0.02) {
+                    track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                    renderedTrackPos = scrollPos;
+                }
             }
         };
 
