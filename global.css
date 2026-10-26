@@ -339,9 +339,12 @@ a {
     pointer-events: none;
 }
 
-/* Indent first project header when filtered to <= 3 projects */
-.projects-track.is-no-loop .project-card:first-child .project-header {
-    padding-left: 16px;
+/* Indent first project header on desktop across infinite sets and filtered states */
+@media (min-width: 1025px) {
+    .project-card[data-is-first-item="true"] .project-header,
+    .projects-track.is-no-loop .project-card:first-child .project-header {
+        padding-left: 16px;
+    }
 }
 
 .project-media-wrap {

@@ -487,6 +487,9 @@
                 filteredTemplates.forEach((tpl, tplIdx) => {
                     const clone = tpl.cloneNode(true);
                     if (s > 0) clone.setAttribute("aria-hidden", "true");
+                    if (tplIdx === 0) {
+                        clone.setAttribute("data-is-first-item", "true");
+                    }
                     const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 4;
                     if (s === 1 || (!isDesktopInfinite && s === 0)) {
                         clone.setAttribute("data-initial-visible", "true");
