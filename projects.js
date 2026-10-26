@@ -316,17 +316,10 @@
                     targetPos = initPos;
                     rawTargetPos = initPos;
                 } else if (prevSetWidth > 0 && singleSetWidth > 0 && Math.abs(singleSetWidth - prevSetWidth) > 0.5) {
-                    if (userHasInteractedDesktop) {
-                        const ratio = singleSetWidth / prevSetWidth;
-                        scrollPos *= ratio;
-                        targetPos *= ratio;
-                        rawTargetPos *= ratio;
-                    } else {
-                        const initPos = getInitialScrollPos();
-                        scrollPos = initPos;
-                        targetPos = initPos;
-                        rawTargetPos = initPos;
-                    }
+                    const ratio = singleSetWidth / prevSetWidth;
+                    scrollPos *= ratio;
+                    targetPos *= ratio;
+                    rawTargetPos *= ratio;
                 } else if (prevSetWidth === 0 && singleSetWidth > 0) {
                     const initPos = getInitialScrollPos();
                     scrollPos = initPos;
