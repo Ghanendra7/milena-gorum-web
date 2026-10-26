@@ -1351,7 +1351,7 @@
                 });
             });
 
-            const safetyTimer = setTimeout(reveal, 600);
+            const safetyTimer = setTimeout(reveal, 400);
             Promise.allSettled(decodeTasks).then(() => {
                 clearTimeout(safetyTimer);
                 reveal();

@@ -13,8 +13,8 @@
     const BUNNY_CDN_HOST = "vz-cc78103f-0dc.b-cdn.net";
     const MAX_VIDEO_SECONDS = 30;
 
-    const MINIMUM_LOADER_TIME = 1500;
-    const MAX_SAFETY_TIME = 3500;
+    const MINIMUM_LOADER_TIME = 200;
+    const MAX_SAFETY_TIME = 800;
     const MAX_ACTIVE_DECODERS = 2;
 
     const WHEEL_MULTIPLIER = 1.15;
@@ -335,8 +335,11 @@
 
     const decodePromises = allSlides.slice(centerStartIndex, centerStartIndex + origCount).map((slide) => {
       const img = slide.querySelector("img");
-      if (img && typeof img.decode === "function") {
-        return img.decode().catch(() => { });
+      if (img) {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        if (typeof img.decode === "function") {
+          return img.decode().catch(() => { });
+        }
       }
       return Promise.resolve();
     });

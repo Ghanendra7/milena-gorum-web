@@ -132,47 +132,57 @@ function initOsmoBoilerplate() {
     // TRANSITIONS
     // -----------------------------------------
     function runPageOnceAnimation(next) {
-        const tl = gsap.timeline();
-        tl.call(() => {
+        return new Promise((resolve) => {
             resetPage(next);
-        }, null, 0);
-        return tl;
+            resolve();
+        });
     }
 
     function runPageLeaveAnimation(current, next) {
-        const tl = gsap.timeline({
-            onComplete: () => {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
                 unmountPage(current);
                 cleanupMediaInContainer(current);
                 current.remove();
-            },
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+            tl.to(current, { autoAlpha: 0, duration: 0.4, ease: "power2.out" });
+
+            setTimeout(done, 700);
         });
-
-        if (reducedMotion) {
-            return tl.set(current, { autoAlpha: 0 });
-        }
-
-        tl.to(current, { autoAlpha: 0, duration: 0.4 });
-        return tl;
     }
 
     function runPageEnterAnimation(next) {
-        const tl = gsap.timeline();
-
-        if (reducedMotion) {
-            tl.set(next, { autoAlpha: 1 });
-            tl.add("pageReady");
-            tl.call(resetPage, [next], "pageReady");
-            return new Promise((resolve) => tl.call(resolve, null, "pageReady"));
-        }
-
-        tl.add("startEnter", 0.6);
-        tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1 }, "startEnter");
-        tl.add("pageReady");
-        tl.call(resetPage, [next], "pageReady");
-
         return new Promise((resolve) => {
-            tl.call(resolve, null, "pageReady");
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                resetPage(next);
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(next, { autoAlpha: 1 });
+                done();
+                return;
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 0.15);
+
+            setTimeout(done, 1000);
         });
     }
 
@@ -180,201 +190,197 @@ function initOsmoBoilerplate() {
     // HOME -> PROJECTS TRANSITION
     // -----------------------------------------
     function runHomeToProjectsLeave(current, next) {
-        const navHome = current.querySelector(".navbar-home");
-        const projectInfo = current.querySelector(".home-project-info");
-        const galleryStage = current.querySelector(".home-gallery-stage");
-
-        const tl = gsap.timeline({
-            onComplete: () => {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
                 unmountPage(current);
                 cleanupMediaInContainer(current);
                 current.remove();
-            },
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            gsap.set(current, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100dvh",
+                zIndex: 1,
+            });
+
+            const navHome = current.querySelector(".navbar-home");
+            const projectInfo = current.querySelector(".home-project-info");
+            const galleryStage = current.querySelector(".home-gallery-stage");
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            if (navHome) {
+                const navRect = navHome.getBoundingClientRect();
+                const targetY = 16 - navRect.top;
+                tl.to(navHome, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+            }
+
+            if (projectInfo) {
+                const infoRect = projectInfo.getBoundingClientRect();
+                const targetY = 16 - infoRect.top;
+                tl.to(projectInfo, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+            }
+
+            if (galleryStage) {
+                tl.to(galleryStage, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+            } else {
+                tl.to(current, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+            }
+
+            setTimeout(done, (slideDuration + 0.3) * 1000);
         });
-
-        if (reducedMotion) {
-            return tl.set(current, { autoAlpha: 0 });
-        }
-
-        gsap.set(current, {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100dvh",
-            zIndex: 1,
-        });
-
-        if (navHome) {
-            const navRect = navHome.getBoundingClientRect();
-            const targetY = 16 - navRect.top;
-            tl.to(navHome, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
-        }
-
-        if (projectInfo) {
-            const infoRect = projectInfo.getBoundingClientRect();
-            const targetY = 16 - infoRect.top;
-            tl.to(projectInfo, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
-        }
-
-        if (galleryStage) {
-            tl.to(galleryStage, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
-        } else {
-            tl.to(current, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
-        }
-
-        return tl;
     }
 
     function runHomeToProjectsEnter(next) {
-        const isDesktop = window.innerWidth > 1024;
-        const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
+        return new Promise((resolve) => {
+            const isDesktop = window.innerWidth > 1024;
+            const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
-        // 1. Immediately position next offscreen so no initial state flashes
-        gsap.set(next, {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            width: "100vw",
-            height: "100dvh",
-            backgroundColor: "#ffffff",
-            zIndex: 2,
-            autoAlpha: 1,
-            yPercent: 100,
-            force3D: true,
-        });
+            const navbar = next.querySelector(".navbar");
+            const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
 
-        // 2. Suppress stage CSS transition and pause marquee during entrance
-        if (isDesktop && section) {
-            section.classList.add("is-marquee-paused");
-            section.classList.add("is-ready");
-            const stage = section.querySelector(".desktop-gallery-stage");
-            if (stage) {
-                stage.style.opacity = "1";
-                stage.style.visibility = "visible";
-                stage.style.transition = "none";
+            const primaryFilters = Array.from(next.querySelectorAll(".primary-filter-list .filter-btn"));
+            const subFilterList = next.querySelector(".sub-filter-list");
+            const subFilters =
+                subFilterList && subFilterList.classList.contains("is-visible")
+                    ? Array.from(subFilterList.querySelectorAll(".sub-btn"))
+                    : [];
+            const filterItems = [...primaryFilters, ...subFilters];
+
+            const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
+            const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
+
+            let visibleCards = [];
+            if (isDesktop && section) {
+                const rawCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card, .desktop-gallery-stage .w-dyn-item"));
+                visibleCards = rawCards.slice(0, 4);
             }
-        }
 
-        // 3. Mount projects engine
-        mountPage(next);
-
-        const navbar = next.querySelector(".navbar");
-        const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
-
-        const primaryFilters = Array.from(next.querySelectorAll(".primary-filter-list .filter-btn"));
-        const subFilterList = next.querySelector(".sub-filter-list");
-        const subFilters =
-            subFilterList && subFilterList.classList.contains("is-visible")
-                ? Array.from(subFilterList.querySelectorAll(".sub-btn"))
-                : [];
-        const filterItems = [...primaryFilters, ...subFilters];
-
-        const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
-        const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
-
-        // 4. Detect visible Set 1 cards for staggered floating entrance
-        let visibleCards = [];
-        if (isDesktop && section) {
-            const taggedCards = Array.from(section.querySelectorAll('.desktop-gallery-stage .project-card[data-initial-visible="true"]'));
-            if (taggedCards.length) {
-                visibleCards = taggedCards.slice(0, 4);
-            } else {
-                const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
-                const setSize = Math.floor(allCards.length / 3);
-                visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 4) : allCards.slice(0, 4);
-            }
-        }
-
-        const tl = gsap.timeline();
-
-        if (reducedMotion) {
-            if (section) section.classList.remove("is-marquee-paused");
-            tl.set(next, { autoAlpha: 1, yPercent: 0 });
-            tl.add("pageReady");
-            tl.call(resetPage, [next], "pageReady");
-            return new Promise((resolve) => tl.call(resolve, null, "pageReady"));
-        }
-
-        if (allNavTargets.length) {
-            gsap.set(allNavTargets, { opacity: 0, transition: "none" });
-        }
-        if (filterItems.length) gsap.set(filterItems, { y: 14 });
-        if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
-
-        if (visibleCards.length) {
-            gsap.set(visibleCards, { opacity: 0, y: 45, force3D: true });
-        }
-
-        tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
-
-        // Stagger entrance starts early as the page rises into view
-        const cardsStart = 0.35;
-        if (visibleCards.length) {
-            tl.to(visibleCards, {
-                opacity: 1,
-                y: 0,
-                duration: 0.70,
-                stagger: 0.08,
-                ease: "power2.out",
-                force3D: true,
-                onComplete: () => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                if (allNavTargets.length) {
+                    gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
+                }
+                if (visibleCards.length) {
                     gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
-                },
-            }, cardsStart);
-        }
+                }
+                resetPage(next);
+                resolve();
+            };
 
-        // Release marquee movement right as cards arrive into place (no awkward static pause)
-        const marqueeReleaseTime = 1.05;
-        tl.add("releaseMarquee", marqueeReleaseTime);
-        tl.call(() => {
+            // 1. Immediately position next offscreen so no initial state flashes
+            gsap.set(next, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                width: "100vw",
+                height: "100dvh",
+                backgroundColor: "#ffffff",
+                zIndex: 2,
+                autoAlpha: 1,
+                yPercent: 100,
+                force3D: true,
+            });
+
+            // 2. Make stage visible so cards are visible during entrance
             if (section) {
-                section.classList.remove("is-marquee-paused");
+                section.classList.add("is-ready");
+                const stage = section.querySelector(".desktop-gallery-stage");
+                if (stage) {
+                    stage.style.opacity = "1";
+                    stage.style.visibility = "visible";
+                    stage.style.transition = "none";
+                }
             }
-        }, null, "releaseMarquee");
 
-        const hitTopLead = 0.35;
-        tl.add("hitTop", Math.max(0, slideDuration - hitTopLead));
+            // Lock natural aspect ratios so Safari doesn't collapse wrappers
+            const imgs = next.querySelectorAll(".desktop-gallery-stage img, .projects-track img");
+            imgs.forEach((img) => {
+                const wrap = img.closest(".project-media-wrap");
+                if (wrap && img.naturalWidth && img.naturalHeight) {
+                    wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                }
+            });
 
-        if (navTop) {
-            tl.to(navTop, { opacity: 1, duration: 0.4, ease: "power2.out" }, "hitTop");
-        }
+            if (reducedMotion) {
+                gsap.set(next, { autoAlpha: 1, yPercent: 0 });
+                done();
+                return;
+            }
 
-        if (filterItems.length) {
-            tl.to(filterItems, { opacity: 1, y: 0, duration: 0.85, stagger: staggerDefault, ease: "power2.out", force3D: true }, "hitTop");
-        }
+            if (allNavTargets.length) {
+                gsap.set(allNavTargets, { opacity: 0, transition: "none" });
+            }
+            if (filterItems.length) gsap.set(filterItems, { y: 14 });
+            if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
-        if (zoomBtns.length) {
-            const validZoomBtns = zoomBtns.filter((btn) => window.getComputedStyle(btn).display !== "none");
-            if (validZoomBtns.length) {
-                tl.to(validZoomBtns, {
-                    opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
+            if (visibleCards.length) {
+                gsap.set(visibleCards, { opacity: 0, y: 50, force3D: true });
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+
+            // Stagger entrance starts early as the page rises into view
+            const cardsStart = 0.35;
+            if (visibleCards.length) {
+                tl.to(visibleCards, {
+                    opacity: 1,
                     y: 0,
-                    duration: 0.85,
-                    stagger: staggerDefault,
+                    duration: 0.70,
+                    stagger: 0.08,
                     ease: "power2.out",
                     force3D: true,
-                }, "hitTop+=0.20");
+                    onComplete: () => {
+                        gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+                    },
+                }, cardsStart);
             }
-        }
 
-        tl.add("pageReady");
-        tl.call(() => {
-            if (section) {
-                section.classList.remove("is-marquee-paused");
-            }
-            if (visibleCards.length) {
-                gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
-            }
-            if (allNavTargets.length) {
-                gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
-            }
-            resetPage(next);
-        }, null, "pageReady");
+            const hitTopLead = 0.35;
+            const hitTopTime = Math.max(0, slideDuration - hitTopLead);
 
-        return new Promise((resolve) => {
-            tl.call(resolve, null, "pageReady");
+            if (navTop) {
+                tl.to(navTop, { opacity: 1, duration: 0.4, ease: "power2.out" }, hitTopTime);
+            }
+
+            if (filterItems.length) {
+                tl.to(filterItems, { opacity: 1, y: 0, duration: 0.85, stagger: staggerDefault, ease: "power2.out", force3D: true }, hitTopTime);
+            }
+
+            if (zoomBtns.length) {
+                const validZoomBtns = zoomBtns.filter((btn) => window.getComputedStyle(btn).display !== "none");
+                if (validZoomBtns.length) {
+                    tl.to(validZoomBtns, {
+                        opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
+                        y: 0,
+                        duration: 0.85,
+                        stagger: staggerDefault,
+                        ease: "power2.out",
+                        force3D: true,
+                    }, hitTopTime + 0.20);
+                }
+            }
+
+            // Guaranteed resolution fallback for Safari
+            setTimeout(done, (slideDuration + 0.3) * 1000);
         });
     }
 
