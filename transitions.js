@@ -255,13 +255,18 @@ function initOsmoBoilerplate() {
         // Detect visible cards on desktop for staggered floating entrance
         let visibleCards = [];
         if (isDesktop && section) {
-            const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
-            visibleCards = allCards.filter((card) => {
-                const rect = card.getBoundingClientRect();
-                return rect.right > 0 && rect.left < window.innerWidth + 200;
-            });
-            if (!visibleCards.length && allCards.length) {
-                visibleCards = allCards.slice(0, 5);
+            const taggedCards = Array.from(section.querySelectorAll('.desktop-gallery-stage .project-card[data-initial-visible="true"]'));
+            if (taggedCards.length) {
+                const viewportWidth = window.innerWidth;
+                const onScreen = taggedCards.filter((card) => {
+                    const cardLeft = card.offsetLeft - (taggedCards[0]?.offsetLeft || 0);
+                    return cardLeft < viewportWidth + 150;
+                });
+                visibleCards = onScreen.length ? onScreen : taggedCards.slice(0, 5);
+            } else {
+                const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
+                const setSize = Math.floor(allCards.length / 3);
+                visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 5) : allCards.slice(0, 5);
             }
         }
 
@@ -296,10 +301,35 @@ function initOsmoBoilerplate() {
         if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
         if (visibleCards.length) {
-            gsap.set(visibleCards, { opacity: 0, y: 55, force3D: true });
+            gsap.set(visibleCards, { opacity: 0, y: 40, force3D: true });
         }
 
         tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+
+        // Stagger entrance starts early as the page rises into view
+        const cardsStart = 0.35;
+        if (visibleCards.length) {
+            tl.to(visibleCards, {
+                opacity: 1,
+                y: 0,
+                duration: 0.70,
+                stagger: 0.08,
+                ease: "power2.out",
+                force3D: true,
+                onComplete: () => {
+                    gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+                },
+            }, cardsStart);
+        }
+
+        // Release marquee movement right as cards arrive into place (no awkward static pause)
+        const marqueeReleaseTime = 1.05;
+        tl.add("releaseMarquee", marqueeReleaseTime);
+        tl.call(() => {
+            if (section) {
+                section.classList.remove("is-marquee-paused");
+            }
+        }, null, "releaseMarquee");
 
         const hitTopLead = 0.35;
         tl.add("hitTop", Math.max(0, slideDuration - hitTopLead));
@@ -322,22 +352,11 @@ function initOsmoBoilerplate() {
                     stagger: staggerDefault,
                     ease: "power2.out",
                     force3D: true,
-                }, "hitTop+=0.30");
+                }, "hitTop+=0.20");
             }
         }
 
-        if (visibleCards.length) {
-            tl.to(visibleCards, {
-                opacity: 1,
-                y: 0,
-                duration: 0.95,
-                stagger: 0.12,
-                ease: "power2.out",
-                force3D: true,
-            }, "hitTop");
-        }
-
-        tl.add("cardsFloatingComplete");
+        tl.add("pageReady");
         tl.call(() => {
             if (section) {
                 section.classList.remove("is-marquee-paused");
@@ -345,10 +364,6 @@ function initOsmoBoilerplate() {
             if (visibleCards.length) {
                 gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
             }
-        });
-
-        tl.add("pageReady");
-        tl.call(() => {
             if (allNavTargets.length) {
                 gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
             }

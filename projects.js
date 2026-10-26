@@ -64,7 +64,7 @@
         const MIN_DETAIL_THRESHOLD = 18;
         const BASE_MARQUEE_SPEED = 0.55;
         const MARQUEE_DECEL_RATE = 0.16;
-        const MARQUEE_ACCEL_RATE = 0.05;
+        const MARQUEE_ACCEL_RATE = 0.16;
         const DRAG_LERP_FACTOR = 0.11;
         const WHEEL_SMOOTH_STAGE1 = 0.16;
         const WHEEL_SMOOTH_STAGE2 = 0.09;
@@ -487,6 +487,9 @@
                 filteredTemplates.forEach((tpl) => {
                     const clone = tpl.cloneNode(true);
                     if (s > 0) clone.setAttribute("aria-hidden", "true");
+                    if (s === 1 || (!isDesktopInfinite && s === 0)) {
+                        clone.setAttribute("data-initial-visible", "true");
+                    }
                     bindDesktopCard(clone, globalIdx);
                     fragment.appendChild(clone);
                     trackCards.push(clone);
@@ -1300,11 +1303,28 @@
                 checkHeaderCollisions();
                 measureMobileThumbMetrics();
 
-                requestAnimationFrame(() => {
-                    isGalleryRevealed = true;
-                    section.classList.add("is-ready");
-                });
+                isGalleryRevealed = true;
+                section.classList.add("is-ready");
             };
+
+            // If section was already prepared by page transition, reveal immediately without Safari decode delay
+            if (section.classList.contains("is-ready")) {
+                reveal();
+                trackCards.forEach((card) => {
+                    const img = card.querySelector(".project-img");
+                    if (img && !img.complete) {
+                        img.addEventListener("load", () => {
+                            const wrap = card.querySelector(".project-media-wrap");
+                            if (wrap && img.naturalWidth && img.naturalHeight) {
+                                wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                            }
+                            measureDesktopMetrics();
+                            checkHeaderCollisions();
+                        }, { once: true });
+                    }
+                });
+                return;
+            }
 
             const uniqueSetCards = trackCards.slice(0, Math.max(1, activeFilteredCount));
             const decodeTasks = uniqueSetCards.map((card) => {
@@ -1320,7 +1340,7 @@
                 });
             });
 
-            const safetyTimer = setTimeout(reveal, 1800);
+            const safetyTimer = setTimeout(reveal, 600);
             Promise.allSettled(decodeTasks).then(() => {
                 clearTimeout(safetyTimer);
                 reveal();
