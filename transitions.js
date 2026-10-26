@@ -324,7 +324,7 @@ function initOsmoBoilerplate() {
                     gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
                 }
                 if (visibleCards.length) {
-                    gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+                    gsap.set(visibleCards, { clearProps: "opacity,transform,y,yPercent" });
                 }
                 resetPage(next);
                 resolve();
@@ -347,7 +347,7 @@ function initOsmoBoilerplate() {
             if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
 
             if (visibleCards.length) {
-                gsap.set(visibleCards, { opacity: 0, y: 55, force3D: true });
+                gsap.set(visibleCards, { opacity: 0, yPercent: 28, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
@@ -359,13 +359,13 @@ function initOsmoBoilerplate() {
             if (visibleCards.length) {
                 tl.to(visibleCards, {
                     opacity: 1,
-                    y: 0,
-                    duration: 0.75,
-                    stagger: 0.09,
+                    yPercent: 0,
+                    duration: 0.85,
+                    stagger: 0.10,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
-                        gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+                        gsap.set(visibleCards, { clearProps: "opacity,transform,y,yPercent" });
                     },
                 }, cardsStart);
             }
