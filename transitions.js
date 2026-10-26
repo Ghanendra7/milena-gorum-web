@@ -380,13 +380,13 @@ function initOsmoBoilerplate() {
                 tl.to(mobileStage, {
                     opacity: 1,
                     yPercent: 0,
-                    duration: 0.85,
+                    duration: 0.6,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
                         gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                     },
-                }, cardsStart + 0.08); // delays mobile float-in by ~150ms
+                }, cardsStart + 0.08); // delays mobile float-in
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
