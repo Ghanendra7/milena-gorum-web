@@ -74,7 +74,7 @@
         const HOLD_SPEED_RATE = 0.009;
         const ZOOM_EASING = (t) => 1 - (1 - t) * (1 - t);
 
-        const INITIAL_LEFT_OFFSET_VW = 0.08;
+        const INITIAL_LEFT_OFFSET_VW = 0;
         const getInitialStartOffset = () => Math.round(window.innerWidth * INITIAL_LEFT_OFFSET_VW);
 
         const ZOOM_LEVELS = [15, 26.67, 38.33, 50, 62.5, 75];
