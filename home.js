@@ -49,8 +49,8 @@
       return;
     }
 
-    const TOTAL_SETS = 5;
-    const CENTER_SET = 2;
+    const TOTAL_SETS = 3;
+    const CENTER_SET = 1;
     const origCount = rawSlides.length;
     const centerStartIndex = CENTER_SET * origCount;
     const allSlides = [];
@@ -148,7 +148,6 @@
       const img = slide.querySelector(".home-media-img") || slide.querySelector("img");
       if (img) {
         img.classList.add("home-media-img");
-        img.setAttribute("loading", "eager");
         img.setAttribute("decoding", "async");
         img.setAttribute("draggable", "false");
         img.style.objectPosition = objPos;
@@ -181,9 +180,19 @@
     track.innerHTML = "";
 
     for (let s = 0; s < TOTAL_SETS; s++) {
-      rawSlides.forEach((origSlide) => {
+      rawSlides.forEach((origSlide, idx) => {
         const clone = origSlide.cloneNode(true);
         if (s !== CENTER_SET) clone.setAttribute("aria-hidden", "true");
+
+        // ONLY eager-load the 3 slides initially centered/visible.
+        // Offscreen slides must use lazy loading to keep Safari's 6-connection pool open.
+        const isInitialVisible = s === CENTER_SET && idx < 3;
+        const img = clone.querySelector(".home-media-img") || clone.querySelector("img");
+        if (img) {
+          img.setAttribute("loading", isInitialVisible ? "eager" : "lazy");
+          img.setAttribute("decoding", "async");
+        }
+
         track.appendChild(clone);
         allSlides.push(clone);
       });
@@ -333,7 +342,7 @@
     measureGeometry();
     window.addEventListener("resize", measureGeometry, { passive: true, signal });
 
-    const decodePromises = allSlides.slice(centerStartIndex, centerStartIndex + origCount).map((slide) => {
+    const decodePromises = allSlides.slice(centerStartIndex, centerStartIndex + 3).map((slide) => {
       const img = slide.querySelector("img");
       if (img) {
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -344,7 +353,9 @@
       return Promise.resolve();
     });
 
+    const curtainSafetyTimer = setTimeout(revealCurtain, 250);
     Promise.allSettled(decodePromises).then(() => {
+      clearTimeout(curtainSafetyTimer);
       measureGeometry();
       const elapsed = performance.now() - startTime;
       const remainingHold = Math.max(0, MINIMUM_LOADER_TIME - elapsed);

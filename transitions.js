@@ -249,39 +249,6 @@ function initOsmoBoilerplate() {
             const isDesktop = window.innerWidth > 1024;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
-            const navbar = next.querySelector(".navbar");
-            const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
-
-            const primaryFilters = Array.from(next.querySelectorAll(".primary-filter-list .filter-btn"));
-            const subFilterList = next.querySelector(".sub-filter-list");
-            const subFilters =
-                subFilterList && subFilterList.classList.contains("is-visible")
-                    ? Array.from(subFilterList.querySelectorAll(".sub-btn"))
-                    : [];
-            const filterItems = [...primaryFilters, ...subFilters];
-
-            const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
-            const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
-
-            let visibleCards = [];
-            if (isDesktop && section) {
-                const rawCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card, .desktop-gallery-stage .w-dyn-item"));
-                visibleCards = rawCards.slice(0, 4);
-            }
-
-            let resolved = false;
-            const done = () => {
-                if (resolved) return;
-                resolved = true;
-                if (allNavTargets.length) {
-                    gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
-                }
-                if (visibleCards.length) {
-                    gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
-                }
-                resetPage(next);
-                resolve();
-            };
 
             // 1. Immediately position next offscreen so no initial state flashes
             gsap.set(next, {
@@ -298,8 +265,9 @@ function initOsmoBoilerplate() {
                 force3D: true,
             });
 
-            // 2. Make stage visible so cards are visible during entrance
+            // 2. Pause marquee and make stage visible
             if (section) {
+                section.classList.add("is-marquee-paused");
                 section.classList.add("is-ready");
                 const stage = section.querySelector(".desktop-gallery-stage");
                 if (stage) {
@@ -309,16 +277,53 @@ function initOsmoBoilerplate() {
                 }
             }
 
-            // Lock natural aspect ratios so Safari doesn't collapse wrappers
-            const imgs = next.querySelectorAll(".desktop-gallery-stage img, .projects-track img");
-            imgs.forEach((img) => {
-                const wrap = img.closest(".project-media-wrap");
-                if (wrap && img.naturalWidth && img.naturalHeight) {
-                    wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+            // 3. Mount projects engine so infinite track is built and positioned
+            mountPage(next);
+
+            const navbar = next.querySelector(".navbar");
+            const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
+
+            const primaryFilters = Array.from(next.querySelectorAll(".primary-filter-list .filter-btn"));
+            const subFilterList = next.querySelector(".sub-filter-list");
+            const subFilters =
+                subFilterList && subFilterList.classList.contains("is-visible")
+                    ? Array.from(subFilterList.querySelectorAll(".sub-btn"))
+                    : [];
+            const filterItems = [...primaryFilters, ...subFilters];
+
+            const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
+            const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
+
+            // 4. Select the tagged Set 1 visible cards for staggered floating entrance
+            let visibleCards = [];
+            if (isDesktop && section) {
+                const taggedCards = Array.from(section.querySelectorAll('.desktop-gallery-stage .project-card[data-initial-visible="true"]'));
+                visibleCards = taggedCards.slice(0, 4);
+            }
+
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                if (section) {
+                    section.classList.remove("is-marquee-paused");
+                    section.classList.add("is-marquee-active");
                 }
-            });
+                if (allNavTargets.length) {
+                    gsap.set(allNavTargets, { clearProps: "opacity,transition,transform,y" });
+                }
+                if (visibleCards.length) {
+                    gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+                }
+                resetPage(next);
+                resolve();
+            };
 
             if (reducedMotion) {
+                if (section) {
+                    section.classList.remove("is-marquee-paused");
+                    section.classList.add("is-marquee-active");
+                }
                 gsap.set(next, { autoAlpha: 1, yPercent: 0 });
                 done();
                 return;
@@ -353,6 +358,16 @@ function initOsmoBoilerplate() {
                     },
                 }, cardsStart);
             }
+
+            // Release marquee movement right as cards arrive into place (no awkward static pause)
+            const marqueeReleaseTime = 1.05;
+            tl.add("releaseMarquee", marqueeReleaseTime);
+            tl.call(() => {
+                if (section) {
+                    section.classList.remove("is-marquee-paused");
+                    section.classList.add("is-marquee-active");
+                }
+            }, null, "releaseMarquee");
 
             const hitTopLead = 0.35;
             const hitTopTime = Math.max(0, slideDuration - hitTopLead);

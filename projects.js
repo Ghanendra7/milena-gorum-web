@@ -153,7 +153,6 @@
             if (img) {
                 img.classList.add("project-img");
                 img.setAttribute("draggable", "false");
-                img.setAttribute("loading", "eager");
                 img.setAttribute("decoding", "async");
                 lockNaturalAspect(img, mediaWrap);
             }
@@ -492,11 +491,17 @@
             let globalIdx = 0;
 
             for (let s = 0; s < setsNeeded; s++) {
-                filteredTemplates.forEach((tpl) => {
+                filteredTemplates.forEach((tpl, tplIdx) => {
                     const clone = tpl.cloneNode(true);
                     if (s > 0) clone.setAttribute("aria-hidden", "true");
+                    const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 4;
                     if (s === 1 || (!isDesktopInfinite && s === 0)) {
                         clone.setAttribute("data-initial-visible", "true");
+                    }
+                    const img = clone.querySelector(".project-img") || clone.querySelector("img");
+                    if (img) {
+                        img.setAttribute("loading", isVisibleInitial ? "eager" : "lazy");
+                        img.setAttribute("decoding", "async");
                     }
                     bindDesktopCard(clone, globalIdx);
                     fragment.appendChild(clone);
@@ -674,6 +679,11 @@
 
                 if (isDesktopInfinite) {
                     const isPaused = !isGalleryRevealed || isTrackHovered || isDragging || isWheelActive || section.classList.contains("is-marquee-paused");
+                    if (section.classList.contains("is-marquee-paused")) {
+                        currentMarqueeSpeed = 0;
+                        rawTargetPos = scrollPos;
+                        targetPos = scrollPos;
+                    }
                     const desiredMarqueeSpeed = isPaused ? 0 : BASE_MARQUEE_SPEED;
 
                     const rate = isPaused ? MARQUEE_DECEL_RATE : MARQUEE_ACCEL_RATE;
@@ -1338,8 +1348,8 @@
                 return;
             }
 
-            const uniqueSetCards = trackCards.slice(0, Math.max(1, activeFilteredCount));
-            const decodeTasks = uniqueSetCards.map((card) => {
+            const initialSetCards = trackCards.filter((c) => c.getAttribute("data-initial-visible") === "true").slice(0, 4);
+            const decodeTasks = (initialSetCards.length ? initialSetCards : trackCards.slice(0, 4)).map((card) => {
                 const img = card.querySelector(".project-img");
                 if (!img) return Promise.resolve();
                 if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -1352,7 +1362,7 @@
                 });
             });
 
-            const safetyTimer = setTimeout(reveal, 400);
+            const safetyTimer = setTimeout(reveal, 250);
             Promise.allSettled(decodeTasks).then(() => {
                 clearTimeout(safetyTimer);
                 reveal();
