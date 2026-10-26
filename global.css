@@ -158,7 +158,8 @@ a {
 
 .home-media-wrap {
     aspect-ratio: 16 / 9;
-    background-color: var(--media-bg-color);
+    /* background-color: var(--media-bg-color); */
+    background-color: #0d0d0d;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     -webkit-transform: translate3d(0, 0, 0);
@@ -354,6 +355,7 @@ a {
 
 /* Indent first project header on desktop across infinite sets and filtered states */
 @media (min-width: 1025px) {
+
     .project-card[data-is-first-item="true"] .project-header,
     .projects-track.is-no-loop .project-card:first-child .project-header {
         padding-left: 16px;
