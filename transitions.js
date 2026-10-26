@@ -68,7 +68,8 @@ function initOsmoBoilerplate() {
     // PAGE INITIALIZATION CONDUCTOR
     // -----------------------------------------
     function mountPage(container) {
-        if (!container) return;
+        if (!container || container._isMounted) return;
+        container._isMounted = true;
         const ns = container.getAttribute("data-barba-namespace") || "";
 
         if (ns === "home") {
@@ -82,6 +83,7 @@ function initOsmoBoilerplate() {
 
     function unmountPage(container) {
         if (!container) return;
+        container._isMounted = false;
         const ns = container.getAttribute("data-barba-namespace") || "";
 
         if (ns === "home") {
@@ -225,6 +227,17 @@ function initOsmoBoilerplate() {
     }
 
     function runHomeToProjectsEnter(next) {
+        const isDesktop = window.innerWidth > 1024;
+        const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
+
+        if (isDesktop && section) {
+            section.classList.add("is-marquee-paused");
+            section.classList.add("is-ready");
+        }
+
+        // Mount projects engine early so 3-set track and offset are established without visual jumps
+        mountPage(next);
+
         const navbar = next.querySelector(".navbar");
         const navTop = navbar ? navbar.querySelector(".nav-top") : next.querySelector(".nav-top");
 
@@ -239,9 +252,23 @@ function initOsmoBoilerplate() {
         const zoomBtns = Array.from(next.querySelectorAll(".zoom-controls .btn-zoom-in, .zoom-controls .btn-zoom-out"));
         const allNavTargets = [navTop, ...filterItems, ...zoomBtns].filter(Boolean);
 
+        // Detect visible cards on desktop for staggered floating entrance
+        let visibleCards = [];
+        if (isDesktop && section) {
+            const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
+            visibleCards = allCards.filter((card) => {
+                const rect = card.getBoundingClientRect();
+                return rect.right > 0 && rect.left < window.innerWidth + 200;
+            });
+            if (!visibleCards.length && allCards.length) {
+                visibleCards = allCards.slice(0, 5);
+            }
+        }
+
         const tl = gsap.timeline();
 
         if (reducedMotion) {
+            if (section) section.classList.remove("is-marquee-paused");
             tl.set(next, { autoAlpha: 1, yPercent: 0 });
             tl.add("pageReady");
             tl.call(resetPage, [next], "pageReady");
@@ -267,6 +294,10 @@ function initOsmoBoilerplate() {
         }
         if (filterItems.length) gsap.set(filterItems, { y: 14 });
         if (zoomBtns.length) gsap.set(zoomBtns, { y: 14 });
+
+        if (visibleCards.length) {
+            gsap.set(visibleCards, { opacity: 0, y: 55, force3D: true });
+        }
 
         tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
 
@@ -294,6 +325,27 @@ function initOsmoBoilerplate() {
                 }, "hitTop+=0.30");
             }
         }
+
+        if (visibleCards.length) {
+            tl.to(visibleCards, {
+                opacity: 1,
+                y: 0,
+                duration: 0.95,
+                stagger: 0.12,
+                ease: "power2.out",
+                force3D: true,
+            }, "hitTop");
+        }
+
+        tl.add("cardsFloatingComplete");
+        tl.call(() => {
+            if (section) {
+                section.classList.remove("is-marquee-paused");
+            }
+            if (visibleCards.length) {
+                gsap.set(visibleCards, { clearProps: "opacity,transform,y" });
+            }
+        });
 
         tl.add("pageReady");
         tl.call(() => {

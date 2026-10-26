@@ -662,7 +662,7 @@
                 }
 
                 if (isDesktopInfinite) {
-                    const isPaused = !isGalleryRevealed || isTrackHovered || isDragging || isWheelActive;
+                    const isPaused = !isGalleryRevealed || isTrackHovered || isDragging || isWheelActive || section.classList.contains("is-marquee-paused");
                     const desiredMarqueeSpeed = isPaused ? 0 : BASE_MARQUEE_SPEED;
 
                     const rate = isPaused ? MARQUEE_DECEL_RATE : MARQUEE_ACCEL_RATE;
