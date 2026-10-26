@@ -572,11 +572,18 @@ function initOsmoBoilerplate() {
                 gsap.set(next, { yPercent: -40, force3D: true });
             }
 
+            let navStartY = 0;
+            let infoStartY = 0;
+
             if (navHome) {
-                gsap.set(navHome, { y: -20, opacity: 1 });
+                const navRect = navHome.getBoundingClientRect();
+                navStartY = 16 - navRect.top;
+                gsap.set(navHome, { y: navStartY, opacity: 1, force3D: true });
             }
             if (projectInfo) {
-                gsap.set(projectInfo, { y: -20, opacity: 1 });
+                const infoRect = projectInfo.getBoundingClientRect();
+                infoStartY = 16 - infoRect.top;
+                gsap.set(projectInfo, { y: infoStartY, opacity: 1, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
@@ -597,23 +604,22 @@ function initOsmoBoilerplate() {
                 }, 0);
             }
 
-            const navLead = 0.45;
-            const navStartTime = Math.max(0, slideDuration - navLead);
-
             if (navHome) {
                 tl.to(navHome, {
                     y: 0,
-                    duration: 0.6,
-                    ease: "power2.out",
-                }, navStartTime);
+                    duration: slideDuration,
+                    ease: "power2.inOut",
+                    force3D: true,
+                }, 0);
             }
 
             if (projectInfo) {
                 tl.to(projectInfo, {
                     y: 0,
-                    duration: 0.6,
-                    ease: "power2.out",
-                }, navStartTime + 0.08);
+                    duration: slideDuration,
+                    ease: "power2.inOut",
+                    force3D: true,
+                }, 0);
             }
 
             // Guaranteed resolution fallback for Safari
