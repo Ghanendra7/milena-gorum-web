@@ -214,10 +214,12 @@ a {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
+    background-color: #000000;
+    z-index: 9999;
     pointer-events: none;
     opacity: 1;
     visibility: visible;
-    transition: opacity 0.7s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.7s ease;
+    transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.8s ease;
     will-change: opacity;
 }
 

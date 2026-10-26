@@ -13,8 +13,8 @@
     const BUNNY_CDN_HOST = "vz-cc78103f-0dc.b-cdn.net";
     const MAX_VIDEO_SECONDS = 30;
 
-    const MINIMUM_LOADER_TIME = 200;
-    const MAX_SAFETY_TIME = 800;
+    const MINIMUM_LOADER_TIME = 350;
+    const MAX_SAFETY_TIME = 1500;
     const MAX_ACTIVE_DECODERS = 2;
 
     const WHEEL_MULTIPLIER = 1.15;
@@ -184,9 +184,11 @@
         const clone = origSlide.cloneNode(true);
         if (s !== CENTER_SET) clone.setAttribute("aria-hidden", "true");
 
-        // ONLY eager-load the 3 slides initially centered/visible.
+        // ONLY eager-load the slides initially centered/visible in viewport.
         // Offscreen slides must use lazy loading to keep Safari's 6-connection pool open.
-        const isInitialVisible = s === CENTER_SET && idx < 3;
+        const isInitialVisible =
+          (s === CENTER_SET && idx <= 1) ||
+          (s === CENTER_SET - 1 && idx === origCount - 1);
         const img = clone.querySelector(".home-media-img") || clone.querySelector("img");
         if (img) {
           img.setAttribute("loading", isInitialVisible ? "eager" : "lazy");
@@ -315,12 +317,14 @@
 
           if (targetMetric) {
             activeCenterSlide = targetMetric.el;
-            currentX = viewportW * 0.5 - targetMetric.center;
-            targetX = currentX;
-            rawTargetX = currentX;
-            track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
-            updateActiveProject(true);
-            manageVideoPlayback();
+            if (!curtainRevealed) {
+              currentX = viewportW * 0.5 - targetMetric.center;
+              targetX = currentX;
+              rawTargetX = currentX;
+              track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
+              updateActiveProject(true);
+              manageVideoPlayback();
+            }
           }
         } else {
           const newMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
@@ -336,24 +340,37 @@
 
     if ("ResizeObserver" in window) {
       homeResizeObserver = new ResizeObserver(measureGeometry);
-      allSlides.slice(0, origCount).forEach((slide) => homeResizeObserver.observe(slide));
+      allSlides.slice(centerStartIndex, centerStartIndex + origCount).forEach((slide) => homeResizeObserver.observe(slide));
     }
 
     measureGeometry();
     window.addEventListener("resize", measureGeometry, { passive: true, signal });
 
-    const decodePromises = allSlides.slice(centerStartIndex, centerStartIndex + 3).map((slide) => {
+    const initialSlideIndices = [centerStartIndex];
+    if (centerStartIndex + 1 < allSlides.length) initialSlideIndices.push(centerStartIndex + 1);
+    if (centerStartIndex - 1 >= 0) initialSlideIndices.push(centerStartIndex - 1);
+
+    const decodePromises = initialSlideIndices.map((idx) => {
+      const slide = allSlides[idx];
+      if (!slide) return Promise.resolve();
       const img = slide.querySelector("img");
       if (img) {
-        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        if (img.complete && img.naturalWidth > 0) {
+          const mediaWrap = slide.querySelector(".home-media-wrap");
+          lockNaturalAspect(img, mediaWrap);
+          return Promise.resolve();
+        }
         if (typeof img.decode === "function") {
-          return img.decode().catch(() => { });
+          return img.decode().then(() => {
+            const mediaWrap = slide.querySelector(".home-media-wrap");
+            lockNaturalAspect(img, mediaWrap);
+          }).catch(() => { });
         }
       }
       return Promise.resolve();
     });
 
-    const curtainSafetyTimer = setTimeout(revealCurtain, 250);
+    const curtainSafetyTimer = setTimeout(revealCurtain, MAX_SAFETY_TIME);
     Promise.allSettled(decodePromises).then(() => {
       clearTimeout(curtainSafetyTimer);
       measureGeometry();
@@ -666,7 +683,7 @@
 
         track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
 
-        if (isDragging || now - lastActiveCheck > 100) {
+        if (isDragging || (userInteracted && now - lastActiveCheck > 100)) {
           lastActiveCheck = now;
           updateActiveProject(false);
           manageVideoPlayback();
