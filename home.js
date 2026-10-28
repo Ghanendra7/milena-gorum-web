@@ -69,7 +69,6 @@
     const allSlides = [];
     const activeVideoPool = [];
     homeActiveVideoPool = activeVideoPool;
-    const projectVideoTimes = {};
 
     let isMobile = checkIsMobile();
     let viewportW = window.innerWidth;
@@ -287,17 +286,6 @@
         if (video.currentTime >= MAX_VIDEO_SECONDS) {
           video.currentTime = 0.05;
         }
-        const key = video.getAttribute("data-resolved-src") || slide.getAttribute("data-orig-index");
-        if (key && video.currentTime > 0) {
-          projectVideoTimes[key] = video.currentTime;
-        }
-      });
-
-      video.addEventListener("pause", () => {
-        const key = video.getAttribute("data-resolved-src") || slide.getAttribute("data-orig-index");
-        if (key && video.currentTime > 0) {
-          projectVideoTimes[key] = video.currentTime;
-        }
       });
     });
 
@@ -470,6 +458,46 @@
       }, remainingHold);
     });
 
+    function syncClonesOnWrap(direction) {
+      const fromSet = direction > 0 ? 2 : 0;
+      const toSet = CENTER_SET;
+
+      for (let j = 0; j < origCount; j++) {
+        const fromSlide = allSlides[fromSet * origCount + j];
+        const toSlide = allSlides[toSet * origCount + j];
+        if (!fromSlide || !toSlide) continue;
+
+        const fromVid = fromSlide.querySelector(".home-slide-video") || fromSlide.querySelector("video");
+        const toVid = toSlide.querySelector(".home-slide-video") || toSlide.querySelector("video");
+        if (!fromVid || !toVid) continue;
+
+        const resolvedSrc = fromVid.getAttribute("data-resolved-src") || toVid.getAttribute("data-resolved-src");
+        if (!resolvedSrc) continue;
+
+        const time = fromVid.currentTime;
+        const wasPlaying = !fromVid.paused;
+
+        if (toVid.getAttribute("src") !== resolvedSrc) {
+          toVid.src = resolvedSrc;
+        }
+
+        try {
+          if (time > 0.05 && time < MAX_VIDEO_SECONDS) {
+            toVid.currentTime = time;
+          }
+        } catch (e) { }
+
+        if (wasPlaying) {
+          toSlide.classList.add("is-video-playing");
+          toVid.muted = true;
+          toVid.defaultMuted = true;
+          toVid.play().catch(() => { });
+          fromVid.pause();
+          fromSlide.classList.remove("is-video-playing");
+        }
+      }
+    }
+
     function wrapTrack() {
       if (singleSetWidth <= 0) return;
 
@@ -480,12 +508,14 @@
           currentX += shift;
           targetX += shift;
           rawTargetX += shift;
+          syncClonesOnWrap(+1);
         } else if (mobileIndex < (CENTER_SET - 1) * origCount) {
           mobileIndex += origCount;
           const shift = origCount * viewportW;
           currentX -= shift;
           targetX -= shift;
           rawTargetX -= shift;
+          syncClonesOnWrap(-1);
         }
       } else {
         const centerSetFirst = slideMetrics[centerStartIndex];
@@ -496,10 +526,12 @@
           currentX -= singleSetWidth;
           targetX -= singleSetWidth;
           rawTargetX -= singleSetWidth;
+          syncClonesOnWrap(-1);
         } else if (diff < -singleSetWidth * 0.5) {
           currentX += singleSetWidth;
           targetX += singleSetWidth;
           rawTargetX += singleSetWidth;
+          syncClonesOnWrap(+1);
         }
       }
     }
@@ -574,21 +606,15 @@
         }
       });
 
-      // Pause videos that are out of view without removing src or resetting time
+      // Pause videos that are out of view without stripping src (so their currentTime is naturally retained!)
       for (let i = 0; i < activeVideoPool.length; i++) {
         const item = activeVideoPool[i];
         if (!activeIndices.includes(item.index)) {
-          if (item.video) {
-            if (item.video.currentTime > 0) {
-              const key = item.video.getAttribute("data-resolved-src") || String(item.index);
-              projectVideoTimes[key] = item.video.currentTime;
-            }
-            if (!item.video.paused) {
-              item.video.pause();
-            }
-            if (item.el) {
-              item.el.classList.remove("is-video-playing");
-            }
+          if (item.video && !item.video.paused) {
+            item.video.pause();
+          }
+          if (item.el) {
+            item.el.classList.remove("is-video-playing");
           }
         }
       }
@@ -599,10 +625,6 @@
         if (offScreenIdx === -1) break;
         const evicted = activeVideoPool.splice(offScreenIdx, 1)[0];
         if (evicted && evicted.video) {
-          if (evicted.video.currentTime > 0) {
-            const key = evicted.video.getAttribute("data-resolved-src") || String(evicted.index);
-            projectVideoTimes[key] = evicted.video.currentTime;
-          }
           if (!evicted.video.paused) evicted.video.pause();
           evicted.video.removeAttribute("src");
           evicted.video.load();
@@ -626,23 +648,6 @@
           }
 
           activeVideoPool.push({ index: idx, video: m.video, el: m.el });
-        }
-
-        const key = m.videoSrc || String(m.origIndex);
-        const savedTime = projectVideoTimes[key];
-        if (savedTime && savedTime > 0.1 && Math.abs(m.video.currentTime - savedTime) > 0.5) {
-          const restore = () => {
-            try {
-              if (savedTime < (m.video.duration || 999)) {
-                m.video.currentTime = savedTime;
-              }
-            } catch (err) { }
-          };
-          if (m.video.readyState >= 1) {
-            restore();
-          } else {
-            m.video.addEventListener("loadedmetadata", restore, { once: true });
-          }
         }
 
         if (m.video.readyState >= 2) {
