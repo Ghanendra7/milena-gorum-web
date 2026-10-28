@@ -511,87 +511,120 @@
                 const { isDesktop } = context.conditions;
                 const targetHeight = isDesktop ? 230 : 180;
 
-                const tl = gsap.timeline({
-                    paused: true,
-                    reversed: true,
-                    onStart: () => {
-                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                            thumbSwiperInstance.update();
-                        }
-                    },
-                    onComplete: () => {
-                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                            thumbSwiperInstance.update();
-                        }
-                    },
-                    onReverseComplete: () => {
-                        gsap.set(drawer, { height: 0, overflow: "hidden" });
-                    }
-                });
-                drawerTimeline = tl;
+                let isOpen = false;
+                let activeCloseTween = null;
 
-                // 1. Drawer height expansion (slowed down with power2.inOut ease)
-                tl.fromTo(drawer,
-                    { height: 0 },
-                    {
+                const openDrawer = () => {
+                    if (activeCloseTween) {
+                        activeCloseTween.kill();
+                        activeCloseTween = null;
+                    }
+                    isOpen = true;
+                    trigger.setAttribute("aria-expanded", "true");
+
+                    // 1. Drawer height expansion (power2.inOut, 1.1s)
+                    gsap.to(drawer, {
                         height: targetHeight,
                         duration: 1.1,
-                        ease: "power2.inOut"
-                    },
-                    0
-                );
+                        ease: "power2.inOut",
+                        overwrite: "auto",
+                        onStart: () => {
+                            if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                                thumbSwiperInstance.update();
+                            }
+                        },
+                        onComplete: () => {
+                            if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                                thumbSwiperInstance.update();
+                            }
+                        }
+                    });
 
-                // 2. Plus icon rotation to 'x'
-                if (icon) {
-                    tl.fromTo(icon,
-                        { rotation: 0 },
-                        {
+                    // 2. Plus icon rotation to 'x' (faster rotation)
+                    if (icon) {
+                        gsap.to(icon, {
                             rotation: 45,
-                            duration: 0.8,
-                            ease: "power2.inOut"
-                        },
-                        0
-                    );
-                }
+                            duration: 0.35,
+                            ease: "power2.out",
+                            overwrite: "auto"
+                        });
+                    }
 
-                // 3. Project details container (credits text) fades in
-                if (detailsContainer) {
-                    tl.fromTo(detailsContainer,
-                        { autoAlpha: 0 },
-                        {
-                            autoAlpha: 1,
-                            duration: 0.7,
-                            ease: "power2.out"
-                        },
-                        0.45
-                    );
-                }
+                    // 3. Project details container (credits text) fades in
+                    if (detailsContainer) {
+                        gsap.fromTo(detailsContainer,
+                            { autoAlpha: 0 },
+                            {
+                                autoAlpha: 1,
+                                duration: 0.8,
+                                delay: 0.35,
+                                ease: "power2.out",
+                                overwrite: "auto"
+                            }
+                        );
+                    }
 
-                // 4. Thumbnail strip slides fade in with slower, more pronounced stagger
-                if (thumbSlides.length) {
-                    tl.fromTo(thumbSlides,
-                        { autoAlpha: 0 },
-                        {
-                            autoAlpha: 1,
-                            duration: 0.75,
-                            stagger: 0.09,
-                            ease: "power2.out"
-                        },
-                        0.5
-                    );
-                }
+                    // 4. Thumbnail strip slides fade in with slower, richer stagger
+                    if (thumbSlides.length) {
+                        gsap.fromTo(thumbSlides,
+                            { autoAlpha: 0 },
+                            {
+                                autoAlpha: 1,
+                                duration: 1.1,
+                                stagger: 0.12,
+                                delay: 0.4,
+                                ease: "power2.out",
+                                overwrite: "auto"
+                            }
+                        );
+                    }
+                };
+
+                const closeDrawer = () => {
+                    isOpen = false;
+                    trigger.setAttribute("aria-expanded", "false");
+
+                    // Keep thumbnails and credits visible as drawer slides down (no fade-out effect)
+                    // 1. Plus icon rotates back quickly
+                    if (icon) {
+                        gsap.to(icon, {
+                            rotation: 0,
+                            duration: 0.35,
+                            ease: "power2.out",
+                            overwrite: "auto"
+                        });
+                    }
+
+                    // 2. Drawer smoothly collapses down with power2.inOut
+                    activeCloseTween = gsap.to(drawer, {
+                        height: 0,
+                        duration: 0.9,
+                        ease: "power2.inOut",
+                        overwrite: "auto",
+                        onComplete: () => {
+                            gsap.set(drawer, { height: 0, overflow: "hidden" });
+                            if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
+                            if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 0 });
+                            activeCloseTween = null;
+                        }
+                    });
+                };
+
+                drawerTimeline = {
+                    isOpen: () => isOpen,
+                    close: closeDrawer,
+                    open: openDrawer
+                };
 
                 const handleToggle = (e) => {
                     if (e) {
                         e.preventDefault();
                         e.stopPropagation();
                     }
-                    const isOpening = tl.reversed();
-                    trigger.setAttribute("aria-expanded", String(isOpening));
-                    if (isOpening) {
-                        tl.play();
+                    if (isOpen) {
+                        closeDrawer();
                     } else {
-                        tl.reverse();
+                        openDrawer();
                     }
                 };
 
@@ -610,7 +643,8 @@
 
                 return () => {
                     trigger.removeEventListener("click", handleToggle);
-                    tl.kill();
+                    if (activeCloseTween) activeCloseTween.kill();
+                    gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
                     gsap.set(drawer, { height: 0 });
                     if (icon) gsap.set(icon, { rotation: 0 });
                     if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 1 });
@@ -632,9 +666,8 @@
                     else activeVideo.pause();
                 }
             } else if (e.key === "Escape" && !document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (drawerTimeline && !drawerTimeline.reversed()) {
-                    trigger?.setAttribute("aria-expanded", "false");
-                    drawerTimeline.reverse();
+                if (drawerTimeline && drawerTimeline.isOpen()) {
+                    drawerTimeline.close();
                 } else {
                     goBack();
                 }
