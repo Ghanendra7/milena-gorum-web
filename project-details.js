@@ -337,36 +337,66 @@
             mainSwiperInstance.on("slideChange", handleSlideMedia);
         }
 
-        const videoContainers = mainEl.querySelectorAll(".video-container, .video-wrapper");
+        const processedVideos = new Set();
+        const allVideoElements = Array.from(mainEl.querySelectorAll("video.slide-video, video"));
 
-        videoContainers.forEach((container) => {
-            if (container.classList.contains("w-condition-invisible")) return;
-            const video = container.querySelector(".slide-video") || container.querySelector("video");
-            const playBtn = container.querySelector(".btn-play");
-            const soundBtn = container.querySelector(".btn-sound");
-            const fullscreenBtn = container.querySelector(".btn-fullscreen");
-            const seekContainer = container.querySelector(".seek-container");
-            const seekFill = container.querySelector(".seek-fill");
+        allVideoElements.forEach((video) => {
+            if (processedVideos.has(video)) return;
+            processedVideos.add(video);
 
-            if (!video) return;
+            const slide = video.closest(".swiper-slide");
+            const wrapper = video.closest(".video-wrapper") || video.closest(".video-container") || video.parentElement;
+            if (!slide && !wrapper) return;
+
+            const playBtn = (slide || wrapper).querySelector(".btn-play");
+            const soundBtn = (slide || wrapper).querySelector(".btn-sound");
+            const fullscreenBtn = (slide || wrapper).querySelector(".btn-fullscreen");
+            const seekContainer = (slide || wrapper).querySelector(".seek-container");
+            const seekFill = (slide || wrapper).querySelector(".seek-fill");
+
             ensureVideoReady(video);
 
             let isDragging = false;
             let seekRafId = null;
+            let lastTapTime = 0;
+
+            const updatePlayButton = () => {
+                if (!playBtn) return;
+                const label = playBtn.querySelector("div") || playBtn;
+                label.textContent = video.paused ? "Play" : "Pause";
+                playBtn.setAttribute("aria-label", video.paused ? "Play video" : "Pause video");
+                playBtn.setAttribute("aria-pressed", String(!video.paused));
+            };
+
+            const updateSoundButton = () => {
+                if (!soundBtn) return;
+                const label = soundBtn.querySelector("div") || soundBtn;
+                label.textContent = video.muted ? "Sound on" : "Sound off";
+                soundBtn.setAttribute("aria-label", video.muted ? "Unmute video" : "Mute video");
+                soundBtn.setAttribute("aria-pressed", String(!video.muted));
+            };
 
             const togglePlay = () => {
                 ensureVideoReady(video);
-                if (video.paused) video.play().catch(() => { });
-                else video.pause();
+                if (video.paused) {
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(() => { });
+                    }
+                } else {
+                    video.pause();
+                }
+                updatePlayButton();
             };
 
             const toggleSound = () => {
-                video.muted = !video.muted;
-                if (soundBtn) {
-                    soundBtn.textContent = video.muted ? "Sound on" : "Sound off";
-                    soundBtn.setAttribute("aria-label", video.muted ? "Unmute video" : "Mute video");
-                    soundBtn.setAttribute("aria-pressed", String(!video.muted));
+                if (video.muted) {
+                    video.muted = false;
+                    if (video.volume === 0) video.volume = 1;
+                } else {
+                    video.muted = true;
                 }
+                updateSoundButton();
             };
 
             const toggleFullscreen = () => {
@@ -387,7 +417,7 @@
                     try { video.webkitEnterFullscreen(); return; } catch (_) { }
                 }
 
-                const target = isMobile ? video : container || video;
+                const target = isMobile ? video : wrapper || video;
                 if (target.requestFullscreen) {
                     target.requestFullscreen().catch(() => {
                         if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
@@ -410,40 +440,62 @@
             };
 
             video.addEventListener("play", () => {
-                if (playBtn) playBtn.textContent = "Pause";
+                updatePlayButton();
                 cancelAnimationFrame(seekRafId);
                 seekRafId = requestAnimationFrame(updateSeekProgress);
             }, { signal });
 
             video.addEventListener("pause", () => {
-                if (playBtn) playBtn.textContent = "Play";
+                updatePlayButton();
                 cancelAnimationFrame(seekRafId);
             }, { signal });
 
+            video.addEventListener("volumechange", () => {
+                updateSoundButton();
+            }, { signal });
+
+            // Initialize button states immediately
+            updatePlayButton();
+            updateSoundButton();
+
+            // Button Click / Tap Listeners with synthetic click debouncing
             if (playBtn) {
-                playBtn.addEventListener("click", (e) => {
+                const handlePlayClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (performance.now() - lastTapTime < 400) return;
+                    lastTapTime = performance.now();
                     togglePlay();
-                }, { signal });
+                };
+                playBtn.addEventListener("click", handlePlayClick, { signal });
+                playBtn.addEventListener("touchend", handlePlayClick, { signal });
             }
 
             if (soundBtn) {
-                soundBtn.addEventListener("click", (e) => {
+                const handleSoundClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (performance.now() - lastTapTime < 400) return;
+                    lastTapTime = performance.now();
                     toggleSound();
-                }, { signal });
+                };
+                soundBtn.addEventListener("click", handleSoundClick, { signal });
+                soundBtn.addEventListener("touchend", handleSoundClick, { signal });
             }
 
             if (fullscreenBtn) {
-                fullscreenBtn.addEventListener("click", (e) => {
+                const handleFsClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (performance.now() - lastTapTime < 400) return;
+                    lastTapTime = performance.now();
                     toggleFullscreen();
-                }, { signal });
+                };
+                fullscreenBtn.addEventListener("click", handleFsClick, { signal });
+                fullscreenBtn.addEventListener("touchend", handleFsClick, { signal });
             }
 
+            // Seek Bar Drag and Touch Scrub
             if (seekContainer) {
                 const getEventClientX = (e) => {
                     if (e.touches && e.touches.length > 0) return e.touches[0].clientX;
@@ -498,9 +550,42 @@
                 }, { signal, passive: true });
             }
 
-            container.addEventListener("click", (e) => {
+            // Video Direct Click / Tap to Pause/Play
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartTime = 0;
+
+            const handleVideoWrapperTap = (e) => {
                 if (e.target.closest(".controls-container") || e.target.closest(".seek-container")) return;
+                if (performance.now() - lastTapTime < 400) return;
+                lastTapTime = performance.now();
                 togglePlay();
+            };
+
+            // Desktop / Mouse Click
+            wrapper.addEventListener("click", handleVideoWrapperTap, { signal });
+
+            // Mobile Touch: detect clean tap (<12px movement, <350ms) so swipes don't trigger play/pause
+            wrapper.addEventListener("touchstart", (e) => {
+                if (e.target.closest(".controls-container") || e.target.closest(".seek-container")) return;
+                const t = e.touches[0];
+                if (!t) return;
+                touchStartX = t.clientX;
+                touchStartY = t.clientY;
+                touchStartTime = performance.now();
+            }, { signal, passive: true });
+
+            wrapper.addEventListener("touchend", (e) => {
+                if (e.target.closest(".controls-container") || e.target.closest(".seek-container")) return;
+                const t = e.changedTouches[0];
+                if (!t) return;
+                const distX = Math.abs(t.clientX - touchStartX);
+                const distY = Math.abs(t.clientY - touchStartY);
+                const elapsed = performance.now() - touchStartTime;
+
+                if (distX < 12 && distY < 12 && elapsed < 350) {
+                    handleVideoWrapperTap(e);
+                }
             }, { signal });
         });
 

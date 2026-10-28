@@ -734,6 +734,22 @@ a {
     -webkit-tap-highlight-color: transparent;
 }
 
+.video-wrapper,
+.slide-video,
+.btn-play,
+.btn-sound,
+.btn-fullscreen {
+    cursor: pointer;
+}
+
+.controls-container,
+.controls-container *,
+.btn-play,
+.btn-sound,
+.btn-fullscreen {
+    pointer-events: auto !important;
+}
+
 /* Guarantee Fill Screen = ON media covers 100% so Focus Coordinates work */
 .image-parallax-container.is-fill,
 .image-wrapper.is-fill,
@@ -820,7 +836,7 @@ a {
         max-width: none !important;
         height: 20px !important;
         transform: none !important;
-        z-index: 5 !important;
+        z-index: 10 !important;
     }
 
     .swiper-slide:not(.is-fill-slide) .controls-container {
@@ -832,7 +848,7 @@ a {
         display: flex !important;
         align-items: center !important;
         gap: 16px !important;
-        z-index: 5 !important;
+        z-index: 10 !important;
         transform: none !important;
     }
 
