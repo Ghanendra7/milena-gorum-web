@@ -696,7 +696,7 @@
                             {
                                 autoAlpha: 1,
                                 duration: 0.6,
-                                delay: 0.6,
+                                delay: 0.8,
                                 ease: "power1.in",
                                 overwrite: "auto"
                             }
@@ -711,7 +711,7 @@
                                 autoAlpha: 1,
                                 duration: 0.6,
                                 stagger: 0.2,
-                                delay: 0.6,
+                                delay: 0.8,
                                 ease: "power1.in",
                                 overwrite: "auto"
                             }
