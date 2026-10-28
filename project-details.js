@@ -644,11 +644,11 @@
             drawerMatchMedia = mm;
 
             mm.add({
-                isDesktop: "(min-width: 768px)",
-                isMobile: "(max-width: 767px)"
+                isDesktop: "(min-width: 1025px)",
+                isTabletOrMobile: "(max-width: 1024px)"
             }, (context) => {
                 const { isDesktop } = context.conditions;
-                const targetHeight = isDesktop ? 220 : 180;
+                const targetHeight = window.innerWidth >= 768 ? 220 : 180;
 
                 let isOpen = false;
                 let activeCloseTween = null;
@@ -703,19 +703,23 @@
                         );
                     }
 
-                    // 4. Thumbnail strip slides fade in with slower, dreamy stagger and gradual fade
+                    // 4. Thumbnail strip slides: staggered fade-in on desktop (>1024px), instant reveal on tablet & mobile (<=1024px)
                     if (thumbSlides.length) {
-                        gsap.fromTo(thumbSlides,
-                            { autoAlpha: 0 },
-                            {
-                                autoAlpha: 1,
-                                duration: 1,
-                                stagger: 0.25,
-                                delay: 0.6,
-                                ease: CustomEase.create("custom", "M0,0 C0.532,0 0.818,1 1,1 "),
-                                overwrite: "auto"
-                            }
-                        );
+                        if (isDesktop) {
+                            gsap.fromTo(thumbSlides,
+                                { autoAlpha: 0 },
+                                {
+                                    autoAlpha: 1,
+                                    duration: 1,
+                                    stagger: 0.25,
+                                    delay: 0.6,
+                                    ease: CustomEase.create("custom", "M0,0 C0.532,0 0.818,1 1,1 "),
+                                    overwrite: "auto"
+                                }
+                            );
+                        } else {
+                            gsap.set(thumbSlides, { autoAlpha: 1 });
+                        }
                     }
                 };
 
