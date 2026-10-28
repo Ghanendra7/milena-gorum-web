@@ -372,7 +372,7 @@
                 if (!fullscreenBtn) return;
                 const isFs = isFullscreenActive();
                 const label = fullscreenBtn.querySelector("div") || fullscreenBtn;
-                label.textContent = isFs ? "Exit FullScreen" : "Fullscreen";
+                label.textContent = isFs ? "Exit fullscreen" : "Fullscreen";
                 fullscreenBtn.setAttribute("aria-label", isFs ? "Exit Fullscreen" : "Fullscreen");
                 fullscreenBtn.setAttribute("aria-pressed", String(isFs));
             };
