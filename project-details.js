@@ -360,6 +360,23 @@
             let seekRafId = null;
             let lastTapTime = 0;
 
+            const isFullscreenActive = () => {
+                return Boolean(
+                    document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    video.webkitDisplayingFullscreen
+                );
+            };
+
+            const updateFullscreenButton = () => {
+                if (!fullscreenBtn) return;
+                const isFs = isFullscreenActive();
+                const label = fullscreenBtn.querySelector("div") || fullscreenBtn;
+                label.textContent = isFs ? "Exit FullScreen" : "Fullscreen";
+                fullscreenBtn.setAttribute("aria-label", isFs ? "Exit Fullscreen" : "Fullscreen");
+                fullscreenBtn.setAttribute("aria-pressed", String(isFs));
+            };
+
             const updatePlayButton = () => {
                 if (!playBtn) return;
                 const label = playBtn.querySelector("div") || playBtn;
@@ -400,9 +417,7 @@
             };
 
             const toggleFullscreen = () => {
-                const isFs = Boolean(
-                    document.fullscreenElement || document.webkitFullscreenElement || video.webkitDisplayingFullscreen
-                );
+                const isFs = isFullscreenActive();
 
                 if (isFs) {
                     if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
@@ -454,9 +469,15 @@
                 updateSoundButton();
             }, { signal });
 
+            document.addEventListener("fullscreenchange", updateFullscreenButton, { signal });
+            document.addEventListener("webkitfullscreenchange", updateFullscreenButton, { signal });
+            video.addEventListener("webkitbeginfullscreen", updateFullscreenButton, { signal });
+            video.addEventListener("webkitendfullscreen", updateFullscreenButton, { signal });
+
             // Initialize button states immediately
             updatePlayButton();
             updateSoundButton();
+            updateFullscreenButton();
 
             // Button Click / Tap Listeners with synthetic click debouncing
             if (playBtn) {
