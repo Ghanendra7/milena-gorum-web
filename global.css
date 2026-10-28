@@ -734,11 +734,70 @@ a {
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Project Details Media Wrappers */
-.video-wrapper,
-.image-container,
-.thumb-img-wrap {
-    background-color: var(--media-bg-color);
+/* ----------------------------------------------------
+   Video Player Controls & Seek Positioning
+   Mode A: Default / Non-Fill (Fill Screen = OFF)
+   Mode B: Fill Screen = ON (.is-fill-slide)
+   ---------------------------------------------------- */
+
+/* Mode A: Non-Fill (Contained Video Layout) */
+.swiper-slide:not(.is-fill-slide) .video-wrapper {
+    position: relative;
+}
+
+.swiper-slide:not(.is-fill-slide) .seek-container {
+    position: absolute !important;
+    left: 10px !important;
+    right: auto !important;
+    bottom: 12px !important;
+    top: auto !important;
+    width: 50% !important;
+    max-width: 320px !important;
+    height: 20px !important;
+    transform: none !important;
+    z-index: 5 !important;
+}
+
+.swiper-slide:not(.is-fill-slide) .controls-container {
+    position: absolute !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: 12px !important;
+    top: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    z-index: 5 !important;
+    transform: none !important;
+}
+
+/* Mode B: Fill Screen (Full-Bleed Stage Layout) */
+.swiper-slide.is-fill-slide .seek-container {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: 220px !important;
+    max-width: 50vw !important;
+    height: 20px !important;
+    z-index: 25 !important;
+}
+
+.swiper-slide.is-fill-slide .controls-container {
+    position: fixed !important;
+    right: var(--padding, 16px) !important;
+    bottom: var(--padding, 16px) !important;
+    left: auto !important;
+    top: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    z-index: 25 !important;
+    transform: none !important;
+    mix-blend-mode: difference !important;
+    color: #ffffff !important;
 }
 
 /* Guarantee Fill Screen = ON media covers 100% so Focus Coordinates work */
