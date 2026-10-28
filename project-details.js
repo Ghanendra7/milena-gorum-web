@@ -445,16 +445,23 @@
             }
 
             if (seekContainer) {
+                const getEventClientX = (e) => {
+                    if (e.touches && e.touches.length > 0) return e.touches[0].clientX;
+                    if (e.changedTouches && e.changedTouches.length > 0) return e.changedTouches[0].clientX;
+                    return e.clientX;
+                };
+
                 const scrub = (event) => {
                     const rect = seekContainer.getBoundingClientRect();
-                    const clientX = event.clientX ?? (event.touches && event.touches[0].clientX);
+                    const clientX = getEventClientX(event);
                     if (clientX === undefined) return;
                     const pos = Math.max(0, Math.min(clientX - rect.left, rect.width));
-                    const scrubRatio = pos / rect.width;
+                    const scrubRatio = rect.width > 0 ? pos / rect.width : 0;
                     if (video.duration) video.currentTime = scrubRatio * video.duration;
                     if (seekFill) seekFill.style.transform = `scaleX(${scrubRatio})`;
                 };
 
+                // Mouse Drag / Seek
                 seekContainer.addEventListener("mousedown", (e) => {
                     e.stopPropagation();
                     isDragging = true;
@@ -468,6 +475,27 @@
                 window.addEventListener("mouseup", () => {
                     isDragging = false;
                 }, { signal });
+
+                // Touch Drag / Seek
+                seekContainer.addEventListener("touchstart", (e) => {
+                    e.stopPropagation();
+                    isDragging = true;
+                    scrub(e);
+                }, { signal, passive: true });
+
+                window.addEventListener("touchmove", (e) => {
+                    if (isDragging) {
+                        scrub(e);
+                    }
+                }, { signal, passive: true });
+
+                window.addEventListener("touchend", () => {
+                    isDragging = false;
+                }, { signal, passive: true });
+
+                window.addEventListener("touchcancel", () => {
+                    isDragging = false;
+                }, { signal, passive: true });
             }
 
             container.addEventListener("click", (e) => {

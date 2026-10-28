@@ -812,12 +812,12 @@ a {
 
     .swiper-slide:not(.is-fill-slide) .seek-container {
         position: absolute !important;
-        left: 10px !important;
+        left: 36px !important;
         right: auto !important;
         bottom: 12px !important;
         top: auto !important;
-        width: 50% !important;
-        max-width: 320px !important;
+        width: calc(100% - 240px) !important;
+        max-width: none !important;
         height: 20px !important;
         transform: none !important;
         z-index: 5 !important;
@@ -825,9 +825,9 @@ a {
 
     .swiper-slide:not(.is-fill-slide) .controls-container {
         position: absolute !important;
-        right: 12px !important;
+        right: 36px !important;
         left: auto !important;
-        bottom: 12px !important;
+        bottom: 16px !important;
         top: auto !important;
         display: flex !important;
         align-items: center !important;
