@@ -709,8 +709,8 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.6,
-                                stagger: 0.2,
+                                duration: 0.9,
+                                stagger: 0.3,
                                 delay: 0.8,
                                 ease: "power1.inOut",
                                 overwrite: "auto"
