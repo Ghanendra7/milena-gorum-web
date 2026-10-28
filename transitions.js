@@ -669,9 +669,9 @@ function initOsmoBoilerplate() {
 
             const tl = gsap.timeline({ onComplete: done });
 
-            // Push current page smoothly towards left
+            // Push current page smoothly towards left with parallax (-80%)
             tl.to(current, {
-                xPercent: -100,
+                xPercent: -80,
                 duration: pushDuration,
                 ease: "power2.inOut",
                 force3D: true,
@@ -819,7 +819,7 @@ function initOsmoBoilerplate() {
                 }
             }
 
-            // Position next container off-screen to the left
+            // Position next container off-screen to the left with parallax (-80%)
             gsap.set(next, {
                 position: "fixed",
                 top: 0,
@@ -830,7 +830,7 @@ function initOsmoBoilerplate() {
                 backgroundColor: "#ffffff",
                 zIndex: 1,
                 autoAlpha: 1,
-                xPercent: -100,
+                xPercent: -80,
                 overflow: "hidden",
                 force3D: true,
             });
@@ -881,6 +881,13 @@ function initOsmoBoilerplate() {
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
 
+        // Synchronize body classes (e.g. .homepage has black background in Webflow)
+        if (nextNs === "home") {
+            document.body.classList.add("homepage");
+        } else {
+            document.body.classList.remove("homepage");
+        }
+
         const initialProps = {
             position: "fixed",
             top: 0,
@@ -895,7 +902,7 @@ function initOsmoBoilerplate() {
         } else if (nextNs === "projects" && currentNs === "home") {
             initialProps.yPercent = 100;
         } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home")) {
-            initialProps.xPercent = -100;
+            initialProps.xPercent = -80;
         }
 
         gsap.set(data.next.container, initialProps);
