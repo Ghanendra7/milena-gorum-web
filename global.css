@@ -367,6 +367,8 @@ a {
     position: relative;
     height: var(--card-height, 50vh);
     width: auto;
+    aspect-ratio: 16 / 9;
+    min-width: calc(var(--card-height, 50vh) * (9 / 16));
     overflow: hidden;
     background-color: var(--media-bg-color);
     -webkit-backface-visibility: hidden;
@@ -377,7 +379,7 @@ a {
 
 .project-img {
     height: 100%;
-    width: auto;
+    width: 100%;
     max-width: none;
     object-fit: cover;
     display: block;

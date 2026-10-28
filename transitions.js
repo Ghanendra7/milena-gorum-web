@@ -106,12 +106,6 @@ function initOsmoBoilerplate() {
 
     function initBeforeEnterFunctions(next) {
         nextPage = next || document;
-        if (nextPage.classList?.contains("projects-section")) {
-            nextPage.classList.add("is-ready");
-        } else {
-            const projSec = nextPage.querySelector?.(".projects-section");
-            if (projSec) projSec.classList.add("is-ready");
-        }
     }
 
     function initAfterEnterFunctions(next) {
