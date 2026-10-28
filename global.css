@@ -675,6 +675,16 @@ a {
 /* ========================================================
    4. PROJECT DETAILS PAGE STYLES
    ======================================================== */
+.gallery-section {
+    width: 100vw;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+    position: relative;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
 .top-bar {
     pointer-events: none;
 }

@@ -54,7 +54,12 @@
                 window.history.back();
             } else {
                 const fallbackHref = backLink?.getAttribute("href");
-                window.location.href = fallbackHref && fallbackHref !== "#" ? fallbackHref : "/projects";
+                const targetUrl = fallbackHref && fallbackHref !== "#" ? fallbackHref : "/projects";
+                if (typeof barba !== "undefined") {
+                    barba.go(targetUrl);
+                } else {
+                    window.location.href = targetUrl;
+                }
             }
         };
 
@@ -690,11 +695,11 @@
             detailAbortController = null;
         }
         if (mainSwiperInstance) {
-            try { mainSwiperInstance.destroy(true, true); } catch (e) { }
+            try { mainSwiperInstance.destroy(true, false); } catch (e) { }
             mainSwiperInstance = null;
         }
         if (thumbSwiperInstance) {
-            try { thumbSwiperInstance.destroy(true, true); } catch (e) { }
+            try { thumbSwiperInstance.destroy(true, false); } catch (e) { }
             thumbSwiperInstance = null;
         }
     }

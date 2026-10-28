@@ -626,17 +626,279 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
+    // HOME/PROJECTS -> PROJECT DETAILS TRANSITION
+    // -----------------------------------------
+    let pushDuration = 1.2;
+
+    function runToProjectDetailLeave(current, next) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                unmountPage(current);
+                cleanupMediaInContainer(current);
+                current.remove();
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            gsap.set(current, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100dvh",
+                zIndex: 1,
+                overflow: "hidden",
+                force3D: true,
+            });
+
+            // Pause marquee if leaving projects overview
+            const section = current.classList?.contains("projects-section")
+                ? current
+                : current.querySelector(".projects-section");
+            if (section) {
+                section.classList.add("is-marquee-paused");
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            // Push current page smoothly towards left
+            tl.to(current, {
+                xPercent: -100,
+                duration: pushDuration,
+                ease: "power2.inOut",
+                force3D: true,
+            }, 0);
+
+            setTimeout(done, (pushDuration + 0.5) * 1000);
+        });
+    }
+
+    function runToProjectDetailEnter(next) {
+        return new Promise((resolve) => {
+            // Position project details off-screen to the right
+            gsap.set(next, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                width: "100vw",
+                height: "100dvh",
+                backgroundColor: "#ffffff",
+                zIndex: 2,
+                autoAlpha: 1,
+                xPercent: 100,
+                overflow: "hidden",
+                force3D: true,
+            });
+
+            // Mount project details engine so Swiper and media are initialized
+            mountPage(next);
+
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                resetPage(next);
+
+                // Calibrate Swiper dimensions after container resets to normal layout
+                const mainEl = next.querySelector(".main-swiper");
+                if (mainEl && mainEl.swiper) {
+                    try { mainEl.swiper.update(); } catch (e) { }
+                }
+                const thumbEl = next.querySelector(".thumb-swiper");
+                if (thumbEl && thumbEl.swiper) {
+                    try { thumbEl.swiper.update(); } catch (e) { }
+                }
+                window.dispatchEvent(new Event("resize"));
+
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(next, { autoAlpha: 1, xPercent: 0 });
+                done();
+                return;
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            // Smooth appear from right to left
+            tl.to(next, {
+                xPercent: 0,
+                duration: pushDuration,
+                ease: "power2.inOut",
+                force3D: true,
+            }, 0);
+
+            setTimeout(done, (pushDuration + 0.5) * 1000);
+        });
+    }
+
+    // -----------------------------------------
+    // PROJECT DETAILS -> HOME/PROJECTS (REVERSE PUSH)
+    // -----------------------------------------
+    function runFromProjectDetailLeave(current, next) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                unmountPage(current);
+                cleanupMediaInContainer(current);
+                current.remove();
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            gsap.set(current, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100dvh",
+                backgroundColor: "#ffffff",
+                zIndex: 2,
+                overflow: "hidden",
+                force3D: true,
+            });
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            // Slide project details out towards right
+            tl.to(current, {
+                xPercent: 100,
+                duration: pushDuration,
+                ease: "power2.inOut",
+                force3D: true,
+            }, 0);
+
+            setTimeout(done, (pushDuration + 0.5) * 1000);
+        });
+    }
+
+    function runFromProjectDetailEnter(next) {
+        return new Promise((resolve) => {
+            const nextNs = next.getAttribute("data-barba-namespace") || "";
+            const isProjects = nextNs === "projects";
+            const isHome = nextNs === "home";
+
+            // If entering home, remove editorial curtain overlay
+            if (isHome) {
+                const curtain = next.querySelector(".home-curtain");
+                if (curtain) {
+                    curtain.classList.add("is-revealed");
+                    curtain.style.display = "none";
+                }
+            }
+
+            const projectsSection = isProjects
+                ? (next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section"))
+                : null;
+
+            if (projectsSection) {
+                projectsSection.classList.add("is-marquee-paused");
+                projectsSection.classList.add("is-ready");
+                const stage = projectsSection.querySelector(".desktop-gallery-stage");
+                if (stage) {
+                    stage.style.opacity = "1";
+                    stage.style.visibility = "visible";
+                    stage.style.transition = "none";
+                }
+            }
+
+            // Position next container off-screen to the left
+            gsap.set(next, {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                width: "100vw",
+                height: "100dvh",
+                backgroundColor: "#ffffff",
+                zIndex: 1,
+                autoAlpha: 1,
+                xPercent: -100,
+                overflow: "hidden",
+                force3D: true,
+            });
+
+            mountPage(next);
+
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                if (projectsSection) {
+                    projectsSection.classList.remove("is-marquee-paused");
+                    projectsSection.classList.add("is-marquee-active");
+                }
+                resetPage(next);
+                window.dispatchEvent(new Event("resize"));
+                resolve();
+            };
+
+            if (reducedMotion) {
+                if (projectsSection) {
+                    projectsSection.classList.remove("is-marquee-paused");
+                    projectsSection.classList.add("is-marquee-active");
+                }
+                gsap.set(next, { autoAlpha: 1, xPercent: 0 });
+                done();
+                return;
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+
+            // Slide previous page back into view from left to center
+            tl.to(next, {
+                xPercent: 0,
+                duration: pushDuration,
+                ease: "power2.inOut",
+                force3D: true,
+            }, 0);
+
+            setTimeout(done, (pushDuration + 0.5) * 1000);
+        });
+    }
+
+    // -----------------------------------------
     // BARBA HOOKS & INIT
     // -----------------------------------------
     barba.hooks.beforeEnter(async (data) => {
-        gsap.set(data.next.container, {
+        const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
+        const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
+
+        const initialProps = {
             position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             height: "100svh",
             overflow: "clip",
-        });
+        };
+
+        if (nextNs === "project-detail") {
+            initialProps.xPercent = 100;
+        } else if (nextNs === "projects" && currentNs === "home") {
+            initialProps.yPercent = 100;
+        } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home")) {
+            initialProps.xPercent = -100;
+        }
+
+        gsap.set(data.next.container, initialProps);
 
         if (lenis && typeof lenis.stop === "function") {
             lenis.stop();
@@ -700,6 +962,30 @@ function initOsmoBoilerplate() {
                 },
             },
             {
+                name: "to-project-detail",
+                sync: true,
+                from: { namespace: ["home", "projects"] },
+                to: { namespace: ["project-detail"] },
+                async leave(data) {
+                    return runToProjectDetailLeave(data.current.container, data.next.container);
+                },
+                async enter(data) {
+                    return runToProjectDetailEnter(data.next.container);
+                },
+            },
+            {
+                name: "from-project-detail",
+                sync: true,
+                from: { namespace: ["project-detail"] },
+                to: { namespace: ["home", "projects"] },
+                async leave(data) {
+                    return runFromProjectDetailLeave(data.current.container, data.next.container);
+                },
+                async enter(data) {
+                    return runFromProjectDetailEnter(data.next.container);
+                },
+            },
+            {
                 name: "default",
                 sync: true,
                 async once(data) {
@@ -743,7 +1029,7 @@ function initOsmoBoilerplate() {
     function resetPage(container) {
         window.scrollTo(0, 0);
         gsap.set(container, {
-            clearProps: "position,top,left,right,width,height,zIndex,yPercent,transform,overflow",
+            clearProps: "position,top,left,right,width,height,zIndex,yPercent,xPercent,transform,overflow,backgroundColor",
         });
     }
 
