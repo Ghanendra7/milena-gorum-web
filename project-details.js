@@ -556,9 +556,9 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.6,
+                                duration: 0.8,
                                 delay: 0.4,
-                                ease: "power1.out",
+                                ease: "power1.in",
                                 overwrite: "auto"
                             }
                         );
@@ -570,8 +570,8 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.6,
-                                stagger: 0.2,
+                                duration: 0.8,
+                                stagger: 0.3,
                                 delay: 0.35,
                                 ease: "power1.in",
                                 overwrite: "auto"
