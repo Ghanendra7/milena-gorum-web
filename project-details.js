@@ -509,7 +509,7 @@
                 isMobile: "(max-width: 767px)"
             }, (context) => {
                 const { isDesktop } = context.conditions;
-                const targetHeight = isDesktop ? 230 : 180;
+                const targetHeight = isDesktop ? 220 : 180;
 
                 let isOpen = false;
                 let activeCloseTween = null;
