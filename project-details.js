@@ -709,8 +709,8 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 1.2,
-                                stagger: 0.3,
+                                duration: 1,
+                                stagger: 0.25,
                                 delay: 0.6,
                                 ease: CustomEase.create("custom", "M0,0 C0.532,0 0.818,1 1,1 "),
                                 overwrite: "auto"
