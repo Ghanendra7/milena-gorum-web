@@ -556,24 +556,24 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.8,
-                                delay: 0.35,
-                                ease: "power2.out",
+                                duration: 1.6,
+                                delay: 0.3,
+                                ease: "power1.out",
                                 overwrite: "auto"
                             }
                         );
                     }
 
-                    // 4. Thumbnail strip slides fade in with slower, richer stagger
+                    // 4. Thumbnail strip slides fade in with slower, dreamy stagger and gradual fade
                     if (thumbSlides.length) {
                         gsap.fromTo(thumbSlides,
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 1.1,
-                                stagger: 0.12,
-                                delay: 0.4,
-                                ease: "power2.out",
+                                duration: 1.8,
+                                stagger: 0.22,
+                                delay: 0.35,
+                                ease: "power1.out",
                                 overwrite: "auto"
                             }
                         );
