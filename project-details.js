@@ -8,6 +8,8 @@
     let detailScope = null;
     let mainSwiperInstance = null;
     let thumbSwiperInstance = null;
+    let drawerMatchMedia = null;
+    let drawerTimeline = null;
 
     function initProjectDetails(container) {
         const scope = container || document.querySelector(".gallery-section") || document;
@@ -222,7 +224,9 @@
                 mousewheel: { enabled: true, forceToAxis: false, sensitivity: 1, releaseOnEdges: true },
                 watchSlidesProgress: true,
                 grabCursor: true,
-                a11y: { enabled: true }
+                a11y: { enabled: true },
+                observer: true,
+                observeParents: true
             });
 
             mainSwiperInstance = new Swiper(mainEl, {
@@ -469,6 +473,152 @@
 
         handleSlideMedia();
 
+        // ----------------------------------------------------
+        // BOTTOM STAGE DRAWER INTERACTION (.bottom-stage)
+        // ----------------------------------------------------
+        const drawer = scope.querySelector(".bottom-stage");
+        const trigger = scope.querySelector(".btn-project-details");
+        const icon = trigger ? trigger.querySelector(".plus-x") : null;
+        const detailsContainer = scope.querySelector(".project-details-container");
+
+        if (trigger && drawer && typeof gsap !== "undefined") {
+            // Webflow DOM Safety: If trigger was nested inside .bottom-stage in Webflow navigator,
+            // move it outside as an immediate sibling so drawer height:0 / overflow:hidden never clips the button.
+            if (drawer.contains(trigger) && drawer.parentNode) {
+                drawer.parentNode.insertBefore(trigger, drawer.nextSibling);
+            }
+
+            if (icon) {
+                gsap.set(icon, {
+                    transformOrigin: "50% 50%",
+                    display: "inline-flex",
+                    justifyContent: "center",
+                    alignItems: "center"
+                });
+            }
+
+            gsap.set(drawer, { height: 0, overflow: "hidden" });
+            if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
+            if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 0 });
+
+            const mm = gsap.matchMedia();
+            drawerMatchMedia = mm;
+
+            mm.add({
+                isDesktop: "(min-width: 768px)",
+                isMobile: "(max-width: 767px)"
+            }, (context) => {
+                const { isDesktop } = context.conditions;
+                const targetHeight = isDesktop ? 230 : 180;
+
+                const tl = gsap.timeline({
+                    paused: true,
+                    reversed: true,
+                    onStart: () => {
+                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                            thumbSwiperInstance.update();
+                        }
+                    },
+                    onComplete: () => {
+                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                            thumbSwiperInstance.update();
+                        }
+                    },
+                    onReverseComplete: () => {
+                        gsap.set(drawer, { height: 0, overflow: "hidden" });
+                    }
+                });
+                drawerTimeline = tl;
+
+                // 1. Drawer height expansion (smooth editorial deceleration matching video sketch)
+                tl.fromTo(drawer,
+                    { height: 0 },
+                    {
+                        height: targetHeight,
+                        duration: 0.7,
+                        ease: "power3.out"
+                    },
+                    0
+                );
+
+                // 2. Plus icon rotation to 'x'
+                if (icon) {
+                    tl.fromTo(icon,
+                        { rotation: 0 },
+                        {
+                            rotation: 45,
+                            duration: 0.5,
+                            ease: "power2.out"
+                        },
+                        0
+                    );
+                }
+
+                // 3. Project details container (credits text) fades in
+                if (detailsContainer) {
+                    tl.fromTo(detailsContainer,
+                        { autoAlpha: 0 },
+                        {
+                            autoAlpha: 1,
+                            duration: 0.4,
+                            ease: "power2.out"
+                        },
+                        0.28
+                    );
+                }
+
+                // 4. Thumbnail strip slides fade in with graceful stagger
+                if (thumbSlides.length) {
+                    tl.fromTo(thumbSlides,
+                        { autoAlpha: 0 },
+                        {
+                            autoAlpha: 1,
+                            duration: 0.42,
+                            stagger: 0.045,
+                            ease: "power2.out"
+                        },
+                        0.32
+                    );
+                }
+
+                const handleToggle = (e) => {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    const isOpening = tl.reversed();
+                    trigger.setAttribute("aria-expanded", String(isOpening));
+                    if (isOpening) {
+                        tl.play();
+                    } else {
+                        tl.reverse();
+                    }
+                };
+
+                trigger.addEventListener("click", handleToggle, { signal });
+                trigger.setAttribute("role", "button");
+                trigger.setAttribute("tabindex", "0");
+                trigger.setAttribute("aria-expanded", "false");
+                trigger.setAttribute("aria-controls", "bottom-stage");
+
+                trigger.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleToggle(e);
+                    }
+                }, { signal });
+
+                return () => {
+                    trigger.removeEventListener("click", handleToggle);
+                    tl.kill();
+                    gsap.set(drawer, { height: 0 });
+                    if (icon) gsap.set(icon, { rotation: 0 });
+                    if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 1 });
+                    if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 1 });
+                };
+            });
+        }
+
         window.addEventListener("keydown", (e) => {
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
             if (activeTag === "input" || activeTag === "textarea") return;
@@ -482,12 +632,22 @@
                     else activeVideo.pause();
                 }
             } else if (e.key === "Escape" && !document.fullscreenElement && !document.webkitFullscreenElement) {
-                goBack();
+                if (drawerTimeline && !drawerTimeline.reversed()) {
+                    trigger?.setAttribute("aria-expanded", "false");
+                    drawerTimeline.reverse();
+                } else {
+                    goBack();
+                }
             }
         }, { signal });
     }
 
     function destroyProjectDetails() {
+        if (drawerMatchMedia) {
+            try { drawerMatchMedia.revert(); } catch (e) { }
+            drawerMatchMedia = null;
+        }
+        drawerTimeline = null;
         if (detailScope) {
             detailScope._isDetailsMounted = false;
             detailScope = null;

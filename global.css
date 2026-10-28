@@ -795,6 +795,7 @@ a {
 .btn-play:focus-visible,
 .btn-sound:focus-visible,
 .btn-fullscreen:focus-visible,
+.btn-project-details:focus-visible,
 .seek-container:focus-visible {
     outline: 1px solid #000000;
     outline-offset: 3px;
@@ -803,4 +804,16 @@ a {
 .controls-container *:focus-visible,
 .seek-container:focus-visible {
     outline-color: #ffffff;
+}
+
+/* Bottom Stage Drawer Styles */
+.bottom-stage {
+    height: 0;
+    overflow: hidden;
+}
+
+@media screen and (max-width: 767px) {
+    .bottom-stage {
+        height: 0;
+    }
 }
