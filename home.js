@@ -222,13 +222,11 @@
         const clone = origSlide.cloneNode(true);
         if (s !== CENTER_SET) clone.setAttribute("aria-hidden", "true");
 
-        // Eager-load center slide + immediately adjacent slides visible on desktop above-the-fold
-        const isInitialVisible = (s === CENTER_SET && (idx === 0 || idx === 1 || idx === origCount - 1));
         const img = clone.querySelector(".home-media-img") || clone.querySelector("img");
         if (img) {
-          img.setAttribute("loading", isInitialVisible ? "eager" : "lazy");
+          img.setAttribute("loading", "eager");
           img.setAttribute("decoding", "async");
-          if (isInitialVisible) {
+          if (s === CENTER_SET) {
             img.setAttribute("fetchpriority", "high");
           }
         }
@@ -252,9 +250,22 @@
 
       const img = slide.querySelector("img");
       if (img && mediaWrap && !isFill) {
+        const origIdx = slide.getAttribute("data-orig-index");
         const applyAspect = () => {
           if (img.naturalWidth && img.naturalHeight) {
-            mediaWrap.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
+            const ratio = img.naturalWidth + " / " + img.naturalHeight;
+            if (origIdx !== null) {
+              allSlides.forEach((s) => {
+                if (s.getAttribute("data-orig-index") === origIdx) {
+                  const w = s.querySelector(".home-media-wrap");
+                  if (w && !s.classList.contains("is-fill")) {
+                    w.style.aspectRatio = ratio;
+                  }
+                }
+              });
+            } else {
+              mediaWrap.style.aspectRatio = ratio;
+            }
             measureGeometry();
           }
         };
@@ -336,9 +347,10 @@
         const gap = !isNaN(computedGap) ? computedGap : 5;
         let runningLeft = 0;
 
-        const prevMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
-        const prevCurrOffset = prevMetric ? viewportW * 0.5 - currentX - prevMetric.center : 0;
-        const prevTargOffset = prevMetric ? viewportW * 0.5 - targetX - prevMetric.center : 0;
+        const prevMetric = activeCenterSlide ? slideMetrics.find((m) => m.el === activeCenterSlide) : null;
+        const hasPrevMetric = Boolean(prevMetric);
+        const prevCurrOffset = hasPrevMetric ? viewportW * 0.5 - currentX - prevMetric.center : 0;
+        const prevTargOffset = hasPrevMetric ? viewportW * 0.5 - targetX - prevMetric.center : 0;
 
         slideMetrics = allSlides.map((el) => {
           const isFillSlide = el.classList.contains("is-fill");
@@ -394,8 +406,8 @@
             track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
           }
         } else {
-          const newMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
-          if (newMetric) {
+          const newMetric = activeCenterSlide ? slideMetrics.find((m) => m.el === activeCenterSlide) : null;
+          if (newMetric && hasPrevMetric) {
             currentX = viewportW * 0.5 - (newMetric.center + prevCurrOffset);
             targetX = viewportW * 0.5 - (newMetric.center + prevTargOffset);
             rawTargetX = targetX;
@@ -414,9 +426,10 @@
     requestAnimationFrame(measureGeometry);
     window.addEventListener("resize", measureGeometry, { passive: true, signal });
 
-    const initialSlideIndices = [centerStartIndex];
-    if (centerStartIndex + 1 < allSlides.length) initialSlideIndices.push(centerStartIndex + 1);
-    if (centerStartIndex - 1 >= 0) initialSlideIndices.push(centerStartIndex - 1);
+    const initialSlideIndices = [];
+    for (let i = 0; i < origCount; i++) {
+      initialSlideIndices.push(centerStartIndex + i);
+    }
 
     const decodePromises = initialSlideIndices.map((idx) => {
       const slide = allSlides[idx];
@@ -509,6 +522,8 @@
           targetX += shift;
           rawTargetX += shift;
           syncClonesOnWrap(+1);
+          const closest = getClosestSlide(currentX);
+          if (closest) activeCenterSlide = closest.el;
         } else if (mobileIndex < (CENTER_SET - 1) * origCount) {
           mobileIndex += origCount;
           const shift = origCount * viewportW;
@@ -516,22 +531,30 @@
           targetX -= shift;
           rawTargetX -= shift;
           syncClonesOnWrap(-1);
+          const closest = getClosestSlide(currentX);
+          if (closest) activeCenterSlide = closest.el;
         }
       } else {
         const centerSetFirst = slideMetrics[centerStartIndex];
         const centerRef = centerSetFirst ? viewportW * 0.5 - centerSetFirst.center : -singleSetWidth * CENTER_SET;
 
         const diff = currentX - centerRef;
-        if (diff > singleSetWidth * 0.5) {
+        const wrapThreshold = singleSetWidth * 0.85;
+
+        if (diff > wrapThreshold) {
           currentX -= singleSetWidth;
           targetX -= singleSetWidth;
           rawTargetX -= singleSetWidth;
           syncClonesOnWrap(-1);
-        } else if (diff < -singleSetWidth * 0.5) {
+          const closest = getClosestSlide(currentX);
+          if (closest) activeCenterSlide = closest.el;
+        } else if (diff < -wrapThreshold) {
           currentX += singleSetWidth;
           targetX += singleSetWidth;
           rawTargetX += singleSetWidth;
           syncClonesOnWrap(+1);
+          const closest = getClosestSlide(currentX);
+          if (closest) activeCenterSlide = closest.el;
         }
       }
     }
