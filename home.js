@@ -8,6 +8,9 @@
   let homeAbortController = null;
   let homeResizeObserver = null;
   let homeScope = null;
+  let wheelIdleTimer = null;
+  let fadeTimer = null;
+  let curtainSafetyTimer = null;
 
   function initHome(container) {
     const scope = container || document.querySelector(".home-section") || document;
@@ -21,6 +24,10 @@
     const MINIMUM_LOADER_TIME = 350;
     const MAX_SAFETY_TIME = 800;
     const MAX_ACTIVE_DECODERS = 2;
+
+    const BASE_MARQUEE_SPEED = 0.55;
+    const MARQUEE_DECEL_RATE = 0.16;
+    const MARQUEE_ACCEL_RATE = 0.16;
 
     const WHEEL_MULTIPLIER = 1.15;
     const WHEEL_SMOOTH_STAGE1 = 0.22;
@@ -66,10 +73,13 @@
     let singleSetWidth = 0;
     let slideMetrics = [];
     let userInteracted = false;
+    let isInitialLayoutDone = false;
 
     let currentX = 0;
     let targetX = 0;
     let rawTargetX = 0;
+    let currentMarqueeSpeed = 0;
+    let isWheelActive = false;
     let lastFrameTime = performance.now();
     let mobileIndex = centerStartIndex;
     let activeCenterSlide = null;
@@ -77,8 +87,10 @@
 
     let isDragging = false;
     let dragDistance = 0;
-    let fadeTimer = null;
-    let curtainRevealed = false;
+    let curtainRevealed = !curtain || curtain.classList.contains("is-revealed");
+    if (curtainRevealed && scope && scope.classList) {
+      scope.classList.add("is-marquee-active");
+    }
     const startTime = performance.now();
 
     function checkIsMobile() {
@@ -105,21 +117,24 @@
     }
 
     function revealCurtain() {
-      if (!curtain || curtainRevealed) return;
+      if (curtainRevealed) return;
       measureGeometry();
       curtainRevealed = true;
-      curtain.classList.add("is-revealed");
+      if (curtain) {
+        curtain.classList.add("is-revealed");
+      }
+      if (scope && scope.classList) {
+        scope.classList.add("is-marquee-active");
+      }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (!userInteracted) {
-            measureGeometry();
-          }
+          measureGeometry();
         });
       });
     }
 
-    if (curtain) {
-      setTimeout(revealCurtain, MAX_SAFETY_TIME);
+    if (curtain && !curtainRevealed) {
+      curtainSafetyTimer = setTimeout(revealCurtain, MAX_SAFETY_TIME);
     }
 
     rawSlides.forEach((slide, idx) => {
@@ -238,9 +253,7 @@
         const applyAspect = () => {
           if (img.naturalWidth && img.naturalHeight) {
             mediaWrap.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
-            if (!userInteracted) {
-              measureGeometry();
-            }
+            measureGeometry();
           }
         };
 
@@ -295,7 +308,7 @@
           };
         });
 
-        if (!userInteracted) {
+        if (!isInitialLayoutDone) {
           mobileIndex = centerStartIndex;
           activeCenterSlide = allSlides[mobileIndex];
           targetX = -mobileIndex * viewportW;
@@ -304,6 +317,7 @@
           track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
           updateActiveProject(true);
           manageVideoPlayback();
+          isInitialLayoutDone = true;
         } else if (wasMobile !== isMobile) {
           const currentActiveIdx = allSlides.indexOf(activeCenterSlide);
           mobileIndex = currentActiveIdx !== -1 ? currentActiveIdx : centerStartIndex;
@@ -352,7 +366,7 @@
 
         if (singleSetWidth <= 0) return;
 
-        if (!userInteracted) {
+        if (!isInitialLayoutDone) {
           const targetMetric =
             slideMetrics.find((m) => m.el === activeCenterSlide) ||
             slideMetrics[centerStartIndex] ||
@@ -366,6 +380,16 @@
             track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
             updateActiveProject(true);
             manageVideoPlayback();
+            isInitialLayoutDone = true;
+          }
+        } else if (wasMobile !== isMobile) {
+          const newMetric = slideMetrics.find((m) => m.el === activeCenterSlide) || slideMetrics[centerStartIndex];
+          if (newMetric) {
+            activeCenterSlide = newMetric.el;
+            currentX = viewportW * 0.5 - newMetric.center;
+            targetX = currentX;
+            rawTargetX = currentX;
+            track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
           }
         } else {
           const newMetric = slideMetrics.find((m) => m.el === activeCenterSlide);
@@ -420,7 +444,7 @@
       return Promise.resolve();
     });
 
-    const curtainSafetyTimer = setTimeout(revealCurtain, MAX_SAFETY_TIME);
+    curtainSafetyTimer = setTimeout(revealCurtain, MAX_SAFETY_TIME);
     Promise.allSettled(decodePromises).then(() => {
       clearTimeout(curtainSafetyTimer);
       measureGeometry();
@@ -614,6 +638,14 @@
         else if (e.deltaMode === 2) delta *= window.innerHeight;
         if (Math.abs(delta) < 0.2) return;
 
+        if (!isWheelActive) {
+          isWheelActive = true;
+        }
+        clearTimeout(wheelIdleTimer);
+        wheelIdleTimer = setTimeout(() => {
+          isWheelActive = false;
+        }, 140);
+
         const clampedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 120);
         rawTargetX -= clampedDelta * WHEEL_MULTIPLIER;
       },
@@ -641,6 +673,8 @@
 
       userInteracted = true;
       isDragging = true;
+      isWheelActive = false;
+      clearTimeout(wheelIdleTimer);
       dragDistance = 0;
       startX = e.clientX;
       lastX = e.clientX;
@@ -715,6 +749,25 @@
         wrapTrack();
 
         if (!isMobile) {
+          const isMarqueePausedClass = Boolean(
+            scope && scope.classList && scope.classList.contains("is-marquee-paused")
+          );
+
+          if (isMarqueePausedClass) {
+            currentMarqueeSpeed = 0;
+            rawTargetX = currentX;
+            targetX = currentX;
+          }
+
+          const isPaused = !curtainRevealed || isDragging || isWheelActive || isMarqueePausedClass;
+          const desiredMarqueeSpeed = isPaused ? 0 : BASE_MARQUEE_SPEED;
+
+          const rate = isPaused ? MARQUEE_DECEL_RATE : MARQUEE_ACCEL_RATE;
+          const speedAlpha = 1 - Math.pow(1 - rate, dtScale);
+          currentMarqueeSpeed += (desiredMarqueeSpeed - currentMarqueeSpeed) * speedAlpha;
+
+          rawTargetX -= currentMarqueeSpeed * dtScale;
+
           if (isDragging) {
             targetX = rawTargetX;
             const dragAlpha = 1 - Math.pow(1 - DRAG_LERP_FACTOR, dtScale);
@@ -726,6 +779,7 @@
             currentX += (targetX - currentX) * stage2Alpha;
           }
         } else {
+          currentMarqueeSpeed = 0;
           const lerpFactor = isDragging ? 0.35 : MOBILE_SNAP_LERP;
           const mobileAlpha = 1 - Math.pow(1 - lerpFactor, dtScale);
           currentX += (targetX - currentX) * mobileAlpha;
@@ -733,7 +787,7 @@
 
         track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
 
-        if (isDragging || (userInteracted && now - lastActiveCheck > 100)) {
+        if (isDragging || now - lastActiveCheck > 100) {
           lastActiveCheck = now;
           updateActiveProject(false);
           manageVideoPlayback();
@@ -749,6 +803,9 @@
   function destroyHome() {
     if (homeScope) {
       homeScope._isHomeMounted = false;
+      if (homeScope.classList) {
+        homeScope.classList.remove("is-marquee-active");
+      }
       homeScope = null;
     }
     if (homeRafId) {
@@ -762,6 +819,18 @@
     if (homeResizeObserver) {
       homeResizeObserver.disconnect();
       homeResizeObserver = null;
+    }
+    if (wheelIdleTimer) {
+      clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = null;
+    }
+    if (fadeTimer) {
+      clearTimeout(fadeTimer);
+      fadeTimer = null;
+    }
+    if (curtainSafetyTimer) {
+      clearTimeout(curtainSafetyTimer);
+      curtainSafetyTimer = null;
     }
   }
 
