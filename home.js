@@ -11,6 +11,7 @@
   let wheelIdleTimer = null;
   let fadeTimer = null;
   let curtainSafetyTimer = null;
+  let homeActiveVideoPool = [];
 
   function initHome(container) {
     const scope = container || document.querySelector(".home-section") || document;
@@ -23,7 +24,7 @@
 
     const MINIMUM_LOADER_TIME = 350;
     const MAX_SAFETY_TIME = 800;
-    const MAX_ACTIVE_DECODERS = 2;
+    const MAX_ACTIVE_DECODERS = 6;
 
     const BASE_MARQUEE_SPEED = 0.55;
     const MARQUEE_DECEL_RATE = 0.16;
@@ -67,6 +68,7 @@
     const centerStartIndex = CENTER_SET * origCount;
     const allSlides = [];
     const activeVideoPool = [];
+    homeActiveVideoPool = activeVideoPool;
 
     let isMobile = checkIsMobile();
     let viewportW = window.innerWidth;
@@ -546,41 +548,53 @@
     function manageVideoPlayback() {
       if (!slideMetrics.length) return;
 
-      const closest = isMobile ? slideMetrics[mobileIndex] : getClosestSlide(currentX);
-      if (!closest) return;
+      const BUFFER = 250;
+      const screenLeftBound = -BUFFER;
+      const screenRightBound = viewportW + BUFFER;
 
-      const curIdx = slideMetrics.indexOf(closest);
-      const allowedIndices = [curIdx];
-      if (curIdx > 0) allowedIndices.push(curIdx - 1);
-      if (curIdx < slideMetrics.length - 1) allowedIndices.push(curIdx + 1);
+      const activeIndices = [];
+      slideMetrics.forEach((m, idx) => {
+        if (!m.video || !m.videoSrc) return;
+        const screenLeft = m.left + currentX;
+        const screenRight = screenLeft + m.width;
+        if (screenRight > screenLeftBound && screenLeft < screenRightBound) {
+          activeIndices.push(idx);
+        }
+      });
 
       for (let i = activeVideoPool.length - 1; i >= 0; i--) {
         const item = activeVideoPool[i];
-        if (!allowedIndices.includes(item.index)) {
+        if (!activeIndices.includes(item.index)) {
           if (item.video) {
-            item.video.pause();
+            if (!item.video.paused) {
+              item.video.pause();
+            }
             item.video.removeAttribute("src");
             item.video.load();
-            item.el.classList.remove("is-video-playing");
+            if (item.el) {
+              item.el.classList.remove("is-video-playing");
+            }
           }
           activeVideoPool.splice(i, 1);
         }
       }
 
-      allowedIndices.forEach((idx) => {
+      activeIndices.forEach((idx) => {
         const m = slideMetrics[idx];
         if (!m || !m.video) return;
 
         const isMounted = activeVideoPool.some((p) => p.index === idx);
 
         if (!isMounted) {
-          if (activeVideoPool.length >= MAX_ACTIVE_DECODERS + 1) {
+          if (activeVideoPool.length >= MAX_ACTIVE_DECODERS) {
             const oldest = activeVideoPool.shift();
             if (oldest && oldest.video) {
-              oldest.video.pause();
+              if (!oldest.video.paused) oldest.video.pause();
               oldest.video.removeAttribute("src");
               oldest.video.load();
-              oldest.el.classList.remove("is-video-playing");
+              if (oldest.el) {
+                oldest.el.classList.remove("is-video-playing");
+              }
             }
           }
 
@@ -592,14 +606,16 @@
           activeVideoPool.push({ index: idx, video: m.video, el: m.el });
         }
 
-        if (idx === curIdx) {
-          if (m.video.paused) {
-            m.video.muted = true;
-            m.video.play().catch(() => { });
-          }
-        } else {
-          if (!m.video.paused) {
-            m.video.pause();
+        if (m.video.readyState >= 2) {
+          m.el.classList.add("is-video-playing");
+        }
+
+        if (m.video.paused) {
+          m.video.muted = true;
+          m.video.defaultMuted = true;
+          const playPromise = m.video.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => { });
           }
         }
       });
@@ -832,6 +848,15 @@
       clearTimeout(curtainSafetyTimer);
       curtainSafetyTimer = null;
     }
+    homeActiveVideoPool.forEach((item) => {
+      if (item.video) {
+        if (!item.video.paused) item.video.pause();
+        item.video.removeAttribute("src");
+        item.video.load();
+        if (item.el) item.el.classList.remove("is-video-playing");
+      }
+    });
+    homeActiveVideoPool.length = 0;
   }
 
   window.initHome = initHome;
