@@ -711,6 +711,7 @@ a {
 
 .seek-container {
     touch-action: none;
+    inset: auto 0% 22px 50% !important;
 }
 
 .seek-fill {
