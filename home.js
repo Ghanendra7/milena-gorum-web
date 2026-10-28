@@ -7,14 +7,19 @@
   let homeRafId = null;
   let homeAbortController = null;
   let homeResizeObserver = null;
+  let homeScope = null;
 
   function initHome(container) {
     const scope = container || document.querySelector(".home-section") || document;
+    if (scope && scope._isHomeMounted) return;
+    if (scope) scope._isHomeMounted = true;
+    homeScope = scope;
+
     const BUNNY_CDN_HOST = "vz-cc78103f-0dc.b-cdn.net";
     const MAX_VIDEO_SECONDS = 30;
 
     const MINIMUM_LOADER_TIME = 350;
-    const MAX_SAFETY_TIME = 1500;
+    const MAX_SAFETY_TIME = 800;
     const MAX_ACTIVE_DECODERS = 2;
 
     const WHEEL_MULTIPLIER = 1.15;
@@ -200,12 +205,15 @@
         const clone = origSlide.cloneNode(true);
         if (s !== CENTER_SET) clone.setAttribute("aria-hidden", "true");
 
-        // Eager-load the first image (active center slide), offscreen slides lazy load
-        const isInitialVisible = (s === CENTER_SET && idx === 0);
+        // Eager-load center slide + immediately adjacent slides visible on desktop above-the-fold
+        const isInitialVisible = (s === CENTER_SET && (idx === 0 || idx === 1 || idx === origCount - 1));
         const img = clone.querySelector(".home-media-img") || clone.querySelector("img");
         if (img) {
           img.setAttribute("loading", isInitialVisible ? "eager" : "lazy");
           img.setAttribute("decoding", "async");
+          if (isInitialVisible) {
+            img.setAttribute("fetchpriority", "high");
+          }
         }
 
         track.appendChild(clone);
@@ -389,17 +397,25 @@
       if (!slide) return Promise.resolve();
       const img = slide.querySelector("img");
       if (img) {
+        const mediaWrap = slide.querySelector(".home-media-wrap");
         if (img.complete && img.naturalWidth > 0) {
-          const mediaWrap = slide.querySelector(".home-media-wrap");
           lockNaturalAspect(img, mediaWrap);
           return Promise.resolve();
         }
         if (typeof img.decode === "function") {
-          return img.decode().then(() => {
-            const mediaWrap = slide.querySelector(".home-media-wrap");
-            lockNaturalAspect(img, mediaWrap);
-          }).catch(() => { });
+          // Cap image decode at 200ms so Safari never hangs curtain reveal
+          const timeoutCap = new Promise((res) => setTimeout(res, 200));
+          return Promise.race([
+            img.decode().then(() => { lockNaturalAspect(img, mediaWrap); }),
+            timeoutCap
+          ]).catch(() => { });
         }
+        return new Promise((res) => {
+          const done = () => { lockNaturalAspect(img, mediaWrap); res(); };
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", res, { once: true });
+          setTimeout(res, 200);
+        });
       }
       return Promise.resolve();
     });
@@ -731,6 +747,10 @@
   }
 
   function destroyHome() {
+    if (homeScope) {
+      homeScope._isHomeMounted = false;
+      homeScope = null;
+    }
     if (homeRafId) {
       cancelAnimationFrame(homeRafId);
       homeRafId = null;

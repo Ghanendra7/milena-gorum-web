@@ -5,6 +5,7 @@
 
 (function () {
     let detailAbortController = null;
+    let detailScope = null;
     let mainSwiperInstance = null;
     let thumbSwiperInstance = null;
 
@@ -17,6 +18,9 @@
         const backLink = scope.querySelector(".back-link");
 
         if (!mainEl || !thumbEl) return;
+        if (scope && scope._isDetailsMounted) return;
+        if (scope) scope._isDetailsMounted = true;
+        detailScope = scope;
 
         destroyProjectDetails();
         detailAbortController = new AbortController();
@@ -73,6 +77,10 @@
             if (!rawInput.trim()) return;
 
             const videoId = extractVideoId(rawInput);
+            videoEl.playsInline = true;
+            videoEl.setAttribute("playsinline", "");
+            videoEl.setAttribute("webkit-playsinline", "true");
+
             if (rawInput.trim().startsWith("http") && videoId === rawInput.trim()) {
                 videoEl.src = rawInput.trim();
                 videoEl.preload = "metadata";
@@ -480,6 +488,10 @@
     }
 
     function destroyProjectDetails() {
+        if (detailScope) {
+            detailScope._isDetailsMounted = false;
+            detailScope = null;
+        }
         if (detailAbortController) {
             detailAbortController.abort();
             detailAbortController = null;

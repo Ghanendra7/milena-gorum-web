@@ -6,6 +6,7 @@
 (function () {
     let projectsRafId = null;
     let projectsAbortController = null;
+    let projectsScope = null;
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -18,6 +19,9 @@
         const subFilterList = scope.querySelector(".sub-filter-list") || document.querySelector(".sub-filter-list");
 
         if (!section || !track || !trackWrapper) return;
+        if (scope && scope._isProjectsMounted) return;
+        if (scope) scope._isProjectsMounted = true;
+        projectsScope = scope;
 
         destroyProjects();
         projectsAbortController = new AbortController();
@@ -374,6 +378,15 @@
 
             registerWarmVideo(video);
 
+            video.playsInline = true;
+            video.setAttribute("playsinline", "");
+            video.setAttribute("webkit-playsinline", "true");
+            video.muted = true;
+            video.defaultMuted = true;
+            video.setAttribute("muted", "");
+            video.loop = true;
+            video.setAttribute("loop", "");
+
             if (video.getAttribute("src") !== previewSrc) {
                 video.setAttribute("src", previewSrc);
                 video.load();
@@ -490,7 +503,7 @@
                     if (tplIdx === 0) {
                         clone.setAttribute("data-is-first-item", "true");
                     }
-                    const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 3;
+                    const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 4;
                     if (s === 1 || (!isDesktopInfinite && s === 0)) {
                         clone.setAttribute("data-initial-visible", "true");
                     }
@@ -498,6 +511,9 @@
                     if (img) {
                         img.setAttribute("loading", isVisibleInitial ? "eager" : "lazy");
                         img.setAttribute("decoding", "async");
+                        if (isVisibleInitial) {
+                            img.setAttribute("fetchpriority", "high");
+                        }
                     }
                     bindDesktopCard(clone, globalIdx);
                     fragment.appendChild(clone);
@@ -1351,15 +1367,18 @@
                 if (!img) return Promise.resolve();
                 if (img.complete && img.naturalWidth > 0) return Promise.resolve();
                 if (typeof img.decode === "function") {
-                    return img.decode().catch(() => { });
+                    const timeoutCap = new Promise((res) => setTimeout(res, 200));
+                    return Promise.race([img.decode(), timeoutCap]).catch(() => { });
                 }
                 return new Promise((res) => {
-                    img.addEventListener("load", res, { once: true });
-                    img.addEventListener("error", res, { once: true });
+                    const done = () => res();
+                    img.addEventListener("load", done, { once: true });
+                    img.addEventListener("error", done, { once: true });
+                    setTimeout(done, 200);
                 });
             });
 
-            const safetyTimer = setTimeout(reveal, 1000);
+            const safetyTimer = setTimeout(reveal, 400);
             Promise.allSettled(decodeTasks).then(() => {
                 clearTimeout(safetyTimer);
                 reveal();
@@ -1383,6 +1402,10 @@
     }
 
     function destroyProjects() {
+        if (projectsScope) {
+            projectsScope._isProjectsMounted = false;
+            projectsScope = null;
+        }
         if (projectsRafId) {
             cancelAnimationFrame(projectsRafId);
             projectsRafId = null;

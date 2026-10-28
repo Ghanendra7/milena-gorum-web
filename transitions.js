@@ -26,9 +26,13 @@
         }
     }
 
-    loadDependencies()
-        .then(initOsmoBoilerplate)
-        .catch((err) => console.error("❌ [Osmo Transitions] Dependency load error:", err));
+    if (typeof window.gsap !== "undefined" && typeof window.CustomEase !== "undefined" && typeof window.barba !== "undefined") {
+        initOsmoBoilerplate();
+    } else {
+        loadDependencies()
+            .then(initOsmoBoilerplate)
+            .catch((err) => console.error("❌ [Osmo Transitions] Dependency load error:", err));
+    }
 })();
 
 
@@ -636,6 +640,8 @@ function initOsmoBoilerplate() {
             top: 0,
             left: 0,
             right: 0,
+            height: "100svh",
+            overflow: "clip",
         });
 
         if (lenis && typeof lenis.stop === "function") {
@@ -663,6 +669,12 @@ function initOsmoBoilerplate() {
     barba.hooks.afterEnter((data) => {
         initAfterEnterFunctions(data.next.container);
     });
+
+    if (typeof window.barbaPrefetch !== "undefined") {
+        try {
+            barba.use(window.barbaPrefetch);
+        } catch (e) { }
+    }
 
     barba.init({
         debug: false,
@@ -698,6 +710,7 @@ function initOsmoBoilerplate() {
                 sync: true,
                 async once(data) {
                     initOnceFunctions();
+                    mountPage(data.next.container);
                     return runPageOnceAnimation(data.next.container);
                 },
                 async leave(data) {
@@ -708,6 +721,18 @@ function initOsmoBoilerplate() {
                 },
             },
         ],
+    });
+
+    // Safari back-forward cache (bfcache) restore handler
+    window.addEventListener("pageshow", (event) => {
+        if (event.persisted) {
+            history.scrollRestoration = "manual";
+            const container = document.querySelector('[data-barba="container"]');
+            if (container) {
+                container._isMounted = false;
+                mountPage(container);
+            }
+        }
     });
 
     const themeConfig = {
@@ -724,7 +749,7 @@ function initOsmoBoilerplate() {
     function resetPage(container) {
         window.scrollTo(0, 0);
         gsap.set(container, {
-            clearProps: "position,top,left,right,width,height,zIndex,yPercent,transform",
+            clearProps: "position,top,left,right,width,height,zIndex,yPercent,transform,overflow",
         });
     }
 
