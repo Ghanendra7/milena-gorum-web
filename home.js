@@ -24,7 +24,7 @@
 
     const MINIMUM_LOADER_TIME = 350;
     const MAX_SAFETY_TIME = 800;
-    const MAX_ACTIVE_DECODERS = 6;
+    const MAX_ACTIVE_DECODERS = 8;
 
     const BASE_MARQUEE_SPEED = 0.55;
     const MARQUEE_DECEL_RATE = 0.16;
@@ -69,6 +69,7 @@
     const allSlides = [];
     const activeVideoPool = [];
     homeActiveVideoPool = activeVideoPool;
+    const projectVideoTimes = {};
 
     let isMobile = checkIsMobile();
     let viewportW = window.innerWidth;
@@ -285,6 +286,17 @@
       video.addEventListener("timeupdate", () => {
         if (video.currentTime >= MAX_VIDEO_SECONDS) {
           video.currentTime = 0.05;
+        }
+        const key = video.getAttribute("data-resolved-src") || slide.getAttribute("data-orig-index");
+        if (key && video.currentTime > 0) {
+          projectVideoTimes[key] = video.currentTime;
+        }
+      });
+
+      video.addEventListener("pause", () => {
+        const key = video.getAttribute("data-resolved-src") || slide.getAttribute("data-orig-index");
+        if (key && video.currentTime > 0) {
+          projectVideoTimes[key] = video.currentTime;
         }
       });
     });
@@ -562,23 +574,45 @@
         }
       });
 
-      for (let i = activeVideoPool.length - 1; i >= 0; i--) {
+      // Pause videos that are out of view without removing src or resetting time
+      for (let i = 0; i < activeVideoPool.length; i++) {
         const item = activeVideoPool[i];
         if (!activeIndices.includes(item.index)) {
           if (item.video) {
+            if (item.video.currentTime > 0) {
+              const key = item.video.getAttribute("data-resolved-src") || String(item.index);
+              projectVideoTimes[key] = item.video.currentTime;
+            }
             if (!item.video.paused) {
               item.video.pause();
             }
-            item.video.removeAttribute("src");
-            item.video.load();
             if (item.el) {
               item.el.classList.remove("is-video-playing");
             }
           }
-          activeVideoPool.splice(i, 1);
         }
       }
 
+      // If activeVideoPool exceeds MAX_ACTIVE_DECODERS, evict furthest off-screen videos
+      while (activeVideoPool.length > MAX_ACTIVE_DECODERS) {
+        const offScreenIdx = activeVideoPool.findIndex((p) => !activeIndices.includes(p.index));
+        if (offScreenIdx === -1) break;
+        const evicted = activeVideoPool.splice(offScreenIdx, 1)[0];
+        if (evicted && evicted.video) {
+          if (evicted.video.currentTime > 0) {
+            const key = evicted.video.getAttribute("data-resolved-src") || String(evicted.index);
+            projectVideoTimes[key] = evicted.video.currentTime;
+          }
+          if (!evicted.video.paused) evicted.video.pause();
+          evicted.video.removeAttribute("src");
+          evicted.video.load();
+          if (evicted.el) {
+            evicted.el.classList.remove("is-video-playing");
+          }
+        }
+      }
+
+      // Mount and resume all visible / near-screen videos from where they left off
       activeIndices.forEach((idx) => {
         const m = slideMetrics[idx];
         if (!m || !m.video) return;
@@ -586,24 +620,29 @@
         const isMounted = activeVideoPool.some((p) => p.index === idx);
 
         if (!isMounted) {
-          if (activeVideoPool.length >= MAX_ACTIVE_DECODERS) {
-            const oldest = activeVideoPool.shift();
-            if (oldest && oldest.video) {
-              if (!oldest.video.paused) oldest.video.pause();
-              oldest.video.removeAttribute("src");
-              oldest.video.load();
-              if (oldest.el) {
-                oldest.el.classList.remove("is-video-playing");
-              }
-            }
-          }
-
           if (m.video.getAttribute("src") !== m.videoSrc) {
             m.video.src = m.videoSrc;
             m.video.load();
           }
 
           activeVideoPool.push({ index: idx, video: m.video, el: m.el });
+        }
+
+        const key = m.videoSrc || String(m.origIndex);
+        const savedTime = projectVideoTimes[key];
+        if (savedTime && savedTime > 0.1 && Math.abs(m.video.currentTime - savedTime) > 0.5) {
+          const restore = () => {
+            try {
+              if (savedTime < (m.video.duration || 999)) {
+                m.video.currentTime = savedTime;
+              }
+            } catch (err) { }
+          };
+          if (m.video.readyState >= 1) {
+            restore();
+          } else {
+            m.video.addEventListener("loadedmetadata", restore, { once: true });
+          }
         }
 
         if (m.video.readyState >= 2) {
