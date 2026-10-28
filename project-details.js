@@ -571,7 +571,7 @@
                             {
                                 autoAlpha: 1,
                                 duration: 0.6,
-                                stagger: 0.4,
+                                stagger: 0.2,
                                 delay: 0.35,
                                 ease: "power1.in",
                                 overwrite: "auto"
