@@ -544,7 +544,7 @@
                     if (icon) {
                         gsap.to(icon, {
                             rotation: 45,
-                            duration: 0.35,
+                            duration: 0.5,
                             ease: "power2.out",
                             overwrite: "auto"
                         });
@@ -589,7 +589,7 @@
                     if (icon) {
                         gsap.to(icon, {
                             rotation: 0,
-                            duration: 0.35,
+                            duration: 0.5,
                             ease: "power2.out",
                             overwrite: "auto"
                         });
