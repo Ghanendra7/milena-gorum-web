@@ -530,13 +530,13 @@
                 });
                 drawerTimeline = tl;
 
-                // 1. Drawer height expansion (smooth editorial deceleration matching video sketch)
+                // 1. Drawer height expansion (slowed down with power2.inOut ease)
                 tl.fromTo(drawer,
                     { height: 0 },
                     {
                         height: targetHeight,
-                        duration: 0.7,
-                        ease: "power3.out"
+                        duration: 1.1,
+                        ease: "power2.inOut"
                     },
                     0
                 );
@@ -547,8 +547,8 @@
                         { rotation: 0 },
                         {
                             rotation: 45,
-                            duration: 0.5,
-                            ease: "power2.out"
+                            duration: 0.8,
+                            ease: "power2.inOut"
                         },
                         0
                     );
@@ -560,24 +560,24 @@
                         { autoAlpha: 0 },
                         {
                             autoAlpha: 1,
-                            duration: 0.4,
+                            duration: 0.7,
                             ease: "power2.out"
                         },
-                        0.28
+                        0.45
                     );
                 }
 
-                // 4. Thumbnail strip slides fade in with graceful stagger
+                // 4. Thumbnail strip slides fade in with slower, more pronounced stagger
                 if (thumbSlides.length) {
                     tl.fromTo(thumbSlides,
                         { autoAlpha: 0 },
                         {
                             autoAlpha: 1,
-                            duration: 0.42,
-                            stagger: 0.045,
+                            duration: 0.75,
+                            stagger: 0.09,
                             ease: "power2.out"
                         },
-                        0.32
+                        0.5
                     );
                 }
 

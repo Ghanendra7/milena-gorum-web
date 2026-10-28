@@ -719,7 +719,7 @@ a {
 .image-wrapper,
 .video-wrapper,
 .image-container,
-.thumb-swiper .swiper-slide {
+.thumb-img-wrap {
     background-color: var(--media-bg-color);
 }
 
