@@ -712,7 +712,7 @@
                                 duration: 0.9,
                                 stagger: 0.3,
                                 delay: 0.8,
-                                ease: "power1.inOut",
+                                ease: CustomEase.create("custom", "M0,0 C0.532,0 0.818,1 1,1 "),
                                 overwrite: "auto"
                             }
                         );
