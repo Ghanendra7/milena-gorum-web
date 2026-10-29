@@ -967,17 +967,20 @@ a {
 .index-col-num {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .index-col-client {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .index-col-title {
     white-space: normal;
     word-break: break-word;
+    flex-shrink: 0;
 }
 
 /* Desktop Horizontal Media Numbers */
@@ -991,6 +994,9 @@ a {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .index-row.is-hovered .index-media-desktop {
