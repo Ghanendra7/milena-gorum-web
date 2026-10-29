@@ -932,7 +932,6 @@ a {
 
 .index-list-wrapper,
 .index-list {
-    width: 100%;
     display: flex;
     flex-direction: column;
 }
