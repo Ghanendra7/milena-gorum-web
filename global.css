@@ -961,8 +961,6 @@ a {
 /* Main Row Line: Desktop Grid Alignment */
 .index-row-header {
     width: 100%;
-    display: grid;
-    grid-template-columns: 44px 220px 320px 1fr;
     gap: 16px;
     align-items: baseline;
     padding: 2px 0;
@@ -1091,9 +1089,6 @@ a {
    Mobile & Tablet Portrait (<= 1024px)
    ======================================================== */
 @media (max-width: 1024px) {
-    .index-wrapper {
-        padding: 56px 16px 80px;
-    }
 
     /* Disable Desktop Fixed Stage & Inline Row Numbers */
     .index-preview-stage,
@@ -1102,8 +1097,6 @@ a {
     }
 
     .index-row-header {
-        grid-template-columns: 36px 140px 1fr;
-        gap: 12px;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
     }
@@ -1166,14 +1159,5 @@ a {
         object-fit: cover;
         display: block;
         pointer-events: none;
-    }
-}
-
-@media (max-width: 600px) {
-
-    .index-row-header,
-    .index-row-drawer {
-        grid-template-columns: 28px 110px 1fr;
-        gap: 8px;
     }
 }
