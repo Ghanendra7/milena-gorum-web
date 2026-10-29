@@ -1099,8 +1099,8 @@ a {
     .index-row-drawer {
         width: 100%;
         display: grid;
-        grid-template-columns: 36px 140px 1fr;
-        gap: 12px;
+        grid-template-columns: 36px 150px 1fr;
+        gap: 16px;
         overflow: hidden;
         height: 0;
         opacity: 0;
