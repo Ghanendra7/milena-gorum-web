@@ -927,7 +927,6 @@ a {
 
 .index-wrapper {
     width: 100%;
-    padding: 60px 16px 120px;
     box-sizing: border-box;
 }
 
@@ -1171,6 +1170,7 @@ a {
 }
 
 @media (max-width: 600px) {
+
     .index-row-header,
     .index-row-drawer {
         grid-template-columns: 28px 110px 1fr;
