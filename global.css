@@ -989,7 +989,8 @@ a {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 20px;
+    row-gap: 8px;
+    column-gap: 24px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
