@@ -11,7 +11,7 @@
     let activeMobileVideo = null;
 
     const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
-    const PREVIEW_FILENAME = "preview_hq.mp4";
+    const PREVIEW_FILENAME = "play_480p.mp4";
     const TABLET_PORTRAIT_BREAKPOINT = 1024;
     const projectMediaCache = new Map();
 
@@ -32,7 +32,7 @@
         return idMatch ? idMatch[0] : trimmed;
     };
 
-    const getBunnyPreviewUrl = (videoId) => {
+    const getBunny480pUrl = (videoId) => {
         if (!videoId) return "";
         const cleanId = extractVideoId(videoId);
         return `${BUNNY_STREAM_BASE}/${cleanId}/${PREVIEW_FILENAME}`;
@@ -42,6 +42,71 @@
         if (!videoId) return "";
         const cleanId = extractVideoId(videoId);
         return `${BUNNY_STREAM_BASE}/${cleanId}/thumbnail.jpg`;
+    };
+
+    const fallbackVideoUrls = (videoId) => {
+        const cleanId = extractVideoId(videoId);
+        return [
+            `${BUNNY_STREAM_BASE}/${cleanId}/play_480p.mp4`,
+            `${BUNNY_STREAM_BASE}/${cleanId}/play_720p.mp4`,
+            `${BUNNY_STREAM_BASE}/${cleanId}/play_360p.mp4`,
+            `${BUNNY_STREAM_BASE}/${cleanId}/play_1080p.mp4`,
+        ];
+    };
+
+    // Comprehensive video ID finder across any attributes, embeds, or text blocks
+    const findVideoIdInItem = (item) => {
+        if (!item) return "";
+
+        // 1. Check direct attributes on item
+        const attrNames = [
+            "data-video-id",
+            "data-video",
+            "data-bunny-id",
+            "data-bunny-video-id",
+            "data-src",
+        ];
+        for (const attr of attrNames) {
+            const val = item.getAttribute(attr);
+            if (val && extractVideoId(val)) return extractVideoId(val);
+        }
+
+        // 2. Check child elements with attributes
+        for (const attr of attrNames) {
+            const child = item.querySelector(`[${attr}]`);
+            if (child) {
+                const val = child.getAttribute(attr);
+                if (val && extractVideoId(val)) return extractVideoId(val);
+            }
+        }
+
+        // 3. Check video or source tags
+        const vidOrSource = item.querySelector("video, source");
+        if (vidOrSource) {
+            const src = vidOrSource.getAttribute("src") || vidOrSource.getAttribute("data-src") || "";
+            if (src && extractVideoId(src)) return extractVideoId(src);
+        }
+
+        // 4. Check classes
+        const classTargets = item.querySelectorAll(".media-data, .video-id, .bunny-video-id, .video-embed, .video-data, [data-field='video']");
+        for (const el of classTargets) {
+            const dataVal = el.getAttribute("data-video-id") || el.getAttribute("data-src");
+            if (dataVal && extractVideoId(dataVal)) return extractVideoId(dataVal);
+            const txt = el.textContent?.trim() || "";
+            if (txt && extractVideoId(txt)) return extractVideoId(txt);
+        }
+
+        // 5. Fallback: inspect any text container for UUID
+        const textNodes = item.querySelectorAll("div, span, p");
+        for (const el of textNodes) {
+            if (el.children.length === 0) {
+                const txt = el.textContent?.trim() || "";
+                const match = txt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+                if (match) return match[0];
+            }
+        }
+
+        return "";
     };
 
     // ----------------------------------------------------
@@ -100,21 +165,18 @@
                         imgEl?.currentSrc ||
                         imgEl?.getAttribute("data-src") || "";
 
-                    // Normalize protocol-relative URLs
                     if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
 
-                    const rawVideoId = mediaDataEl?.getAttribute("data-video-id") ||
-                        item.getAttribute("data-video-id") ||
-                        "";
-                    const videoId = extractVideoId(rawVideoId);
-
+                    const videoId = findVideoIdInItem(item);
+                    const poster = imgSrc || (videoId ? getBunnyThumbnailUrl(videoId) : "");
                     const label = `${projectNum}-${padTwoDigits(idx + 1)}`;
+
                     mediaItems.push({
                         label,
                         idx,
                         imgSrc,
                         videoId,
-                        poster: videoId ? getBunnyThumbnailUrl(videoId) : imgSrc,
+                        poster,
                     });
                 });
             }
@@ -143,31 +205,56 @@
         const showDesktopPreview = (media) => {
             if (!previewStage || isMobileLayout()) return;
 
+            // 1. Always display the thumbnail/poster image first
+            const posterSrc = media.poster || media.imgSrc;
+            if (previewImg && posterSrc) {
+                previewImg.src = posterSrc;
+                previewImg.style.display = "block";
+            }
+
+            // 2. Load and play video if this media is a motion item
             if (media.videoId) {
-                const videoSrc = getBunnyPreviewUrl(media.videoId);
+                const videoSrc = getBunny480pUrl(media.videoId);
                 if (previewVideoEl) {
-                    if (previewVideoEl.src !== videoSrc) {
+                    if (previewVideoEl.dataset.currentId !== media.videoId) {
+                        previewVideoEl.dataset.currentId = media.videoId;
+                        if (posterSrc) previewVideoEl.poster = posterSrc;
                         previewVideoEl.src = videoSrc;
-                        previewVideoEl.poster = media.poster || media.imgSrc;
+
+                        // Fallback chain for video variants
+                        const fallbacks = fallbackVideoUrls(media.videoId);
+                        let attemptIndex = 0;
+                        previewVideoEl.onerror = () => {
+                            attemptIndex++;
+                            if (attemptIndex < fallbacks.length) {
+                                previewVideoEl.src = fallbacks[attemptIndex];
+                                previewVideoEl.load();
+                                previewVideoEl.play().catch(() => { });
+                            }
+                        };
+
                         previewVideoEl.load();
                     }
+
+                    if (previewVideoEmbed) {
+                        previewVideoEmbed.style.display = "block";
+                    }
+
                     previewVideoEl.play().catch(() => { });
                     activeDesktopVideo = previewVideoEl;
                 }
-                if (previewVideoEmbed) previewVideoEmbed.style.display = "block";
-                if (previewImg) previewImg.style.display = "none";
             } else {
+                // Pure image item
                 if (previewVideoEl) {
                     try {
                         previewVideoEl.pause();
                         previewVideoEl.removeAttribute("src");
+                        delete previewVideoEl.dataset.currentId;
                         previewVideoEl.load();
                     } catch (_) { }
                 }
-                if (previewVideoEmbed) previewVideoEmbed.style.display = "none";
-                if (previewImg) {
-                    previewImg.src = media.imgSrc;
-                    previewImg.style.display = "block";
+                if (previewVideoEmbed) {
+                    previewVideoEmbed.style.display = "none";
                 }
             }
 
@@ -182,9 +269,14 @@
                 try {
                     activeDesktopVideo.pause();
                     activeDesktopVideo.removeAttribute("src");
+                    delete activeDesktopVideo.dataset.currentId;
                     activeDesktopVideo.load();
                 } catch (_) { }
                 activeDesktopVideo = null;
+            }
+
+            if (previewVideoEmbed) {
+                previewVideoEmbed.style.display = "none";
             }
         };
 
@@ -210,31 +302,54 @@
                 mobileVideoEmbed.appendChild(mobileVideoEl);
             }
 
+            // 1. Always display thumbnail/poster immediately
+            const posterSrc = media.poster || media.imgSrc;
+            if (mobileImg && posterSrc) {
+                mobileImg.src = posterSrc;
+                mobileImg.style.display = "block";
+            }
+
+            // 2. Play 480p video if motion item
             if (media.videoId) {
-                const videoSrc = getBunnyPreviewUrl(media.videoId);
+                const videoSrc = getBunny480pUrl(media.videoId);
                 if (mobileVideoEl) {
-                    if (mobileVideoEl.src !== videoSrc) {
+                    if (mobileVideoEl.dataset.currentId !== media.videoId) {
+                        mobileVideoEl.dataset.currentId = media.videoId;
+                        if (posterSrc) mobileVideoEl.poster = posterSrc;
                         mobileVideoEl.src = videoSrc;
-                        mobileVideoEl.poster = media.poster || media.imgSrc;
+
+                        const fallbacks = fallbackVideoUrls(media.videoId);
+                        let attemptIndex = 0;
+                        mobileVideoEl.onerror = () => {
+                            attemptIndex++;
+                            if (attemptIndex < fallbacks.length) {
+                                mobileVideoEl.src = fallbacks[attemptIndex];
+                                mobileVideoEl.load();
+                                mobileVideoEl.play().catch(() => { });
+                            }
+                        };
+
                         mobileVideoEl.load();
                     }
+
+                    if (mobileVideoEmbed) {
+                        mobileVideoEmbed.style.display = "block";
+                    }
+
                     mobileVideoEl.play().catch(() => { });
                     activeMobileVideo = mobileVideoEl;
                 }
-                if (mobileVideoEmbed) mobileVideoEmbed.style.display = "block";
-                if (mobileImg) mobileImg.style.display = "none";
             } else {
                 if (mobileVideoEl) {
                     try {
                         mobileVideoEl.pause();
                         mobileVideoEl.removeAttribute("src");
+                        delete mobileVideoEl.dataset.currentId;
                         mobileVideoEl.load();
                     } catch (_) { }
                 }
-                if (mobileVideoEmbed) mobileVideoEmbed.style.display = "none";
-                if (mobileImg) {
-                    mobileImg.src = media.imgSrc;
-                    mobileImg.style.display = "block";
+                if (mobileVideoEmbed) {
+                    mobileVideoEmbed.style.display = "none";
                 }
             }
 
@@ -312,6 +427,7 @@
                 try {
                     mobileVideo.pause();
                     mobileVideo.removeAttribute("src");
+                    delete mobileVideo.dataset.currentId;
                     mobileVideo.load();
                 } catch (_) { }
             }
@@ -386,9 +502,12 @@
                 row.classList.add("is-hovered");
 
                 // Preload first media
-                if (mediaItems.length && mediaItems[0].imgSrc) {
-                    const preloadImg = new Image();
-                    preloadImg.src = mediaItems[0].imgSrc;
+                if (mediaItems.length) {
+                    const preloadSrc = mediaItems[0].poster || mediaItems[0].imgSrc;
+                    if (preloadSrc) {
+                        const preloadImg = new Image();
+                        preloadImg.src = preloadSrc;
+                    }
                 }
             }, { signal });
 
@@ -461,8 +580,8 @@
                 if (slides.length > 5) {
                     fullMedia = slides.map((slide, idx) => {
                         const img = slide.querySelector("img");
-                        const vidEmbed = slide.querySelector("[data-video-id], video");
-                        const rawVidId = vidEmbed?.getAttribute("data-video-id") || vidEmbed?.src || "";
+                        const vidEmbed = slide.querySelector("[data-video-id], video, .slide-video, [data-src]");
+                        const rawVidId = vidEmbed?.getAttribute("data-video-id") || vidEmbed?.getAttribute("data-src") || vidEmbed?.src || "";
                         const videoId = extractVideoId(rawVidId);
                         let imgSrc = img?.getAttribute("src") || img?.currentSrc || "";
                         if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
@@ -472,7 +591,7 @@
                             idx,
                             imgSrc,
                             videoId,
-                            poster: videoId ? getBunnyThumbnailUrl(videoId) : imgSrc,
+                            poster: imgSrc || (videoId ? getBunnyThumbnailUrl(videoId) : ""),
                         };
                     });
                     projectMediaCache.set(slug, fullMedia);
@@ -500,11 +619,7 @@
                     btn.addEventListener("pointerenter", () => {
                         desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                         btn.classList.add("is-active");
-                        // Trigger desktop preview
-                        const stage = document.querySelector(".index-preview-stage");
-                        const img = stage?.querySelector(".index-preview-img");
-                        if (img) img.src = media.imgSrc;
-                        if (stage) stage.classList.add("is-visible");
+                        showDesktopPreview(media);
                     }, { signal });
 
                     desktopMediaContainer.appendChild(btn);
@@ -525,12 +640,7 @@
 
                     btn.addEventListener("click", (e) => {
                         e.stopPropagation();
-                        const mobileMediaBox = row.querySelector(".index-mobile-media-box");
-                        const mobileImg = mobileMediaBox?.querySelector(".index-mobile-img");
-                        if (mobileImg) mobileImg.src = media.imgSrc;
-                        mobileMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
-                            b.classList.toggle("is-active", idx === i);
-                        });
+                        selectMobileMedia(row, media);
                     }, { signal });
 
                     mobileMediaContainer.appendChild(btn);
@@ -552,6 +662,7 @@
             try {
                 activeDesktopVideo.pause();
                 activeDesktopVideo.removeAttribute("src");
+                delete activeDesktopVideo.dataset.currentId;
                 activeDesktopVideo.load();
             } catch (_) { }
             activeDesktopVideo = null;
@@ -561,6 +672,7 @@
             try {
                 activeMobileVideo.pause();
                 activeMobileVideo.removeAttribute("src");
+                delete activeMobileVideo.dataset.currentId;
                 activeMobileVideo.load();
             } catch (_) { }
             activeMobileVideo = null;
@@ -582,4 +694,3 @@
     window.initIndex = initIndex;
     window.destroyIndex = destroyIndex;
 })();
-
