@@ -959,10 +959,7 @@ a {
 
 /* Main Row Line: Desktop Grid Alignment */
 .index-row-header {
-    width: 100%;
-    gap: 16px;
     align-items: baseline;
-    padding: 2px 0;
     box-sizing: border-box;
     cursor: default;
 }
@@ -1025,15 +1022,6 @@ a {
 
 /* Desktop Fixed Top-Right Preview Stage */
 .index-preview-stage {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    width: 30vw;
-    max-width: 460px;
-    aspect-ratio: 16 / 9;
-    z-index: 40;
-    pointer-events: none;
-    opacity: 0;
     visibility: hidden;
     transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.25s ease;
     background-color: var(--media-bg-color, #f7f7f7);
