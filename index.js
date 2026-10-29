@@ -582,3 +582,4 @@
     window.initIndex = initIndex;
     window.destroyIndex = destroyIndex;
 })();
+
