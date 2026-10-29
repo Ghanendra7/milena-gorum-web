@@ -14,7 +14,7 @@ Webflow Site Settings Integration:
 
 <head>: Preconnects to Bunny CDN, Swiper v11 bundle CSS, and loads [https://milena-gorum-assets.pages.dev/global.css](https://milena-gorum-assets.pages.dev/global.css).
 
-Footer (Before </body>): Swiper v11 bundle JS, followed by deferred scripts: home.js, projects.js, project-detail.js, and transitions.js.
+Footer (Before </body>): Swiper v11 bundle JS, followed by deferred scripts: home.js, projects.js, project-detail.js, index.js, and transitions.js.
 
 Individual Page Settings: All custom code blocks inside Webflow's individual Page Settings have been removed. All runtime logic is driven exclusively by the repository files.
 
@@ -166,6 +166,37 @@ Special Logic:
 Video playback supports native iOS Safari fullscreen (webkitEnterFullscreen) and standard HTML5 fullscreen.
 
 Spacebar toggles active slide video playback; Escape key navigates back.
+
+D. Index Directory (/index)
+Barba Attributes: data-barba="container" | data-barba-namespace="index" (placed on .index-section).
+
+Navigator Tree:
+
+Plaintext
+index-section                           [100%, Min-Height: 100dvh, Relative, Background: #ffffff]
+├── navbar                              [Top navigation bar]
+├── index-preview-stage                 [Fixed Top-Right: 16px Top/Right, 30vw, Max 460px, 16/9 Aspect Ratio, Desktop Only]
+│     └── index-preview-box             [index-preview-img + index-preview-video-embed]
+└── index-wrapper                       [Page Wrapper with Padding]
+      └── index-list-wrapper            [Collection List Wrapper — Sort: Sequence Asc]
+            └── index-list              [Collection List — Vertical Flex]
+                  └── index-row         [Collection Item with data-project-num, data-slug]
+                        ├── index-row-header      [CSS Grid: Line 1 of the Project]
+                        │     ├── index-col-num   [Text: Bound to Sequence]
+                        │     ├── index-col-client [Text: Bound to Client Title]
+                        │     ├── index-col-title [Text: Bound to Sub-title]
+                        │     └── index-media-desktop [Flex Row: Horizontal Media Numbers (29-01, 29-02...)]
+                        ├── index-row-drawer      [CSS Grid: Mobile Expansion Drawer (<= 1024px)]
+                        │     ├── index-col-drawer-num    [Col 1 under Num: Vertical Stack index-media-mobile]
+                        │     ├── index-col-drawer-media  [Col 2 under Client: Inline index-mobile-media-box]
+                        │     └── index-col-drawer-spacer [Col 3 under Title: Spacer Div]
+                        └── index-gallery-source  [Nested Collection List — Display: None, bound to Gallery Multi-Ref]
+
+Special Logic:
+Permanent 2-digit sequence formatting (01, 02...).
+Desktop hover dims other rows (.index-list.has-hovered-item) and previews media top-right.
+Mobile tap expands accordion drawer with GSAP, dims other rows, and defaults to 1st media preview inline.
+Automatic background hydration for >5 items from /projects/[slug] to bypass Webflow's native 5-item nesting limit.
 
 4. Separation of Responsibilities: Webflow vs. global.css
 To allow visual design adjustments in Webflow Designer without code conflicts, styles are strictly separated:

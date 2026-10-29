@@ -82,6 +82,8 @@ function initOsmoBoilerplate() {
             if (typeof window.initProjects === "function") window.initProjects(container);
         } else if (ns === "project-detail") {
             if (typeof window.initProjectDetails === "function") window.initProjectDetails(container);
+        } else if (ns === "index") {
+            if (typeof window.initIndex === "function") window.initIndex(container);
         }
     }
 
@@ -96,6 +98,8 @@ function initOsmoBoilerplate() {
             if (typeof window.destroyProjects === "function") window.destroyProjects();
         } else if (ns === "project-detail") {
             if (typeof window.destroyProjectDetails === "function") window.destroyProjectDetails();
+        } else if (ns === "index") {
+            if (typeof window.destroyIndex === "function") window.destroyIndex();
         }
     }
 
