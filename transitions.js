@@ -210,6 +210,9 @@ function initOsmoBoilerplate() {
                 return;
             }
 
+            // Immediately pause active videos on outgoing page
+            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
+
             gsap.set(current, {
                 position: "fixed",
                 top: 0,
@@ -453,6 +456,9 @@ function initOsmoBoilerplate() {
                 return;
             }
 
+            // Immediately pause active videos on outgoing page
+            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
+
             // Projects stays on top (zIndex: 2) as it slides down out of view
             gsap.set(current, {
                 position: "fixed",
@@ -653,6 +659,9 @@ function initOsmoBoilerplate() {
                 return;
             }
 
+            // Immediately pause active videos on outgoing page
+            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
+
             gsap.set(current, {
                 position: "fixed",
                 top: 0,
@@ -672,20 +681,13 @@ function initOsmoBoilerplate() {
                 section.classList.add("is-marquee-paused");
             }
 
-            // Save visual track position of current page before leaving
+            // Save visual track position of current page before leaving (projects overview only)
             try {
                 const prjTrack = current.querySelector(".projects-track");
                 if (prjTrack && prjTrack.style.transform) {
                     const match = prjTrack.style.transform.match(/translate3d\((-?[\d.]+)px/);
                     if (match && match[1]) {
                         sessionStorage.setItem("mg_projects_saved_scroll", String(Math.abs(parseFloat(match[1]))));
-                    }
-                }
-                const homeTrack = current.querySelector(".home-track");
-                if (homeTrack && homeTrack.style.transform) {
-                    const match = homeTrack.style.transform.match(/translate3d\((-?[\d.]+)px/);
-                    if (match && match[1]) {
-                        sessionStorage.setItem("mg_home_saved_x", match[1]);
                     }
                 }
             } catch (_) { }
@@ -785,6 +787,9 @@ function initOsmoBoilerplate() {
                 done();
                 return;
             }
+
+            // Immediately pause active videos on outgoing page
+            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
 
             gsap.set(current, {
                 position: "fixed",
@@ -906,7 +911,23 @@ function initOsmoBoilerplate() {
             const currentCount = parseInt(sessionStorage.getItem("mg_session_history_count") || "0", 10);
             sessionStorage.setItem("mg_session_history_count", String(currentCount + 1));
 
+            const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
             const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
+
+            if (currentNs === "project-detail") {
+                // Navigating back from project detail
+                sessionStorage.setItem("mg_restore_from_detail", "true");
+            } else {
+                // If navigating to projects from anywhere other than project-detail (e.g. from home or nav),
+                // clear all restoration data so projects always starts from the 1st project.
+                if (nextNs === "projects" || currentNs === "home") {
+                    sessionStorage.removeItem("mg_restore_from_detail");
+                    sessionStorage.removeItem("mg_projects_saved_scroll");
+                    sessionStorage.removeItem("mg_restore_project_slug");
+                    sessionStorage.removeItem("mg_restore_project_url");
+                }
+            }
+
             if (nextNs === "project-detail") {
                 const nextUrl = data.next.url?.path || window.location.pathname;
                 const slug = nextUrl.split("/").filter(Boolean).pop() || "";

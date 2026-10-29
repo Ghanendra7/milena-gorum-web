@@ -283,6 +283,9 @@
             let restoreSlug = "";
             let restoreUrl = "";
             try {
+                if (sessionStorage.getItem("mg_restore_from_detail") !== "true") {
+                    return null;
+                }
                 savedScroll = sessionStorage.getItem("mg_projects_saved_scroll");
                 restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
                 restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
@@ -1129,12 +1132,16 @@
             let targetProjIdx = 0;
             let restoreSlug = "";
             let restoreUrl = "";
+            let isRestoreFromDetail = false;
             try {
-                restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
-                restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+                isRestoreFromDetail = sessionStorage.getItem("mg_restore_from_detail") === "true";
+                if (isRestoreFromDetail) {
+                    restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
+                    restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+                }
             } catch (_) { }
 
-            if (restoreSlug || restoreUrl) {
+            if (isRestoreFromDetail && (restoreSlug || restoreUrl)) {
                 const foundIdx = mobileFilteredTemplates.findIndex((tpl) => {
                     const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
                     return (
@@ -1164,6 +1171,13 @@
                 if (mobileMainSwiper && targetProjIdx > 0) {
                     try {
                         mobileMainSwiper.slideToLoop(targetProjIdx, 0);
+                    } catch (_) { }
+                }
+                if (isRestoreFromDetail) {
+                    try {
+                        sessionStorage.removeItem("mg_restore_from_detail");
+                        sessionStorage.removeItem("mg_restore_project_slug");
+                        sessionStorage.removeItem("mg_restore_project_url");
                     } catch (_) { }
                 }
                 if (isMobileLayout()) syncMobileVideos();
@@ -1408,6 +1422,12 @@
                 rawTargetPos = initPos;
                 if (restored !== null) {
                     userHasInteractedDesktop = true;
+                    try {
+                        sessionStorage.removeItem("mg_restore_from_detail");
+                        sessionStorage.removeItem("mg_projects_saved_scroll");
+                        sessionStorage.removeItem("mg_restore_project_slug");
+                        sessionStorage.removeItem("mg_restore_project_url");
+                    } catch (_) { }
                 }
 
                 track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;

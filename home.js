@@ -304,6 +304,9 @@
       let restoreSlug = "";
       let restoreUrl = "";
       try {
+        if (sessionStorage.getItem("mg_restore_from_detail") !== "true") {
+          return null;
+        }
         restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
         restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
       } catch (_) { }
@@ -311,7 +314,7 @@
       if (!restoreSlug && !restoreUrl) return null;
 
       const centerSlides = allSlides.slice(centerStartIndex, centerStartIndex + origCount);
-      return centerSlides.find((s) => {
+      const matched = centerSlides.find((s) => {
         const sSlug = (s.getAttribute("data-slug") || "").trim().toLowerCase();
         const sUrl = (s.getAttribute("data-project-url") || "").trim().toLowerCase();
         return (
@@ -319,6 +322,15 @@
           (restoreUrl && (sUrl.includes(restoreUrl) || restoreUrl.includes(sSlug)))
         );
       }) || null;
+
+      if (matched) {
+        try {
+          sessionStorage.removeItem("mg_restore_from_detail");
+          sessionStorage.removeItem("mg_restore_project_slug");
+          sessionStorage.removeItem("mg_restore_project_url");
+        } catch (_) { }
+      }
+      return matched;
     }
 
     function measureGeometry() {
@@ -620,10 +632,6 @@
 
         if (infoBox && targetHref) {
           infoBox.setAttribute("href", targetHref);
-          try {
-            sessionStorage.setItem("mg_restore_project_url", targetHref);
-            if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
-          } catch (_) { }
         }
 
         if (instant || !infoBox) {

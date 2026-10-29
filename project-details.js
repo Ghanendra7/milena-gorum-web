@@ -80,6 +80,7 @@
                 if (currentSlug) {
                     sessionStorage.setItem("mg_restore_project_slug", currentSlug);
                     sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
+                    sessionStorage.setItem("mg_restore_from_detail", "true");
                 }
             } catch (_) { }
 
