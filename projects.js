@@ -278,6 +278,36 @@
             return 0;
         };
 
+        const getRestoredScrollPos = () => {
+            let savedScroll = null;
+            let restoreSlug = "";
+            let restoreUrl = "";
+            try {
+                savedScroll = sessionStorage.getItem("mg_projects_saved_scroll");
+                restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
+                restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+            } catch (_) { }
+
+            if (savedScroll !== null && !isNaN(parseFloat(savedScroll))) {
+                return parseFloat(savedScroll);
+            }
+
+            if (restoreSlug || restoreUrl) {
+                const matchIdx = trackCards.findIndex((card) => {
+                    const link = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    return (
+                        (restoreUrl && (link.includes(restoreUrl) || restoreUrl.includes(link))) ||
+                        (restoreSlug && link.includes(restoreSlug))
+                    );
+                });
+                if (matchIdx !== -1 && cachedCardMetrics[matchIdx]) {
+                    const m = cachedCardMetrics[matchIdx];
+                    return Math.max(0, m.left + m.width / 2 - window.innerWidth / 2);
+                }
+            }
+            return null;
+        };
+
         const measureDesktopMetrics = () => {
             const total = trackCards.length;
             if (total === 0 || activeFilteredCount === 0) {
@@ -315,20 +345,24 @@
                 maxBoundedScroll = 0;
 
                 if (!isGalleryRevealed && singleSetWidth > 0) {
-                    const initPos = getInitialScrollPos();
+                    const restored = getRestoredScrollPos();
+                    const initPos = restored !== null ? restored : getInitialScrollPos();
                     scrollPos = initPos;
                     targetPos = initPos;
                     rawTargetPos = initPos;
+                    if (restored !== null) userHasInteractedDesktop = true;
                 } else if (prevSetWidth > 0 && singleSetWidth > 0 && Math.abs(singleSetWidth - prevSetWidth) > 0.5) {
                     const ratio = singleSetWidth / prevSetWidth;
                     scrollPos *= ratio;
                     targetPos *= ratio;
                     rawTargetPos *= ratio;
                 } else if (prevSetWidth === 0 && singleSetWidth > 0) {
-                    const initPos = getInitialScrollPos();
+                    const restored = getRestoredScrollPos();
+                    const initPos = restored !== null ? restored : getInitialScrollPos();
                     scrollPos = initPos;
                     targetPos = initPos;
                     rawTargetPos = initPos;
+                    if (restored !== null) userHasInteractedDesktop = true;
                 }
             } else {
                 singleSetWidth = 0;
@@ -461,7 +495,15 @@
                     if (dragMovedDist > 6) {
                         e.preventDefault();
                         e.stopPropagation();
+                        return;
                     }
+                    const href = link.getAttribute("href") || "";
+                    const slug = href.split("/").filter(Boolean).pop() || "";
+                    try {
+                        sessionStorage.setItem("mg_restore_project_url", href);
+                        if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
+                        sessionStorage.setItem("mg_projects_saved_scroll", String(scrollPos));
+                    } catch (_) { }
                 }, { signal });
             }
         };
@@ -525,10 +567,14 @@
             track.appendChild(fragment);
             measureDesktopMetrics();
 
-            const initPos = getInitialScrollPos();
+            const restored = getRestoredScrollPos();
+            const initPos = restored !== null ? restored : getInitialScrollPos();
             scrollPos = initPos;
             targetPos = initPos;
             rawTargetPos = initPos;
+            if (restored !== null) {
+                userHasInteractedDesktop = true;
+            }
             if (!isDesktopInfinite) {
                 currentMarqueeSpeed = 0;
             }
@@ -1079,9 +1125,31 @@
             }
 
             mobileThumbTrack.appendChild(thumbFragment);
-            updateMobileMeta(0);
 
-            const initialCloneIdx = isMobileInfinite ? Math.floor(thumbSetsNeeded / 2) * count : 0;
+            let targetProjIdx = 0;
+            let restoreSlug = "";
+            let restoreUrl = "";
+            try {
+                restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
+                restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+            } catch (_) { }
+
+            if (restoreSlug || restoreUrl) {
+                const foundIdx = mobileFilteredTemplates.findIndex((tpl) => {
+                    const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    return (
+                        (restoreUrl && (link.includes(restoreUrl) || restoreUrl.includes(link))) ||
+                        (restoreSlug && link.includes(restoreSlug))
+                    );
+                });
+                if (foundIdx !== -1) targetProjIdx = foundIdx;
+            }
+
+            const initialCloneIdx = isMobileInfinite
+                ? Math.floor(thumbSetsNeeded / 2) * count + targetProjIdx
+                : targetProjIdx;
+
+            updateMobileMeta(targetProjIdx);
 
             requestAnimationFrame(() => {
                 measureMobileThumbMetrics();
@@ -1092,6 +1160,11 @@
                         thumbScrollPos = thumbTargetPos;
                         mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
                     }
+                }
+                if (mobileMainSwiper && targetProjIdx > 0) {
+                    try {
+                        mobileMainSwiper.slideToLoop(targetProjIdx, 0);
+                    } catch (_) { }
                 }
                 if (isMobileLayout()) syncMobileVideos();
             });
@@ -1328,10 +1401,14 @@
                 });
 
                 measureDesktopMetrics();
-                const initPos = getInitialScrollPos();
+                const restored = getRestoredScrollPos();
+                const initPos = restored !== null ? restored : getInitialScrollPos();
                 scrollPos = initPos;
                 targetPos = initPos;
                 rawTargetPos = initPos;
+                if (restored !== null) {
+                    userHasInteractedDesktop = true;
+                }
 
                 track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
                 checkHeaderCollisions();

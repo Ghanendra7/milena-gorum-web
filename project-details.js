@@ -74,6 +74,15 @@
                 e.stopPropagation();
             }
 
+            // Preserve current project so Homepage and Projects can restore to this exact slide
+            try {
+                const currentSlug = window.location.pathname.split("/").filter(Boolean).pop() || "";
+                if (currentSlug) {
+                    sessionStorage.setItem("mg_restore_project_slug", currentSlug);
+                    sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
+                }
+            } catch (_) { }
+
             // Determine if the user navigated to this page within this site session
             let hasInternalHistory = false;
             try {
@@ -768,7 +777,9 @@
                                     duration: 1,
                                     stagger: 0.25,
                                     delay: 0.6,
-                                    ease: CustomEase.create("custom", "M0,0 C0.532,0 0.818,1 1,1 "),
+                                    ease: typeof CustomEase !== "undefined"
+                                        ? CustomEase.create("thumbCurve", "M0,0 C0.532,0 0.818,1 1,1 ")
+                                        : "power2.out",
                                     overwrite: "auto"
                                 }
                             );

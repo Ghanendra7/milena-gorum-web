@@ -300,6 +300,27 @@
       });
     });
 
+    function getRestoredCenterSlide() {
+      let restoreSlug = "";
+      let restoreUrl = "";
+      try {
+        restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
+        restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+      } catch (_) { }
+
+      if (!restoreSlug && !restoreUrl) return null;
+
+      const centerSlides = allSlides.slice(centerStartIndex, centerStartIndex + origCount);
+      return centerSlides.find((s) => {
+        const sSlug = (s.getAttribute("data-slug") || "").trim().toLowerCase();
+        const sUrl = (s.getAttribute("data-project-url") || "").trim().toLowerCase();
+        return (
+          (restoreSlug && sSlug === restoreSlug) ||
+          (restoreUrl && (sUrl.includes(restoreUrl) || restoreUrl.includes(sSlug)))
+        );
+      }) || null;
+    }
+
     function measureGeometry() {
       const wasMobile = isMobile;
       isMobile = checkIsMobile();
@@ -322,7 +343,8 @@
         });
 
         if (!isInitialLayoutDone) {
-          mobileIndex = centerStartIndex;
+          const restoredSlide = getRestoredCenterSlide();
+          mobileIndex = restoredSlide ? allSlides.indexOf(restoredSlide) : centerStartIndex;
           activeCenterSlide = allSlides[mobileIndex];
           targetX = -mobileIndex * viewportW;
           rawTargetX = targetX;
@@ -381,7 +403,9 @@
         if (singleSetWidth <= 0) return;
 
         if (!isInitialLayoutDone) {
+          const restoredSlide = getRestoredCenterSlide();
           const targetMetric =
+            (restoredSlide && slideMetrics.find((m) => m.el === restoredSlide)) ||
             slideMetrics.find((m) => m.el === activeCenterSlide) ||
             slideMetrics[centerStartIndex] ||
             slideMetrics[0];
@@ -592,9 +616,14 @@
         const clientName = slideEl.getAttribute("data-client") || "";
         const subtitle = slideEl.getAttribute("data-subtitle") || "";
         const targetHref = slideEl.getAttribute("data-project-url") || "";
+        const slug = slideEl.getAttribute("data-slug") || "";
 
         if (infoBox && targetHref) {
           infoBox.setAttribute("href", targetHref);
+          try {
+            sessionStorage.setItem("mg_restore_project_url", targetHref);
+            if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
+          } catch (_) { }
         }
 
         if (instant || !infoBox) {
