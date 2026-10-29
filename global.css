@@ -982,7 +982,7 @@ a {
 
 /* Desktop Horizontal Media Numbers */
 .index-media-desktop {
-    display: flex;
+    display: none;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
@@ -994,6 +994,7 @@ a {
 }
 
 .index-row.is-hovered .index-media-desktop {
+    display: flex;
     opacity: 1;
     pointer-events: auto;
 }

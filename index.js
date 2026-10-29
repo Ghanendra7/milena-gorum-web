@@ -109,6 +109,44 @@
         return "";
     };
 
+    // Derives or retrieves the exact project slug with robust fallbacks
+    const getProjectSlug = (row) => {
+        if (!row) return "";
+
+        // 1. Direct attribute on row
+        let s = row.getAttribute("data-slug") || row.getAttribute("data-project-slug") || "";
+        if (s) return s.replace(/^\/projects\//, "").replace(/^\//, "").trim();
+
+        // 2. Attribute on any child element
+        const childWithSlug = row.querySelector("[data-slug], [data-project-slug]");
+        if (childWithSlug) {
+            s = childWithSlug.getAttribute("data-slug") || childWithSlug.getAttribute("data-project-slug") || "";
+            if (s) return s.replace(/^\/projects\//, "").replace(/^\//, "").trim();
+        }
+
+        // 3. Link block inside row (e.g. <a href="/projects/olivia-rodrigo">)
+        const link = row.querySelector("a[href*='/projects/']");
+        if (link) {
+            const href = link.getAttribute("href") || "";
+            const parts = href.split("/projects/");
+            if (parts[1]) return parts[1].split("/")[0].split("?")[0].trim();
+        }
+
+        // 4. Derive from client name / title via slugification
+        const clientEl = row.querySelector(".index-col-client, [data-client]");
+        const clientTxt = clientEl?.getAttribute("data-client") || clientEl?.textContent?.trim() || "";
+        if (clientTxt) {
+            return clientTxt
+                .toLowerCase()
+                .trim()
+                .replace(/\$/g, "-")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "");
+        }
+
+        return "";
+    };
+
     // ----------------------------------------------------
     // INITIALIZATION & TEARDOWN
     // ----------------------------------------------------
@@ -162,8 +200,11 @@
 
                     let imgSrc = mediaDataEl?.getAttribute("data-img") ||
                         imgEl?.getAttribute("src") ||
-                        imgEl?.currentSrc ||
                         imgEl?.getAttribute("data-src") || "";
+
+                    if (!imgSrc && imgEl?.getAttribute("srcset")) {
+                        imgSrc = imgEl.getAttribute("srcset").split(",")[0].trim().split(" ")[0];
+                    }
 
                     if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
 
@@ -439,24 +480,16 @@
         };
 
         // ----------------------------------------------------
-        // BUILD ROW DOM & INTERACTION BINDINGS
+        // MEDIA BUTTON BUILDER
         // ----------------------------------------------------
-        rows.forEach((row, rowIndex) => {
-            // Project Sequence
-            const colNum = row.querySelector(".index-col-num");
-            const rawNum = row.getAttribute("data-project-num") || (colNum ? colNum.textContent.trim() : "");
-            const projectNum = padTwoDigits(rawNum || rowIndex + 1);
-            if (colNum) colNum.textContent = projectNum;
+        const buildMediaButtons = (row, mediaList, signalToUse) => {
+            row._mediaItems = mediaList;
 
-            // Extract Media Items
-            const mediaItems = parseRowMedia(row, projectNum);
-            row._mediaItems = mediaItems;
-
-            // 1. Populate Desktop Media Numbers Container
+            // 1. Desktop buttons
             const desktopMediaContainer = row.querySelector(".index-media-desktop");
             if (desktopMediaContainer) {
                 desktopMediaContainer.innerHTML = "";
-                mediaItems.forEach((media, mIdx) => {
+                mediaList.forEach((media, mIdx) => {
                     const btn = document.createElement("button");
                     btn.type = "button";
                     btn.className = "index-media-item";
@@ -468,20 +501,23 @@
                         desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                         btn.classList.add("is-active");
                         showDesktopPreview(media);
-                    }, { signal });
+                    }, { signal: signalToUse });
 
                     desktopMediaContainer.appendChild(btn);
                 });
             }
 
-            // 2. Populate Mobile Drawer Media Numbers Container
+            // 2. Mobile buttons
             const mobileMediaContainer = row.querySelector(".index-media-mobile");
             if (mobileMediaContainer) {
+                const currentActiveIdx = mobileMediaContainer.querySelector(".index-media-item.is-active")?.getAttribute("data-media-idx");
+                const activeIdxNum = currentActiveIdx ? parseInt(currentActiveIdx, 10) : 0;
+
                 mobileMediaContainer.innerHTML = "";
-                mediaItems.forEach((media, mIdx) => {
+                mediaList.forEach((media, mIdx) => {
                     const btn = document.createElement("button");
                     btn.type = "button";
-                    btn.className = `index-media-item is-mobile${mIdx === 0 ? " is-active" : ""}`;
+                    btn.className = `index-media-item is-mobile${mIdx === activeIdxNum ? " is-active" : ""}`;
                     btn.textContent = media.label;
                     btn.setAttribute("data-media-idx", String(mIdx));
                     btn.setAttribute("aria-label", `Select media ${media.label}`);
@@ -489,21 +525,36 @@
                     btn.addEventListener("click", (e) => {
                         e.stopPropagation();
                         selectMobileMedia(row, media);
-                    }, { signal });
+                    }, { signal: signalToUse });
 
                     mobileMediaContainer.appendChild(btn);
                 });
             }
+        };
 
-            // 3. Desktop Hover Handlers
+        // ----------------------------------------------------
+        // BUILD ROW DOM & INTERACTION BINDINGS
+        // ----------------------------------------------------
+        rows.forEach((row, rowIndex) => {
+            // Project Sequence
+            const colNum = row.querySelector(".index-col-num");
+            const rawNum = row.getAttribute("data-project-num") || (colNum ? colNum.textContent.trim() : "");
+            const projectNum = padTwoDigits(rawNum || rowIndex + 1);
+            if (colNum) colNum.textContent = projectNum;
+
+            // Extract initial Media Items from nested Webflow source
+            const mediaItems = parseRowMedia(row, projectNum);
+            buildMediaButtons(row, mediaItems, signal);
+
+            // Desktop Hover Handlers
             row.addEventListener("pointerenter", () => {
                 if (isMobileLayout()) return;
                 list.classList.add("has-hovered-item");
                 row.classList.add("is-hovered");
 
                 // Preload first media
-                if (mediaItems.length) {
-                    const preloadSrc = mediaItems[0].poster || mediaItems[0].imgSrc;
+                if (row._mediaItems && row._mediaItems.length) {
+                    const preloadSrc = row._mediaItems[0].poster || row._mediaItems[0].imgSrc;
                     if (preloadSrc) {
                         const preloadImg = new Image();
                         preloadImg.src = preloadSrc;
@@ -516,22 +567,20 @@
                 row.classList.remove("is-hovered");
                 hideDesktopPreview();
 
+                const desktopMediaContainer = row.querySelector(".index-media-desktop");
                 if (desktopMediaContainer) {
                     desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                 }
 
-                // If no row is hovered, remove parent dimming
                 if (!list.querySelector(".index-row.is-hovered")) {
                     list.classList.remove("has-hovered-item");
                 }
             }, { signal });
 
-            // 4. Mobile Tap to Expand/Collapse
+            // Mobile Tap to Expand/Collapse
             const rowHeader = row.querySelector(".index-row-header") || row;
             rowHeader.addEventListener("click", (e) => {
                 if (!isMobileLayout()) return;
-
-                // Ignore if clicked on a direct link
                 if (e.target.closest("a")) return;
 
                 if (row.classList.contains("is-expanded")) {
@@ -542,13 +591,12 @@
             }, { signal });
 
             // ----------------------------------------------------
-            // ASYNC HYDRATION FOR > 5 ITEMS
-            // If Webflow capped nested list at 5 items, fetch project template page
-            // to retrieve items 6+ without any extra manual CMS fields!
+            // ASYNC HYDRATION (> 5 ITEMS)
+            // Fetch project detail page to bypass Webflow's 5-item nested cap
             // ----------------------------------------------------
-            const projectSlug = row.getAttribute("data-slug");
-            if (projectSlug && mediaItems.length === 5) {
-                hydrateProjectMediaBeyondFive(row, projectSlug, projectNum, signal);
+            const projectSlug = getProjectSlug(row);
+            if (projectSlug) {
+                hydrateProjectMedia(row, projectSlug, projectNum, signal);
             }
         });
 
@@ -561,9 +609,9 @@
     }
 
     // ----------------------------------------------------
-    // ASYNC HYDRATION (> 5 ITEMS)
+    // ASYNC HYDRATION (FETCH PROJECT DETAIL PAGE)
     // ----------------------------------------------------
-    async function hydrateProjectMediaBeyondFive(row, slug, projectNum, signal) {
+    async function hydrateProjectMedia(row, slug, projectNum, signal) {
         let fullMedia = projectMediaCache.get(slug);
 
         if (!fullMedia) {
@@ -576,24 +624,33 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, "text/html");
 
-                const slides = Array.from(doc.querySelectorAll(".main-swiper .swiper-slide, .thumb-swiper .swiper-slide"));
-                if (slides.length > 5) {
+                // Target ONLY main swiper slides (never duplicate with thumb-swiper)
+                let slides = Array.from(doc.querySelectorAll(".main-swiper .swiper-slide:not(.swiper-slide-duplicate), .main-stage .swiper-slide:not(.swiper-slide-duplicate)"));
+                if (!slides.length) {
+                    slides = Array.from(doc.querySelectorAll(".thumb-swiper .swiper-slide:not(.swiper-slide-duplicate)"));
+                }
+
+                if (slides.length > 0) {
                     fullMedia = slides.map((slide, idx) => {
-                        const img = slide.querySelector("img");
-                        const vidEmbed = slide.querySelector("[data-video-id], video, .slide-video, [data-src]");
-                        const rawVidId = vidEmbed?.getAttribute("data-video-id") || vidEmbed?.getAttribute("data-src") || vidEmbed?.src || "";
-                        const videoId = extractVideoId(rawVidId);
-                        let imgSrc = img?.getAttribute("src") || img?.currentSrc || "";
+                        const img = slide.querySelector(".main-media-img, .thumb-img, img");
+                        let imgSrc = img?.getAttribute("src") || img?.getAttribute("data-src") || "";
+                        if (!imgSrc && img?.getAttribute("srcset")) {
+                            imgSrc = img.getAttribute("srcset").split(",")[0].trim().split(" ")[0];
+                        }
                         if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
+
+                        const videoId = findVideoIdInItem(slide);
+                        const poster = imgSrc || (videoId ? getBunnyThumbnailUrl(videoId) : "");
 
                         return {
                             label: `${projectNum}-${padTwoDigits(idx + 1)}`,
                             idx,
                             imgSrc,
                             videoId,
-                            poster: imgSrc || (videoId ? getBunnyThumbnailUrl(videoId) : ""),
+                            poster,
                         };
                     });
+
                     projectMediaCache.set(slug, fullMedia);
                 }
             } catch (_) {
@@ -601,51 +658,125 @@
             }
         }
 
-        if (fullMedia && fullMedia.length > row._mediaItems.length) {
-            row._mediaItems = fullMedia;
-
-            // Append additional desktop buttons
+        // If detail page has more media items than the initial nested list, upgrade the row
+        if (fullMedia && fullMedia.length > (row._mediaItems ? row._mediaItems.length : 0)) {
+            // Rebuild with complete collection of media items
             const desktopMediaContainer = row.querySelector(".index-media-desktop");
             if (desktopMediaContainer) {
-                for (let i = 5; i < fullMedia.length; i++) {
-                    const media = fullMedia[i];
+                desktopMediaContainer.innerHTML = "";
+                fullMedia.forEach((media, mIdx) => {
                     const btn = document.createElement("button");
                     btn.type = "button";
                     btn.className = "index-media-item";
                     btn.textContent = media.label;
-                    btn.setAttribute("data-media-idx", String(i));
+                    btn.setAttribute("data-media-idx", String(mIdx));
                     btn.setAttribute("aria-label", `Show media ${media.label}`);
 
                     btn.addEventListener("pointerenter", () => {
                         desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                         btn.classList.add("is-active");
-                        showDesktopPreview(media);
+                        // Trigger desktop preview
+                        const stage = document.querySelector(".index-preview-stage");
+                        const img = stage?.querySelector(".index-preview-img");
+                        const videoEmbed = stage?.querySelector(".index-preview-video-embed");
+                        let videoEl = videoEmbed?.querySelector("video");
+
+                        const posterSrc = media.poster || media.imgSrc;
+                        if (img && posterSrc) {
+                            img.src = posterSrc;
+                            img.style.display = "block";
+                        }
+
+                        if (media.videoId) {
+                            if (videoEl) {
+                                if (videoEl.dataset.currentId !== media.videoId) {
+                                    videoEl.dataset.currentId = media.videoId;
+                                    videoEl.src = getBunny480pUrl(media.videoId);
+                                    if (posterSrc) videoEl.poster = posterSrc;
+                                    videoEl.load();
+                                }
+                                videoEl.play().catch(() => {});
+                                if (videoEmbed) videoEmbed.style.display = "block";
+                            }
+                        } else {
+                            if (videoEl) {
+                                try {
+                                    videoEl.pause();
+                                    videoEl.removeAttribute("src");
+                                    delete videoEl.dataset.currentId;
+                                    videoEl.load();
+                                } catch (_) {}
+                            }
+                            if (videoEmbed) videoEmbed.style.display = "none";
+                        }
+
+                        if (stage) stage.classList.add("is-visible");
                     }, { signal });
 
                     desktopMediaContainer.appendChild(btn);
-                }
+                });
             }
 
-            // Append additional mobile buttons
             const mobileMediaContainer = row.querySelector(".index-media-mobile");
             if (mobileMediaContainer) {
-                for (let i = 5; i < fullMedia.length; i++) {
-                    const media = fullMedia[i];
+                const currentActiveIdx = mobileMediaContainer.querySelector(".index-media-item.is-active")?.getAttribute("data-media-idx");
+                const activeIdxNum = currentActiveIdx ? parseInt(currentActiveIdx, 10) : 0;
+
+                mobileMediaContainer.innerHTML = "";
+                fullMedia.forEach((media, mIdx) => {
                     const btn = document.createElement("button");
                     btn.type = "button";
-                    btn.className = "index-media-item is-mobile";
+                    btn.className = `index-media-item is-mobile${mIdx === activeIdxNum ? " is-active" : ""}`;
                     btn.textContent = media.label;
-                    btn.setAttribute("data-media-idx", String(i));
+                    btn.setAttribute("data-media-idx", String(mIdx));
                     btn.setAttribute("aria-label", `Select media ${media.label}`);
 
                     btn.addEventListener("click", (e) => {
                         e.stopPropagation();
-                        selectMobileMedia(row, media);
+                        const mobileMediaBox = row.querySelector(".index-mobile-media-box");
+                        const mobileImg = mobileMediaBox?.querySelector(".index-mobile-img");
+                        const mobileVideoEmbed = mobileMediaBox?.querySelector(".index-mobile-video-embed");
+                        let mobileVideoEl = mobileVideoEmbed?.querySelector("video");
+
+                        const posterSrc = media.poster || media.imgSrc;
+                        if (mobileImg && posterSrc) {
+                            mobileImg.src = posterSrc;
+                            mobileImg.style.display = "block";
+                        }
+
+                        if (media.videoId) {
+                            if (mobileVideoEl) {
+                                if (mobileVideoEl.dataset.currentId !== media.videoId) {
+                                    mobileVideoEl.dataset.currentId = media.videoId;
+                                    mobileVideoEl.src = getBunny480pUrl(media.videoId);
+                                    if (posterSrc) mobileVideoEl.poster = posterSrc;
+                                    mobileVideoEl.load();
+                                }
+                                mobileVideoEl.play().catch(() => {});
+                                if (mobileVideoEmbed) mobileVideoEmbed.style.display = "block";
+                            }
+                        } else {
+                            if (mobileVideoEl) {
+                                try {
+                                    mobileVideoEl.pause();
+                                    mobileVideoEl.removeAttribute("src");
+                                    delete mobileVideoEl.dataset.currentId;
+                                    mobileVideoEl.load();
+                                } catch (_) {}
+                            }
+                            if (mobileVideoEmbed) mobileVideoEmbed.style.display = "none";
+                        }
+
+                        mobileMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
+                            b.classList.toggle("is-active", idx === mIdx);
+                        });
                     }, { signal });
 
                     mobileMediaContainer.appendChild(btn);
-                }
+                });
             }
+
+            row._mediaItems = fullMedia;
         }
     }
 
