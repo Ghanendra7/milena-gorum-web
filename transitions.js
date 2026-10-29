@@ -102,6 +102,11 @@ function initOsmoBoilerplate() {
     function initOnceFunctions() {
         if (onceFunctionsInitialized) return;
         onceFunctionsInitialized = true;
+        try {
+            if (sessionStorage.getItem("mg_session_history_count") === null) {
+                sessionStorage.setItem("mg_session_history_count", "0");
+            }
+        } catch (_) { }
     }
 
     function initBeforeEnterFunctions(next) {
@@ -877,6 +882,14 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     // BARBA HOOKS & INIT
     // -----------------------------------------
+    barba.hooks.before((data) => {
+        window.__mgHasInternalHistory = true;
+        try {
+            const currentCount = parseInt(sessionStorage.getItem("mg_session_history_count") || "0", 10);
+            sessionStorage.setItem("mg_session_history_count", String(currentCount + 1));
+        } catch (_) { }
+    });
+
     barba.hooks.beforeEnter(async (data) => {
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";

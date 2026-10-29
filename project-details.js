@@ -21,10 +21,10 @@
 
         if (!mainEl || !thumbEl) return;
         if (scope && scope._isDetailsMounted) return;
+        destroyProjectDetails();
         if (scope) scope._isDetailsMounted = true;
         detailScope = scope;
 
-        destroyProjectDetails();
         detailAbortController = new AbortController();
         const { signal } = detailAbortController;
 
@@ -39,27 +39,82 @@
             return /^\d+$/.test(str) ? str.padStart(2, "0") : str;
         };
 
-        const goBack = (e) => {
-            if (e) e.preventDefault();
-            if (typeof barba !== "undefined" && barba.history && barba.history.previous) {
-                barba.go(barba.history.previous.url.href);
-                return;
-            }
-            const hasInternalReferrer =
-                document.referrer &&
-                document.referrer.indexOf(window.location.host) !== -1 &&
-                window.history.length > 1;
+        // Ensure back-link has proper accessible attributes and safe fallback href
+        if (backLink) {
+            backLink.setAttribute("href", "/projects");
+            backLink.setAttribute("role", "button");
+            backLink.setAttribute("aria-label", "Back to projects");
+        }
 
-            if (hasInternalReferrer) {
-                window.history.back();
-            } else {
-                const fallbackHref = backLink?.getAttribute("href");
-                const targetUrl = fallbackHref && fallbackHref !== "#" ? fallbackHref : "/projects";
-                if (typeof barba !== "undefined") {
-                    barba.go(targetUrl);
-                } else {
-                    window.location.href = targetUrl;
+        const navigateToProjects = () => {
+            const targetUrl = "/projects";
+            if (typeof barba !== "undefined" && typeof barba.go === "function") {
+                if (barba.transitions && barba.transitions.isRunning) {
+                    setTimeout(() => {
+                        if (barba.transitions && !barba.transitions.isRunning) {
+                            try { barba.go(targetUrl); return; } catch (_) { }
+                        }
+                        window.location.href = targetUrl;
+                    }, 100);
+                    return;
                 }
+                try {
+                    barba.go(targetUrl);
+                    return;
+                } catch (err) {
+                    console.warn("[Project Details] barba.go failed:", err);
+                }
+            }
+            window.location.href = targetUrl;
+        };
+
+        const goBack = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Determine if the user navigated to this page within this site session
+            let hasInternalHistory = false;
+            try {
+                const navCount = parseInt(sessionStorage.getItem("mg_session_history_count") || "0", 10);
+                if (window.__mgHasInternalHistory || navCount > 0) {
+                    hasInternalHistory = true;
+                }
+            } catch (_) { }
+
+            // Check if document.referrer came from the same host (and is not a self-refresh)
+            if (!hasInternalHistory && document.referrer) {
+                try {
+                    const refUrl = new URL(document.referrer);
+                    if (refUrl.host === window.location.host && refUrl.pathname !== window.location.pathname) {
+                        hasInternalHistory = true;
+                    }
+                } catch (_) { }
+            }
+
+            const canGoBack = hasInternalHistory && window.history.length > 1;
+
+            if (canGoBack) {
+                // Works like a browser back button
+                let didNavigate = false;
+                const onPageExit = () => { didNavigate = true; };
+                window.addEventListener("pagehide", onPageExit, { once: true });
+                window.addEventListener("popstate", onPageExit, { once: true });
+
+                window.history.back();
+
+                // Safety fallback: If history.back did not change the page within 350ms, navigate to /projects
+                setTimeout(() => {
+                    window.removeEventListener("pagehide", onPageExit);
+                    window.removeEventListener("popstate", onPageExit);
+                    if (!didNavigate && window.location.pathname.indexOf("/projects/") !== -1) {
+                        navigateToProjects();
+                    }
+                }, 350);
+            } else {
+                // Direct URL entry (or no internal history): by default go to /projects
+                navigateToProjects();
             }
         };
 
