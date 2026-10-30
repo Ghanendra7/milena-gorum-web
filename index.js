@@ -253,6 +253,8 @@
             // 1. Always display the thumbnail/poster image first
             const posterSrc = media.poster || media.imgSrc;
             if (previewImg && posterSrc) {
+                previewImg.removeAttribute("srcset");
+                previewImg.removeAttribute("sizes");
                 previewImg.src = posterSrc;
                 previewImg.style.display = "block";
             }
@@ -354,6 +356,8 @@
             // 1. Always display thumbnail/poster immediately
             const posterSrc = media.poster || media.imgSrc;
             if (mobileImg && posterSrc) {
+                mobileImg.removeAttribute("srcset");
+                mobileImg.removeAttribute("sizes");
                 mobileImg.src = posterSrc;
                 mobileImg.style.display = "block";
             }
@@ -561,6 +565,71 @@
         };
 
         // ----------------------------------------------------
+        // ASYNC HYDRATION (FETCH PROJECT DETAIL PAGE)
+        // ----------------------------------------------------
+        async function hydrateProjectMedia(row, slug, projectNum) {
+            let fullMedia = projectMediaCache.get(slug);
+
+            if (!fullMedia) {
+                try {
+                    const targetUrl = `/projects/${slug}`;
+                    const res = await fetch(targetUrl, { signal });
+                    if (!res.ok) return;
+
+                    const html = await res.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+
+                    // Target ONLY main swiper slides (never duplicate with thumb-swiper)
+                    let slides = Array.from(doc.querySelectorAll(".main-swiper .swiper-slide:not(.swiper-slide-duplicate), .main-stage .swiper-slide:not(.swiper-slide-duplicate)"));
+                    if (!slides.length) {
+                        slides = Array.from(doc.querySelectorAll(".thumb-swiper .swiper-slide:not(.swiper-slide-duplicate)"));
+                    }
+
+                    if (slides.length > 0) {
+                        fullMedia = slides.map((slide, idx) => {
+                            const img = slide.querySelector(".main-media-img, .thumb-img, img");
+                            const video = slide.querySelector("video");
+                            let imgSrc = img?.getAttribute("src") || img?.getAttribute("data-src") || "";
+                            if (!imgSrc && img?.getAttribute("srcset")) {
+                                imgSrc = img.getAttribute("srcset").split(",")[0].trim().split(" ")[0];
+                            }
+                            const posterAttr = img?.getAttribute("poster") || video?.getAttribute("poster") || "";
+                            if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
+
+                            const videoId = findVideoIdInItem(slide);
+                            const poster = imgSrc || posterAttr || (videoId ? getBunnyThumbnailUrl(videoId) : "");
+
+                            return {
+                                label: `${projectNum}-${padTwoDigits(idx + 1)}`,
+                                idx,
+                                imgSrc: imgSrc || posterAttr,
+                                videoId,
+                                poster,
+                            };
+                        });
+
+                        projectMediaCache.set(slug, fullMedia);
+                    }
+                } catch (_) {
+                    return;
+                }
+            }
+
+            // Synchronize the row with authoritative project detail media
+            if (fullMedia && fullMedia.length > 0) {
+                buildMediaButtons(row, fullMedia, signal);
+
+                // If this row is currently the active expanded mobile row, re-sync active preview
+                if (activeMobileRow === row) {
+                    const activeBtn = row.querySelector(".index-media-mobile .index-media-item.is-active");
+                    const aIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : 0;
+                    selectMobileMedia(row, fullMedia[aIdx] || fullMedia[0]);
+                }
+            }
+        }
+
+        // ----------------------------------------------------
         // BUILD ROW DOM & INTERACTION BINDINGS
         // ----------------------------------------------------
         rows.forEach((row, rowIndex) => {
@@ -625,7 +694,7 @@
             // ----------------------------------------------------
             const projectSlug = getProjectSlug(row);
             if (projectSlug) {
-                hydrateProjectMedia(row, projectSlug, projectNum, signal);
+                hydrateProjectMedia(row, projectSlug, projectNum);
             }
         });
 
@@ -635,107 +704,6 @@
                 collapseRow(activeMobileRow);
             }
         }, { signal, passive: true });
-    }
-
-    // ----------------------------------------------------
-    // ASYNC HYDRATION (FETCH PROJECT DETAIL PAGE)
-    // ----------------------------------------------------
-    async function hydrateProjectMedia(row, slug, projectNum, signal) {
-        let fullMedia = projectMediaCache.get(slug);
-
-        if (!fullMedia) {
-            try {
-                const targetUrl = `/projects/${slug}`;
-                const res = await fetch(targetUrl, { signal });
-                if (!res.ok) return;
-
-                const html = await res.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, "text/html");
-
-                // Target ONLY main swiper slides (never duplicate with thumb-swiper)
-                let slides = Array.from(doc.querySelectorAll(".main-swiper .swiper-slide:not(.swiper-slide-duplicate), .main-stage .swiper-slide:not(.swiper-slide-duplicate)"));
-                if (!slides.length) {
-                    slides = Array.from(doc.querySelectorAll(".thumb-swiper .swiper-slide:not(.swiper-slide-duplicate)"));
-                }
-
-                if (slides.length > 0) {
-                    fullMedia = slides.map((slide, idx) => {
-                        const img = slide.querySelector(".main-media-img, .thumb-img, img");
-                        let imgSrc = img?.getAttribute("src") || img?.getAttribute("data-src") || "";
-                        if (!imgSrc && img?.getAttribute("srcset")) {
-                            imgSrc = img.getAttribute("srcset").split(",")[0].trim().split(" ")[0];
-                        }
-                        if (imgSrc.startsWith("//")) imgSrc = "https:" + imgSrc;
-
-                        const videoId = findVideoIdInItem(slide);
-                        const poster = imgSrc || (videoId ? getBunnyThumbnailUrl(videoId) : "");
-
-                        return {
-                            label: `${projectNum}-${padTwoDigits(idx + 1)}`,
-                            idx,
-                            imgSrc,
-                            videoId,
-                            poster,
-                        };
-                    });
-
-                    projectMediaCache.set(slug, fullMedia);
-                }
-            } catch (_) {
-                return;
-            }
-        }
-
-        // If detail page has more media items than the initial nested list, upgrade the row
-        if (fullMedia && fullMedia.length > (row._mediaItems ? row._mediaItems.length : 0)) {
-            // Rebuild with complete collection of media items
-            const desktopMediaContainer = row.querySelector(".index-media-desktop");
-            if (desktopMediaContainer) {
-                desktopMediaContainer.innerHTML = "";
-                fullMedia.forEach((media, mIdx) => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = "index-media-item";
-                    btn.textContent = media.label;
-                    btn.setAttribute("data-media-idx", String(mIdx));
-                    btn.setAttribute("aria-label", `Show media ${media.label}`);
-
-                    btn.addEventListener("pointerenter", () => {
-                        desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
-                        btn.classList.add("is-active");
-                        showDesktopPreview(media);
-                    }, { signal });
-
-                    desktopMediaContainer.appendChild(btn);
-                });
-            }
-
-            const mobileMediaContainer = row.querySelector(".index-media-mobile");
-            if (mobileMediaContainer) {
-                const currentActiveIdx = mobileMediaContainer.querySelector(".index-media-item.is-active")?.getAttribute("data-media-idx");
-                const activeIdxNum = currentActiveIdx ? parseInt(currentActiveIdx, 10) : 0;
-
-                mobileMediaContainer.innerHTML = "";
-                fullMedia.forEach((media, mIdx) => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = `index-media-item is-mobile${mIdx === activeIdxNum ? " is-active" : ""}`;
-                    btn.textContent = media.label;
-                    btn.setAttribute("data-media-idx", String(mIdx));
-                    btn.setAttribute("aria-label", `Select media ${media.label}`);
-
-                    btn.addEventListener("click", (e) => {
-                        e.stopPropagation();
-                        selectMobileMedia(row, media);
-                    }, { signal });
-
-                    mobileMediaContainer.appendChild(btn);
-                });
-            }
-
-            row._mediaItems = fullMedia;
-        }
     }
 
     // ----------------------------------------------------
