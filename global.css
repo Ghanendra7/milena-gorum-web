@@ -999,23 +999,28 @@ a {
     cursor: default;
 }
 
+.index-details-stack,
+.num-title-container,
+.index-col-num,
+.index-col-client,
+.index-col-title {
+    flex-shrink: 0;
+}
+
 .index-col-num {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .index-col-client {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 0;
 }
 
 .index-col-title {
     white-space: normal;
     word-break: break-word;
-    flex-shrink: 0;
 }
 
 /* Desktop Horizontal Media Numbers */

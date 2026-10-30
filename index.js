@@ -610,6 +610,7 @@
             rowHeader.addEventListener("click", (e) => {
                 if (!isMobileLayout()) return;
                 if (e.target.closest("a")) return;
+                if (e.target.closest(".index-row-drawer")) return;
 
                 if (row.classList.contains("is-expanded")) {
                     collapseRow(row);
