@@ -1132,15 +1132,19 @@ a {
         display: block;
     }
 
-    .index-mobile-video-embed {
+    .index-mobile-video-embed,
+    .index-mobile-media-box .index-preview-video-embed {
         position: absolute;
         inset: 0;
+        width: 100%;
         max-width: 100%;
         height: 100%;
         display: none;
+        z-index: 2;
     }
 
-    .index-mobile-video-embed video {
+    .index-mobile-video-embed video,
+    .index-mobile-media-box .index-preview-video-embed video {
         width: 100%;
         height: 100%;
         object-fit: cover;
