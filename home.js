@@ -96,9 +96,9 @@
     const startTime = performance.now();
 
     function checkIsMobile() {
-      const w = window.innerWidth;
+      const w = wrapper ? wrapper.clientWidth : window.innerWidth;
       const h = window.innerHeight;
-      return w <= 767 || (w <= 1024 && window.innerHeight > w);
+      return w <= 767 || (w <= 1024 && h > w);
     }
 
     function getBunnyUrl(rawVal) {
@@ -336,18 +336,27 @@
     function measureGeometry() {
       const wasMobile = isMobile;
       isMobile = checkIsMobile();
-      viewportW = window.innerWidth;
+      viewportW = wrapper ? wrapper.clientWidth : (document.documentElement.clientWidth || window.innerWidth);
 
       if (isMobile) {
-        singleSetWidth = origCount * viewportW;
+        const slideW = viewportW;
+        allSlides.forEach((el) => {
+          el.style.width = slideW + "px";
+          el.style.minWidth = slideW + "px";
+          el.style.maxWidth = slideW + "px";
+          el.style.flex = "0 0 " + slideW + "px";
+        });
+
+        singleSetWidth = origCount * slideW;
         slideMetrics = allSlides.map((el, idx) => {
           const video = el.querySelector(".home-slide-video") || el.querySelector("video");
           const videoSrc = video ? video.getAttribute("data-resolved-src") || "" : "";
+          const left = idx * slideW;
           return {
             el: el,
-            left: idx * viewportW,
-            width: viewportW,
-            center: idx * viewportW + viewportW * 0.5,
+            left: left,
+            width: slideW,
+            center: left + slideW * 0.5,
             origIndex: parseInt(el.getAttribute("data-orig-index") || "0", 10),
             video: videoSrc ? video : null,
             videoSrc: videoSrc
@@ -358,7 +367,7 @@
           const restoredSlide = getRestoredCenterSlide();
           mobileIndex = restoredSlide ? allSlides.indexOf(restoredSlide) : centerStartIndex;
           activeCenterSlide = allSlides[mobileIndex];
-          targetX = -mobileIndex * viewportW;
+          targetX = -mobileIndex * slideW;
           rawTargetX = targetX;
           currentX = targetX;
           track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
@@ -368,15 +377,23 @@
         } else if (wasMobile !== isMobile) {
           const currentActiveIdx = allSlides.indexOf(activeCenterSlide);
           mobileIndex = currentActiveIdx !== -1 ? currentActiveIdx : centerStartIndex;
-          targetX = -mobileIndex * viewportW;
+          targetX = -mobileIndex * slideW;
           rawTargetX = targetX;
           currentX = targetX;
           track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
         } else {
-          targetX = -mobileIndex * viewportW;
+          targetX = -mobileIndex * slideW;
           rawTargetX = targetX;
         }
       } else {
+        if (wasMobile) {
+          allSlides.forEach((el) => {
+            el.style.width = "";
+            el.style.minWidth = "";
+            el.style.maxWidth = "";
+            el.style.flex = "";
+          });
+        }
         const computedGap = parseFloat(window.getComputedStyle(track).columnGap || window.getComputedStyle(track).gap);
         const gap = !isNaN(computedGap) ? computedGap : 5;
         let runningLeft = 0;
@@ -454,8 +471,12 @@
     }
 
     if ("ResizeObserver" in window) {
-      homeResizeObserver = new ResizeObserver(measureGeometry);
-      allSlides.slice(0, centerStartIndex + origCount).forEach((slide) => homeResizeObserver.observe(slide));
+      homeResizeObserver = new ResizeObserver(() => {
+        measureGeometry();
+      });
+      if (wrapper) {
+        homeResizeObserver.observe(wrapper);
+      }
     }
 
     measureGeometry();

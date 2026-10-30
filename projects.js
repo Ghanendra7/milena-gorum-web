@@ -900,7 +900,8 @@
         const getScrollPosForThumbIdx = (idx) => {
             if (cachedThumbCenters.length === 0) measureMobileThumbMetrics();
             if (idx < 0 || idx >= cachedThumbCenters.length) return 0;
-            return cachedThumbCenters[idx] - window.innerWidth / 2;
+            const containerW = mobileThumbEl?.clientWidth || window.innerWidth;
+            return cachedThumbCenters[idx] - containerW / 2;
         };
 
         const clampBoundedMobileThumbPos = (pos) => {
@@ -1066,8 +1067,15 @@
                     spaceBetween: 0,
                     speed: 350,
                     grabCursor: true,
+                    roundLengths: true,
                     observer: true,
                     observeParents: true
+                });
+
+                requestAnimationFrame(() => {
+                    if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
+                        mobileMainSwiper.update();
+                    }
                 });
 
                 const handleMainSwipeChange = () => {
@@ -1437,6 +1445,9 @@
                 isGalleryRevealed = true;
                 section.classList.add("is-ready");
                 section.classList.add("is-marquee-active");
+                if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
+                    mobileMainSwiper.update();
+                }
             };
 
             // If section was already prepared by page transition, reveal immediately without Safari decode delay
@@ -1489,6 +1500,9 @@
             checkHeaderCollisions();
             measureMobileThumbMetrics();
             if (isMobileLayout()) {
+                if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
+                    mobileMainSwiper.update();
+                }
                 if (activeThumbCloneIdx >= 0 && cachedThumbCenters.length > 0) {
                     thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
                     thumbScrollPos = thumbTargetPos;
