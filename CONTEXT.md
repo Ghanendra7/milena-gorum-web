@@ -198,6 +198,30 @@ Desktop hover dims other rows (.index-list.has-hovered-item) and previews media 
 Mobile tap expands accordion drawer with GSAP, dims other rows, and defaults to 1st media preview inline.
 Automatic background hydration for >5 items from /projects/[slug] to bypass Webflow's native 5-item nesting limit.
 
+E. Information Page (/information)
+Barba Attributes: data-barba="container" | data-barba-namespace="information" (placed on .info-main).
+
+Navigator Tree:
+
+Plaintext
+info-main                               [Page Root Section]
+├── navbar                              [Top navigation bar]
+│     └── nav-top                       [Top Row: Logo + Links]
+├── pic-container                       [Div: Client-editable in Webflow Editor]
+│     └── mg-pic-wrapper > image        [Portrait photo]
+└── info-container                      [Text content wrapper]
+      ├── info-rich-text                [Bio description paragraph]
+      └── info-details-grid             [Details Grid]
+            ├── info-grid-item          [Services: Art Direction, Set Design, Prop Styling]
+            ├── info-grid-item          [Location: New York, Los Angeles]
+            ├── info-grid-item          [Contact: email]
+            ├── info-grid-item          [Press: Text block with .info-link-list]
+            └── info-grid-item          [Interviews: Text block with .info-link-list]
+
+Special Logic:
+Client Editor Mode: Text and media elements (like .pic-container) are unlocked for direct client updates in Webflow Editor.
+Press & Interviews Link Hover: .info-link-list uses modern CSS :has(a:hover) to dim unhovered text lines and sibling links to var(--grey, #ababab) while keeping the hovered link solid #000000.
+
 4. Separation of Responsibilities: Webflow vs. global.css
 To allow visual design adjustments in Webflow Designer without code conflicts, styles are strictly separated:
 
