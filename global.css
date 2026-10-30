@@ -1120,7 +1120,7 @@ a {
         position: relative;
         overflow: hidden;
         margin-top: 4px;
-        margin-bottom: 12px;
+        margin-bottom: 4px;
         -webkit-backface-visibility: hidden;
         backface-visibility: hidden;
     }
@@ -1145,10 +1145,10 @@ a {
     .index-mobile-video-embed video,
     .index-mobile-media-box .index-preview-video-embed video {
         height: 100%;
+        width: auto;
         max-width: 100%;
         object-fit: cover;
         display: block;
         pointer-events: none;
-        width: auto;
     }
 }
