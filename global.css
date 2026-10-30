@@ -267,6 +267,7 @@ a {
     }
 
     .home-track {
+        width: 100% !important;
         column-gap: 0px !important;
         gap: 0px !important;
         grid-column-gap: 0px !important;
@@ -309,6 +310,7 @@ a {
         padding: 0 !important;
         border: 0 !important;
         object-fit: cover !important;
+        aspect-ratio: auto !important;
     }
 }
 

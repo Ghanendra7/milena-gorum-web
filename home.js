@@ -112,7 +112,7 @@
     }
 
     function lockNaturalAspect(img, mediaWrap) {
-      if (!img || !mediaWrap || mediaWrap.classList.contains("is-fill") || (mediaWrap.closest && mediaWrap.closest(".is-fill"))) return;
+      if (!img || !mediaWrap || isMobile || mediaWrap.classList.contains("is-fill") || (mediaWrap.closest && mediaWrap.closest(".is-fill"))) return;
       if (img.naturalWidth && img.naturalHeight) {
         mediaWrap.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
       }
@@ -252,6 +252,7 @@
       if (img && mediaWrap && !isFill) {
         const origIdx = slide.getAttribute("data-orig-index");
         const applyAspect = () => {
+          if (isMobile) return;
           if (img.naturalWidth && img.naturalHeight) {
             const ratio = img.naturalWidth + " / " + img.naturalHeight;
             if (origIdx !== null) {
@@ -341,33 +342,46 @@
       if (isMobile) {
         const slideW = viewportW;
         allSlides.forEach((el) => {
-          el.style.width = slideW + "px";
-          el.style.minWidth = slideW + "px";
-          el.style.maxWidth = slideW + "px";
-          el.style.flex = "0 0 " + slideW + "px";
+          el.style.setProperty("width", slideW + "px", "important");
+          el.style.setProperty("min-width", slideW + "px", "important");
+          el.style.setProperty("max-width", slideW + "px", "important");
+          el.style.setProperty("flex", "0 0 " + slideW + "px", "important");
+          const mw = el.querySelector(".home-media-wrap");
+          if (mw) mw.style.aspectRatio = "";
         });
 
-        singleSetWidth = origCount * slideW;
+        const trackRect = track.getBoundingClientRect();
         slideMetrics = allSlides.map((el, idx) => {
+          const elRect = el.getBoundingClientRect();
+          const left = (typeof el.offsetLeft === "number" && el.offsetParent === track)
+            ? el.offsetLeft
+            : (elRect.left - trackRect.left);
+          const w = elRect.width || slideW;
           const video = el.querySelector(".home-slide-video") || el.querySelector("video");
           const videoSrc = video ? video.getAttribute("data-resolved-src") || "" : "";
-          const left = idx * slideW;
           return {
             el: el,
             left: left,
-            width: slideW,
-            center: left + slideW * 0.5,
+            width: w,
+            center: left + w * 0.5,
             origIndex: parseInt(el.getAttribute("data-orig-index") || "0", 10),
             video: videoSrc ? video : null,
             videoSrc: videoSrc
           };
         });
 
+        const set1Start = slideMetrics[origCount];
+        const set0Start = slideMetrics[0];
+        singleSetWidth = (set1Start && set0Start && (set1Start.left - set0Start.left) > 0)
+          ? (set1Start.left - set0Start.left)
+          : (origCount * slideW);
+
         if (!isInitialLayoutDone) {
           const restoredSlide = getRestoredCenterSlide();
           mobileIndex = restoredSlide ? allSlides.indexOf(restoredSlide) : centerStartIndex;
           activeCenterSlide = allSlides[mobileIndex];
-          targetX = -mobileIndex * slideW;
+          const curMetric = slideMetrics[mobileIndex] || slideMetrics[centerStartIndex] || slideMetrics[0];
+          targetX = curMetric ? -curMetric.left : -mobileIndex * slideW;
           rawTargetX = targetX;
           currentX = targetX;
           track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
@@ -377,21 +391,23 @@
         } else if (wasMobile !== isMobile) {
           const currentActiveIdx = allSlides.indexOf(activeCenterSlide);
           mobileIndex = currentActiveIdx !== -1 ? currentActiveIdx : centerStartIndex;
-          targetX = -mobileIndex * slideW;
+          const curMetric = slideMetrics[mobileIndex] || slideMetrics[centerStartIndex] || slideMetrics[0];
+          targetX = curMetric ? -curMetric.left : -mobileIndex * slideW;
           rawTargetX = targetX;
           currentX = targetX;
           track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
         } else {
-          targetX = -mobileIndex * slideW;
+          const curMetric = slideMetrics[mobileIndex] || slideMetrics[centerStartIndex] || slideMetrics[0];
+          targetX = curMetric ? -curMetric.left : -mobileIndex * slideW;
           rawTargetX = targetX;
         }
       } else {
         if (wasMobile) {
           allSlides.forEach((el) => {
-            el.style.width = "";
-            el.style.minWidth = "";
-            el.style.maxWidth = "";
-            el.style.flex = "";
+            el.style.removeProperty("width");
+            el.style.removeProperty("min-width");
+            el.style.removeProperty("max-width");
+            el.style.removeProperty("flex");
           });
         }
         const computedGap = parseFloat(window.getComputedStyle(track).columnGap || window.getComputedStyle(track).gap);
@@ -574,7 +590,7 @@
       if (isMobile) {
         if (mobileIndex >= (CENTER_SET + 1) * origCount) {
           mobileIndex -= origCount;
-          const shift = origCount * viewportW;
+          const shift = singleSetWidth;
           currentX += shift;
           targetX += shift;
           rawTargetX += shift;
@@ -583,7 +599,7 @@
           if (closest) activeCenterSlide = closest.el;
         } else if (mobileIndex < (CENTER_SET - 1) * origCount) {
           mobileIndex += origCount;
-          const shift = origCount * viewportW;
+          const shift = singleSetWidth;
           currentX -= shift;
           targetX -= shift;
           rawTargetX -= shift;
@@ -750,7 +766,8 @@
       userInteracted = true;
       if (isMobile) {
         mobileIndex = Math.max(0, Math.min(allSlides.length - 1, mobileIndex + dir));
-        targetX = -mobileIndex * viewportW;
+        const targetMetric = slideMetrics[mobileIndex];
+        targetX = targetMetric ? -targetMetric.left : -mobileIndex * viewportW;
         rawTargetX = targetX;
       } else {
         const closest = getClosestSlide(targetX);
