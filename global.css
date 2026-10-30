@@ -1140,6 +1140,7 @@ a {
         height: 100%;
         display: none;
         z-index: 2;
+
     }
 
     .index-mobile-video-embed video,
@@ -1149,5 +1150,6 @@ a {
         object-fit: cover;
         display: block;
         pointer-events: none;
+        width: auto;
     }
 }
