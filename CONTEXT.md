@@ -221,6 +221,11 @@ info-main                               [Page Root Section]
 Special Logic:
 Client Editor Mode: Text and media elements (like .pic-container) are unlocked for direct client updates in Webflow Editor.
 Press & Interviews Link Hover: .info-link-list uses modern CSS :has(a:hover) to dim unhovered text lines and sibling links to var(--grey, #ababab) while keeping the hovered link solid #000000.
+Subtle Floating Entrance: Orchestrated via GSAP in transitions.js (initInformation / destroyInformation). Plays every time the page is loaded directly or transitioned into via Barba:
+1. .info-rich-text floats in (y: 22 -> 0, opacity: 0 -> 1, duration: 0.85s).
+2. .info-grid-item items float in staggered one after another (stagger: 0.08s, duration: 0.75s).
+3. .mg-pic-wrapper floats in (y: 22 -> 0, opacity: 0 -> 1, duration: 0.85s).
+All animated properties are cleared on completion (clearProps: "transform,opacity") to prevent stacking context or subpixel rendering conflicts.
 
 4. Separation of Responsibilities: Webflow vs. global.css
 To allow visual design adjustments in Webflow Designer without code conflicts, styles are strictly separated:

@@ -84,6 +84,12 @@ function initOsmoBoilerplate() {
             if (typeof window.initProjectDetails === "function") window.initProjectDetails(container);
         } else if (ns === "index") {
             if (typeof window.initIndex === "function") window.initIndex(container);
+        } else if (ns === "information" || ns === "info") {
+            if (typeof window.initInformation === "function") {
+                window.initInformation(container);
+            } else if (typeof initInformation === "function") {
+                initInformation(container);
+            }
         }
     }
 
@@ -100,6 +106,12 @@ function initOsmoBoilerplate() {
             if (typeof window.destroyProjectDetails === "function") window.destroyProjectDetails();
         } else if (ns === "index") {
             if (typeof window.destroyIndex === "function") window.destroyIndex();
+        } else if (ns === "information" || ns === "info") {
+            if (typeof window.destroyInformation === "function") {
+                window.destroyInformation();
+            } else if (typeof destroyInformation === "function") {
+                destroyInformation();
+            }
         }
     }
 
@@ -1120,6 +1132,132 @@ function initOsmoBoilerplate() {
         });
     }
 
+    // -----------------------------------------
+    // INFORMATION PAGE FLOATING ENTRANCE
+    // -----------------------------------------
+    let infoTimeline = null;
+    let infoScope = null;
+
+    function destroyInformation() {
+        if (infoTimeline) {
+            infoTimeline.kill();
+            infoTimeline = null;
+        }
+        if (infoScope && typeof gsap !== "undefined") {
+            const richText = infoScope.querySelector(".info-rich-text");
+            const gridItems = infoScope.querySelectorAll(".info-grid-item");
+            const picWrapper = infoScope.querySelector(".mg-pic-wrapper");
+            const allTargets = [richText, ...gridItems, picWrapper].filter(Boolean);
+            if (allTargets.length) {
+                gsap.set(allTargets, { clearProps: "transform,opacity" });
+            }
+            infoScope._isInfoMounted = false;
+            infoScope = null;
+        }
+    }
+
+    function initInformation(container) {
+        const scope = container ||
+            document.querySelector('[data-barba="container"][data-barba-namespace="information"]') ||
+            document.querySelector('[data-barba="container"][data-barba-namespace="info"]') ||
+            document.querySelector(".info-main") ||
+            document;
+
+        const main = scope.classList?.contains("info-main") ? scope : scope.querySelector(".info-main");
+        if (!main && !scope.querySelector(".info-rich-text")) return;
+        if (scope && scope._isInfoMounted) return;
+        destroyInformation();
+
+        if (scope) scope._isInfoMounted = true;
+        if (container) container._isMounted = true;
+        infoScope = scope;
+
+        const richText = scope.querySelector(".info-rich-text");
+        const gridItems = scope.querySelectorAll(".info-grid-item");
+        const picWrapper = scope.querySelector(".mg-pic-wrapper");
+
+        const allTargets = [richText, ...gridItems, picWrapper].filter(Boolean);
+        if (!allTargets.length) return;
+
+        if (reducedMotion) {
+            gsap.set(allTargets, { opacity: 1, y: 0 });
+            return;
+        }
+
+        const executeAnim = () => {
+            if (typeof gsap === "undefined") return;
+
+            if (infoTimeline) {
+                infoTimeline.kill();
+                infoTimeline = null;
+            }
+
+            // Subtle initial displacement & opacity
+            gsap.set(allTargets, { opacity: 0, y: 22, force3D: true });
+
+            infoTimeline = gsap.timeline({
+                delay: 0.12,
+                onComplete: () => {
+                    gsap.set(allTargets, { clearProps: "transform,opacity" });
+                    infoTimeline = null;
+                }
+            });
+
+            // 1. First the info-rich-text floats in
+            if (richText) {
+                infoTimeline.to(richText, {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.85,
+                    ease: "power2.out",
+                    force3D: true,
+                }, 0);
+            }
+
+            // 2. Then each info-grid-item floats in one after other
+            if (gridItems.length) {
+                infoTimeline.to(gridItems, {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.75,
+                    stagger: 0.08,
+                    ease: "power2.out",
+                    force3D: true,
+                }, richText ? 0.28 : 0);
+            }
+
+            // 3. Then the mg-pic-wrapper floats in
+            if (picWrapper) {
+                const picDelay = gridItems.length
+                    ? 0.28 + (gridItems.length * 0.08) - 0.04
+                    : (richText ? 0.35 : 0);
+
+                infoTimeline.to(picWrapper, {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.85,
+                    ease: "power2.out",
+                    force3D: true,
+                }, picDelay);
+            }
+        };
+
+        if (typeof gsap !== "undefined") {
+            executeAnim();
+        } else {
+            const checkGsap = setInterval(() => {
+                if (typeof gsap !== "undefined") {
+                    clearInterval(checkGsap);
+                    executeAnim();
+                }
+            }, 20);
+            setTimeout(() => clearInterval(checkGsap), 2000);
+        }
+    }
+
+    window.initInformation = initInformation;
+    window.destroyInformation = destroyInformation;
+
     function initBarbaNavUpdate(data) {
         const tpl = document.createElement("template");
         tpl.innerHTML = data.next.html.trim();
@@ -1135,5 +1273,23 @@ function initOsmoBoilerplate() {
             const newClassList = next.getAttribute("class") || "";
             curr.setAttribute("class", newClassList);
         });
+    }
+}
+
+// Auto-boot Information page if loaded directly
+if (typeof document !== "undefined") {
+    const bootInfo = () => {
+        const container = document.querySelector('[data-barba="container"][data-barba-namespace="information"]') ||
+            document.querySelector('[data-barba="container"][data-barba-namespace="info"]') ||
+            document.querySelector(".info-main");
+        if (container && !container._isInfoMounted && typeof window.initInformation === "function") {
+            window.initInformation(container);
+        }
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootInfo);
+    } else {
+        bootInfo();
     }
 }
