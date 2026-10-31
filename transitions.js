@@ -1176,11 +1176,12 @@ function initOsmoBoilerplate() {
         const gridItems = scope.querySelectorAll(".info-grid-item");
         const picWrapper = scope.querySelector(".mg-pic-wrapper");
 
+        const textTargets = [richText, ...gridItems].filter(Boolean);
         const allTargets = [richText, ...gridItems, picWrapper].filter(Boolean);
         if (!allTargets.length) return;
 
         if (reducedMotion) {
-            gsap.set(allTargets, { opacity: 1, y: 0 });
+            gsap.set(allTargets, { opacity: 1, y: 0, yPercent: 0 });
             return;
         }
 
@@ -1192,8 +1193,13 @@ function initOsmoBoilerplate() {
                 infoTimeline = null;
             }
 
-            // Subtle initial displacement & opacity
-            gsap.set(allTargets, { opacity: 0, y: 22, force3D: true });
+            // Text elements float from y: 22px; portrait wrapper floats from y: 30% below
+            if (textTargets.length) {
+                gsap.set(textTargets, { opacity: 0, y: 22, force3D: true });
+            }
+            if (picWrapper) {
+                gsap.set(picWrapper, { opacity: 0, yPercent: 30, force3D: true });
+            }
 
             infoTimeline = gsap.timeline({
                 delay: 0.12,
@@ -1209,7 +1215,7 @@ function initOsmoBoilerplate() {
                     opacity: 1,
                     y: 0,
                     duration: 0.85,
-                    ease: "power2.out",
+                    ease: "power2.inOut",
                     force3D: true,
                 }, 0);
             }
@@ -1221,12 +1227,12 @@ function initOsmoBoilerplate() {
                     y: 0,
                     duration: 0.75,
                     stagger: 0.08,
-                    ease: "power2.out",
+                    ease: "power2.inOut",
                     force3D: true,
                 }, richText ? 0.28 : 0);
             }
 
-            // 3. Then the mg-pic-wrapper floats in
+            // 3. Then the mg-pic-wrapper floats in from below (30% -> 0)
             if (picWrapper) {
                 const picDelay = gridItems.length
                     ? 0.28 + (gridItems.length * 0.08) - 0.04
@@ -1234,9 +1240,9 @@ function initOsmoBoilerplate() {
 
                 infoTimeline.to(picWrapper, {
                     opacity: 1,
-                    y: 0,
+                    yPercent: 0,
                     duration: 0.85,
-                    ease: "power2.out",
+                    ease: "power2.inOut",
                     force3D: true,
                 }, picDelay);
             }
