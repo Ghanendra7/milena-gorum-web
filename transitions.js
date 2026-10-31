@@ -180,6 +180,8 @@ function initOsmoBoilerplate() {
                 resolve();
             };
 
+            mountPage(next);
+
             if (reducedMotion) {
                 gsap.set(next, { autoAlpha: 1 });
                 done();

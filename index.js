@@ -9,6 +9,7 @@
     let activeMobileRow = null;
     let activeDesktopVideo = null;
     let activeMobileVideo = null;
+    let appearTimeline = null;
 
     const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
     const PREVIEW_FILENAME = "play_480p.mp4";
@@ -148,6 +149,58 @@
     };
 
     // ----------------------------------------------------
+    // APPEAR ANIMATION (Subtle Floating Column Stagger)
+    // ----------------------------------------------------
+    const playAppearAnimation = (list) => {
+        if (!list) return;
+
+        const colNums = Array.from(list.querySelectorAll(".index-col-num"));
+        const colClients = Array.from(list.querySelectorAll(".index-col-client"));
+        const colTitles = Array.from(list.querySelectorAll(".index-col-title"));
+
+        if (!colNums.length && !colClients.length && !colTitles.length) return;
+
+        const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (prefersReducedMotion) return;
+
+        const executeAnim = () => {
+            if (typeof gsap === "undefined") return;
+
+            if (appearTimeline) {
+                appearTimeline.kill();
+                appearTimeline = null;
+            }
+
+            const allTargets = [...colNums, ...colClients, ...colTitles];
+            gsap.set(allTargets, { opacity: 0, y: 12, force3D: true });
+
+            appearTimeline = gsap.timeline({
+                onComplete: () => {
+                    gsap.set(allTargets, { clearProps: "transform,opacity" });
+                    appearTimeline = null;
+                }
+            });
+
+            appearTimeline
+                .to(colNums, { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", force3D: true }, 0.08)
+                .to(colClients, { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", force3D: true }, 0.20)
+                .to(colTitles, { opacity: 1, y: 0, duration: 0.75, ease: "power2.out", force3D: true }, 0.32);
+        };
+
+        if (typeof gsap !== "undefined") {
+            executeAnim();
+        } else {
+            const checkGsap = setInterval(() => {
+                if (typeof gsap !== "undefined") {
+                    clearInterval(checkGsap);
+                    executeAnim();
+                }
+            }, 20);
+            setTimeout(() => clearInterval(checkGsap), 2000);
+        }
+    };
+
+    // ----------------------------------------------------
     // INITIALIZATION & TEARDOWN
     // ----------------------------------------------------
     function initIndex(container) {
@@ -160,6 +213,9 @@
         destroyIndex();
         if (scope) scope._isIndexMounted = true;
         indexScope = scope;
+
+        // Subtle GSAP appear animation for columns: numbers -> client name -> subtitle
+        playAppearAnimation(list);
 
         indexAbortController = new AbortController();
         const { signal } = indexAbortController;
@@ -710,6 +766,11 @@
     // CLEANUP & TEARDOWN
     // ----------------------------------------------------
     function destroyIndex() {
+        if (appearTimeline) {
+            appearTimeline.kill();
+            appearTimeline = null;
+        }
+
         if (indexAbortController) {
             indexAbortController.abort();
             indexAbortController = null;
@@ -736,8 +797,15 @@
         }
 
         if (indexScope) {
-            indexScope._isIndexMounted = false;
             const list = indexScope.querySelector(".index-list");
+            if (list && typeof gsap !== "undefined") {
+                const allTargets = list.querySelectorAll(".index-col-num, .index-col-client, .index-col-title");
+                if (allTargets.length) {
+                    gsap.set(allTargets, { clearProps: "transform,opacity" });
+                }
+            }
+
+            indexScope._isIndexMounted = false;
             if (list) {
                 list.classList.remove("has-hovered-item", "has-active-mobile");
             }
@@ -750,4 +818,19 @@
     // Expose lifecycle hooks globally
     window.initIndex = initIndex;
     window.destroyIndex = destroyIndex;
+
+    // Auto-boot if page loaded directly
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+            const container = document.querySelector('[data-barba="container"][data-barba-namespace="index"]') || document.querySelector(".index-section");
+            if (container && !container._isIndexMounted) {
+                initIndex(container);
+            }
+        });
+    } else {
+        const container = document.querySelector('[data-barba="container"][data-barba-namespace="index"]') || document.querySelector(".index-section");
+        if (container && !container._isIndexMounted) {
+            initIndex(container);
+        }
+    }
 })();
