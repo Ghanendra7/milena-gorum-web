@@ -1198,7 +1198,7 @@ function initOsmoBoilerplate() {
                 gsap.set(textTargets, { opacity: 0, y: 22, force3D: true });
             }
             if (picWrapper) {
-                gsap.set(picWrapper, { opacity: 0, yPercent: 20, force3D: true });
+                gsap.set(picWrapper, { opacity: 0, yPercent: 12, force3D: true });
             }
 
             infoTimeline = gsap.timeline({
@@ -1235,7 +1235,7 @@ function initOsmoBoilerplate() {
             // 3. Then the mg-pic-wrapper floats in from below (30% -> 0)
             if (picWrapper) {
                 const picDelay = gridItems.length
-                    ? 0.08 + (gridItems.length * 0.08) - 0.04
+                    ? 0.09 + (gridItems.length * 0.08) - 0.04
                     : (richText ? 0.35 : 0);
 
                 infoTimeline.to(picWrapper, {
