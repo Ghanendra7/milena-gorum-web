@@ -172,7 +172,7 @@
             }
 
             const allTargets = [...colNums, ...colClients, ...colTitles];
-            gsap.set(allTargets, { opacity: 0, y: 30, force3D: true });
+            gsap.set(allTargets, { opacity: 0, y: 22, force3D: true });
 
             appearTimeline = gsap.timeline({
                 onComplete: () => {
@@ -182,9 +182,9 @@
             });
 
             appearTimeline
-                .to(colNums, { opacity: 1, y: 0, duration: 0.75, ease: "power2.inOut", force3D: true }, 0.08)
-                .to(colClients, { opacity: 1, y: 0, duration: 0.75, ease: "power2.inOut", force3D: true }, 0.20)
-                .to(colTitles, { opacity: 1, y: 0, duration: 0.75, ease: "power2.inOut", force3D: true }, 0.32);
+                .to(colNums, { opacity: 1, y: 0, duration: 0.9, ease: "power2.inOut", force3D: true }, 0.08)
+                .to(colClients, { opacity: 1, y: 0, duration: 0.9, ease: "power2.inOut", force3D: true }, 0.20)
+                .to(colTitles, { opacity: 1, y: 0, duration: 0.9, ease: "power2.inOut", force3D: true }, 0.32);
         };
 
         if (typeof gsap !== "undefined") {
