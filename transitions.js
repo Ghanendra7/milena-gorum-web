@@ -68,6 +68,31 @@ function initOsmoBoilerplate() {
         return ns === "index" || ns === "information" || ns === "info";
     }
 
+    function ensureNavbarInContainer(container, rawHtml) {
+        if (!container) return null;
+        let navbar = container.querySelector(".navbar");
+        const bodyNav = document.body.querySelector(":scope > .navbar");
+
+        if (!navbar) {
+            if (bodyNav) {
+                container.prepend(bodyNav);
+                navbar = bodyNav;
+            } else if (rawHtml) {
+                try {
+                    const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+                    const parsedNav = doc.querySelector(".navbar");
+                    if (parsedNav) {
+                        navbar = document.importNode(parsedNav, true);
+                        container.prepend(navbar);
+                    }
+                } catch (_) { }
+            }
+        } else if (bodyNav && bodyNav !== navbar) {
+            bodyNav.remove();
+        }
+        return navbar;
+    }
+
     // -----------------------------------------
     // PAGE INITIALIZATION CONDUCTOR
     // -----------------------------------------
@@ -123,6 +148,10 @@ function initOsmoBoilerplate() {
                 sessionStorage.setItem("mg_session_history_count", "0");
             }
         } catch (_) { }
+        const initialContainer = document.querySelector('[data-barba="container"]');
+        if (initialContainer) {
+            ensureNavbarInContainer(initialContainer);
+        }
     }
 
     function initBeforeEnterFunctions(next) {
@@ -268,11 +297,12 @@ function initOsmoBoilerplate() {
         });
     }
 
-    function runHomeToProjectsEnter(next) {
+    function runHomeToProjectsEnter(next, data) {
         return new Promise((resolve) => {
             const isDesktop = window.innerWidth > 1024;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
+            ensureNavbarInContainer(next, data?.next?.html);
 
             // 1. Immediately position next offscreen so no initial state flashes
             gsap.set(next, {
@@ -477,7 +507,10 @@ function initOsmoBoilerplate() {
             // Immediately pause active videos on outgoing page
             current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
 
-            // Projects stays on top (zIndex: 2) as it slides down out of view
+            ensureNavbarInContainer(current);
+
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            // Outgoing page stays on top (zIndex: 2) as it slides down out of view
             gsap.set(current, {
                 position: "fixed",
                 top: 0,
@@ -486,8 +519,13 @@ function initOsmoBoilerplate() {
                 height: "100dvh",
                 backgroundColor: "#ffffff",
                 zIndex: 2,
+                overflow: "hidden",
                 force3D: true,
             });
+            if (scrollY > 0) {
+                current.scrollTop = scrollY;
+                window.scrollTo(0, 0);
+            }
 
             const section = current.classList?.contains("projects-section") ? current : current.querySelector(".projects-section");
             if (section) {
@@ -961,6 +999,8 @@ function initOsmoBoilerplate() {
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
 
+        ensureNavbarInContainer(data.next.container, data.next.html);
+
         // Synchronize body classes (e.g. .homepage has black background in Webflow)
         if (nextNs === "home") {
             document.body.classList.add("homepage");
@@ -979,7 +1019,10 @@ function initOsmoBoilerplate() {
 
         if (nextNs === "project-detail") {
             initialProps.xPercent = 100;
-        } else if (nextNs === "projects" && currentNs === "home") {
+        } else if (
+            (nextNs === "projects" || nextNs === "index" || nextNs === "information" || nextNs === "info") &&
+            currentNs === "home"
+        ) {
             initialProps.yPercent = 100;
         } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home")) {
             initialProps.xPercent = -80;
@@ -1028,18 +1071,18 @@ function initOsmoBoilerplate() {
                 name: "home-to-projects",
                 sync: true,
                 from: { namespace: ["home"] },
-                to: { namespace: ["projects"] },
+                to: { namespace: ["projects", "index", "information", "info"] },
                 async leave(data) {
                     return runHomeToProjectsLeave(data.current.container, data.next.container);
                 },
                 async enter(data) {
-                    return runHomeToProjectsEnter(data.next.container);
+                    return runHomeToProjectsEnter(data.next.container, data);
                 },
             },
             {
                 name: "projects-to-home",
                 sync: true,
-                from: { namespace: ["projects"] },
+                from: { namespace: ["projects", "index", "information", "info"] },
                 to: { namespace: ["home"] },
                 async leave(data) {
                     return runProjectsToHomeLeave(data.current.container, data.next.container);
@@ -1285,6 +1328,14 @@ function initOsmoBoilerplate() {
 // Auto-boot Information page if loaded directly
 if (typeof document !== "undefined") {
     const bootInfo = () => {
+        const initialContainer = document.querySelector('[data-barba="container"]');
+        if (initialContainer) {
+            const bodyNav = document.body.querySelector(":scope > .navbar");
+            if (bodyNav && !initialContainer.contains(bodyNav)) {
+                initialContainer.prepend(bodyNav);
+            }
+        }
+
         const container = document.querySelector('[data-barba="container"][data-barba-namespace="information"]') ||
             document.querySelector('[data-barba="container"][data-barba-namespace="info"]') ||
             document.querySelector(".info-main");
