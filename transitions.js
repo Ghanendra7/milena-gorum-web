@@ -540,7 +540,7 @@ function initOsmoBoilerplate() {
             // Information appear animation: bio text -> grid items -> portrait picture
             if (allInfoTargets.length) {
                 if (richText) {
-                    tl.to(richText, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, appearStartTime);
+                    tl.to(richText, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, appearStartTime);
                 }
                 if (gridItems.length) {
                     tl.to(gridItems, {
@@ -548,7 +548,7 @@ function initOsmoBoilerplate() {
                         y: 0,
                         duration: 0.75,
                         stagger: 0.08,
-                        ease: "power2.inOut",
+                        ease: "power2.out",
                         force3D: true,
                     }, appearStartTime + (richText ? 0.28 : 0));
                 }
@@ -560,7 +560,7 @@ function initOsmoBoilerplate() {
                         opacity: 1,
                         yPercent: 0,
                         duration: 0.85,
-                        ease: "power2.inOut",
+                        ease: "power2.out",
                         force3D: true,
                     }, appearStartTime + picDelay);
                 }
