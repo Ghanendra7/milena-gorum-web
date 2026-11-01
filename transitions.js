@@ -1394,7 +1394,7 @@ function initOsmoBoilerplate() {
                     opacity: 1,
                     yPercent: 0,
                     duration: 0.85,
-                    ease: "power2.inOut",
+                    ease: "power2.out",
                     force3D: true,
                 }, picDelay);
             }
