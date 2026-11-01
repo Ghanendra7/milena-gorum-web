@@ -423,7 +423,7 @@ function initOsmoBoilerplate() {
                 }
             }, null, "releaseMarquee");
 
-            const hitTopLead = 0.25;
+            const hitTopLead = 0.3;
             const hitTopTime = Math.max(0, slideDuration - hitTopLead);
 
             if (navTop) {
