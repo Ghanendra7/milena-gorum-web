@@ -529,8 +529,8 @@ function initOsmoBoilerplate() {
             if (navElements.length) {
                 tl.to(navElements, {
                     opacity: 0,
-                    y: 12,
-                    duration: 0.45,
+                    y: -10,
+                    duration: 0.25,
                     ease: "power2.out",
                 }, 0.05);
             }
