@@ -525,17 +525,8 @@ function initOsmoBoilerplate() {
             }
 
             // 3. Gracefully fade out nav & filter controls as page descends
-            const navElements = [filterList, subFilterList, zoomControls].filter(Boolean);
+            const navElements = [navTop, filterList, subFilterList, zoomControls].filter(Boolean);
             if (navElements.length) {
-                tl.to(navElements, {
-                    opacity: 0,
-                    y: 0,
-                    duration: 0.4,
-                    ease: "power2.out",
-                }, 0.05);
-            }
-
-            if (navTop) {
                 tl.to(navElements, {
                     opacity: 0,
                     y: -7,
@@ -543,6 +534,8 @@ function initOsmoBoilerplate() {
                     ease: "power2.out",
                 }, 0.05);
             }
+
+
 
             // Guaranteed resolution fallback for Safari
             setTimeout(done, (slideDuration + 0.3) * 1000);
