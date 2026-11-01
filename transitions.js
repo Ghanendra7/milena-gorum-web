@@ -649,10 +649,27 @@ function initOsmoBoilerplate() {
                 }, 0);
             }
 
-            // 3. Gracefully fade out nav & filter controls as page descends
-            const navElements = [navTop, filterList, subFilterList, zoomControls].filter(Boolean);
-            if (navElements.length) {
-                tl.to(navElements, {
+            // 3. Gracefully fade out nav, filter controls, and content containers as page descends
+            const picContainer = current.querySelector(".pic-container");
+            const infoContainer = current.querySelector(".info-container");
+            const indexSection = current.querySelector(".index-section");
+            const indexWrapper = current.querySelector(".index-wrapper");
+            const indexPreview = current.querySelector(".index-preview-stage");
+
+            const fadeElements = [
+                navTop,
+                filterList,
+                subFilterList,
+                zoomControls,
+                picContainer,
+                infoContainer,
+                indexSection,
+                indexWrapper,
+                indexPreview,
+            ].filter(Boolean);
+
+            if (fadeElements.length) {
+                tl.to(fadeElements, {
                     opacity: 0,
                     y: -9,
                     duration: 0.4,
