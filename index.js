@@ -215,7 +215,9 @@
         indexScope = scope;
 
         // Subtle GSAP appear animation for columns: numbers -> client name -> subtitle
-        playAppearAnimation(list);
+        if (!scope._deferAppear && !window.__mgEnteringFromHome) {
+            playAppearAnimation(list);
+        }
 
         indexAbortController = new AbortController();
         const { signal } = indexAbortController;

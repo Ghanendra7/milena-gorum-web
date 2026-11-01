@@ -299,6 +299,7 @@ function initOsmoBoilerplate() {
 
     function runHomeToProjectsEnter(next, data) {
         return new Promise((resolve) => {
+            const nextNs = next.getAttribute("data-barba-namespace") || "";
             const isDesktop = window.innerWidth > 1024;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
@@ -318,6 +319,10 @@ function initOsmoBoilerplate() {
                 yPercent: 100,
                 force3D: true,
             });
+
+            // Signal to child engines to defer their own appear animations to the transition timeline
+            next._deferAppear = true;
+            window.__mgEnteringFromHome = true;
 
             // 2. Pause marquee and make stage visible
             if (section) {
@@ -368,10 +373,28 @@ function initOsmoBoilerplate() {
 
             const mobileStage = !isDesktop && section ? section.querySelector(".mobile-gallery-stage") : null;
 
+            // 5. Select Index page column targets
+            const isIndex = nextNs === "index";
+            const indexList = isIndex ? next.querySelector(".index-list") : null;
+            const colNums = indexList ? Array.from(indexList.querySelectorAll(".index-col-num")) : [];
+            const colClients = indexList ? Array.from(indexList.querySelectorAll(".index-col-client")) : [];
+            const colTitles = indexList ? Array.from(indexList.querySelectorAll(".index-col-title")) : [];
+            const allIndexTargets = [...colNums, ...colClients, ...colTitles];
+
+            // 6. Select Information page targets
+            const isInfo = nextNs === "information" || nextNs === "info";
+            const richText = isInfo ? next.querySelector(".info-rich-text") : null;
+            const gridItems = isInfo ? Array.from(next.querySelectorAll(".info-grid-item")) : [];
+            const picWrapper = isInfo ? next.querySelector(".mg-pic-wrapper") : null;
+            const infoTextTargets = [richText, ...gridItems].filter(Boolean);
+            const allInfoTargets = [richText, ...gridItems, picWrapper].filter(Boolean);
+
             let resolved = false;
             const done = () => {
                 if (resolved) return;
                 resolved = true;
+                window.__mgEnteringFromHome = false;
+                next._deferAppear = false;
                 if (section) {
                     section.classList.remove("is-marquee-paused");
                     section.classList.add("is-marquee-active");
@@ -385,11 +408,19 @@ function initOsmoBoilerplate() {
                 if (mobileStage) {
                     gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                 }
+                if (allIndexTargets.length) {
+                    gsap.set(allIndexTargets, { clearProps: "transform,opacity" });
+                }
+                if (allInfoTargets.length) {
+                    gsap.set(allInfoTargets, { clearProps: "transform,opacity" });
+                }
                 resetPage(next);
                 resolve();
             };
 
             if (reducedMotion) {
+                window.__mgEnteringFromHome = false;
+                next._deferAppear = false;
                 if (section) {
                     section.classList.remove("is-marquee-paused");
                     section.classList.add("is-marquee-active");
@@ -410,6 +441,17 @@ function initOsmoBoilerplate() {
             }
             if (mobileStage) {
                 gsap.set(mobileStage, { opacity: 0, yPercent: 20, force3D: true });
+            }
+
+            if (allIndexTargets.length) {
+                gsap.set(allIndexTargets, { opacity: 0, y: 22, force3D: true });
+            }
+
+            if (infoTextTargets.length) {
+                gsap.set(infoTextTargets, { opacity: 0, y: 22, force3D: true });
+            }
+            if (picWrapper) {
+                gsap.set(picWrapper, { opacity: 0, yPercent: 12, force3D: true });
             }
 
             const tl = gsap.timeline({ onComplete: done });
@@ -478,8 +520,53 @@ function initOsmoBoilerplate() {
                 }
             }
 
+            // Right after navTop appears: trigger appear animations for Index & Information
+            const appearStartTime = hitTopTime + 0.18;
+
+            // Index appear animation: numbers -> client name -> subtitle
+            if (allIndexTargets.length) {
+                if (colNums.length) {
+                    tl.to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, appearStartTime + 0.08);
+                }
+                if (colClients.length) {
+                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, appearStartTime + 0.20);
+                }
+                if (colTitles.length) {
+                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, appearStartTime + 0.32);
+                }
+            }
+
+            // Information appear animation: bio text -> grid items -> portrait picture
+            if (allInfoTargets.length) {
+                if (richText) {
+                    tl.to(richText, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, appearStartTime);
+                }
+                if (gridItems.length) {
+                    tl.to(gridItems, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.75,
+                        stagger: 0.08,
+                        ease: "power2.inOut",
+                        force3D: true,
+                    }, appearStartTime + (richText ? 0.28 : 0));
+                }
+                if (picWrapper) {
+                    const picDelay = gridItems.length
+                        ? 0.09 + (gridItems.length * 0.08) - 0.04
+                        : (richText ? 0.35 : 0);
+                    tl.to(picWrapper, {
+                        opacity: 1,
+                        yPercent: 0,
+                        duration: 0.85,
+                        ease: "power2.inOut",
+                        force3D: true,
+                    }, appearStartTime + picDelay);
+                }
+            }
+
             // Guaranteed resolution fallback for Safari
-            setTimeout(done, (slideDuration + 0.9) * 1000);
+            setTimeout(done, (appearStartTime + 2.0) * 1000);
         });
     }
 
@@ -1225,6 +1312,10 @@ function initOsmoBoilerplate() {
 
         if (reducedMotion) {
             gsap.set(allTargets, { opacity: 1, y: 0, yPercent: 0 });
+            return;
+        }
+
+        if (scope._deferAppear || window.__mgEnteringFromHome) {
             return;
         }
 
