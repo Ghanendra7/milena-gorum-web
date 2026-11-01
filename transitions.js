@@ -529,13 +529,11 @@ function initOsmoBoilerplate() {
             if (navElements.length) {
                 tl.to(navElements, {
                     opacity: 0,
-                    y: -7,
+                    y: -9,
                     duration: 0.4,
                     ease: "power2.out",
                 }, 0.05);
             }
-
-
 
             // Guaranteed resolution fallback for Safari
             setTimeout(done, (slideDuration + 0.3) * 1000);
