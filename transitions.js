@@ -529,7 +529,7 @@ function initOsmoBoilerplate() {
             if (navElements.length) {
                 tl.to(navElements, {
                     opacity: 0,
-                    y: -10,
+                    y: 0,
                     duration: 0.5,
                     ease: "power2.out",
                 }, 0.05);
