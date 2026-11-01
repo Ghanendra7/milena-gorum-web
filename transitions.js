@@ -527,13 +527,13 @@ function initOsmoBoilerplate() {
             // Index appear animation: numbers -> client name -> subtitle
             if (allIndexTargets.length) {
                 if (colNums.length) {
-                    tl.to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, indexAppearStart);
+                    tl.to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart);
                 }
                 if (colClients.length) {
-                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, indexAppearStart + 0.10);
+                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.10);
                 }
                 if (colTitles.length) {
-                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, indexAppearStart + 0.20);
+                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.20);
                 }
             }
 
