@@ -521,8 +521,8 @@ function initOsmoBoilerplate() {
             }
 
             // Right after navTop appears: trigger appear animations for Index & Information
-            const appearStartTime = hitTopTime + 0.18;
-            const indexAppearStart = hitTopTime + 0.05;
+            const appearStartTime = hitTopTime + 0;
+            const indexAppearStart = hitTopTime + 0;
 
             // Index appear animation: numbers -> client name -> subtitle
             if (allIndexTargets.length) {
