@@ -237,6 +237,94 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
+    // PERSISTENT NAV OVERLAY (INNER PAGE SWITCH)
+    // -----------------------------------------
+    let navOverlayEl = null;
+
+    function createNavOverlay(current, next) {
+        if (navOverlayEl) return navOverlayEl;
+        const sourceNav = next?.querySelector(".nav-top") || current?.querySelector(".nav-top");
+        if (!sourceNav) return null;
+
+        navOverlayEl = document.createElement("nav");
+        navOverlayEl.className = "navbar mg-nav-overlay";
+        navOverlayEl.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; pointer-events: none;";
+        navOverlayEl.appendChild(sourceNav.cloneNode(true));
+        document.body.appendChild(navOverlayEl);
+
+        const currentNavTop = current?.querySelector(".nav-top");
+        const nextNavTop = next?.querySelector(".nav-top");
+        if (currentNavTop) currentNavTop.style.opacity = "0";
+        if (nextNavTop) nextNavTop.style.opacity = "0";
+
+        return navOverlayEl;
+    }
+
+    function removeNavOverlay(next) {
+        if (navOverlayEl) {
+            navOverlayEl.remove();
+            navOverlayEl = null;
+        }
+        const nextNavTop = next?.querySelector(".nav-top") || document.querySelector('[data-barba="container"] .nav-top');
+        if (nextNavTop) nextNavTop.style.opacity = "";
+    }
+
+    function runInnerPageLeave(current, next) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                unmountPage(current);
+                cleanupMediaInContainer(current);
+                current.remove();
+                resolve();
+            };
+
+            if (reducedMotion) {
+                gsap.set(current, { autoAlpha: 0 });
+                done();
+                return;
+            }
+
+            createNavOverlay(current, next);
+
+            const tl = gsap.timeline({ onComplete: done });
+            tl.to(current, { autoAlpha: 0, duration: 0.35, ease: "power2.out" });
+
+            setTimeout(done, 700);
+        });
+    }
+
+    function runInnerPageEnter(next, current) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                removeNavOverlay(next);
+                resetPage(next);
+                resolve();
+            };
+
+            createNavOverlay(current, next);
+            mountPage(next);
+
+            if (reducedMotion) {
+                removeNavOverlay(next);
+                gsap.set(next, { autoAlpha: 1 });
+                done();
+                return;
+            }
+
+            const tl = gsap.timeline({ onComplete: done });
+            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, ease: "power2.out" }, 0.08);
+
+            setTimeout(done, 900);
+        });
+    }
+
+    // -----------------------------------------
     // HOME -> PROJECTS TRANSITION
     // -----------------------------------------
     function runHomeToProjectsLeave(current, next) {
@@ -1068,6 +1156,7 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     barba.hooks.before((data) => {
         window.__mgHasInternalHistory = true;
+        removeNavOverlay();
         try {
             const currentCount = parseInt(sessionStorage.getItem("mg_session_history_count") || "0", 10);
             sessionStorage.setItem("mg_session_history_count", String(currentCount + 1));
@@ -1218,6 +1307,18 @@ function initOsmoBoilerplate() {
                 },
                 async enter(data) {
                     return runFromProjectDetailEnter(data.next.container);
+                },
+            },
+            {
+                name: "inner-pages",
+                sync: true,
+                from: { namespace: ["projects", "index", "information", "info"] },
+                to: { namespace: ["projects", "index", "information", "info"] },
+                async leave(data) {
+                    return runInnerPageLeave(data.current.container, data.next.container);
+                },
+                async enter(data) {
+                    return runInnerPageEnter(data.next.container, data.current.container);
                 },
             },
             {
