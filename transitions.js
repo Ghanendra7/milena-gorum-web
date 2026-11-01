@@ -468,6 +468,10 @@ function initOsmoBoilerplate() {
             const colClients = indexList ? Array.from(indexList.querySelectorAll(".index-col-client")) : [];
             const colTitles = indexList ? Array.from(indexList.querySelectorAll(".index-col-title")) : [];
             const allIndexTargets = [...colNums, ...colClients, ...colTitles];
+            if (indexList) {
+                indexList.classList.add("is-appearing");
+                indexList.style.pointerEvents = "none";
+            }
 
             // 6. Select Information page targets
             const isInfo = nextNs === "information" || nextNs === "info";
@@ -499,6 +503,15 @@ function initOsmoBoilerplate() {
                 if (allIndexTargets.length) {
                     gsap.set(allIndexTargets, { clearProps: "transform,opacity" });
                 }
+                if (indexList) {
+                    indexList.classList.remove("is-appearing");
+                    indexList.style.pointerEvents = "";
+                    const hoveredRow = indexList.querySelector(".index-row:hover");
+                    if (hoveredRow && isDesktop) {
+                        indexList.classList.add("has-hovered-item");
+                        hoveredRow.classList.add("is-hovered");
+                    }
+                }
                 if (allInfoTargets.length) {
                     gsap.set(allInfoTargets, { clearProps: "transform,opacity" });
                 }
@@ -509,6 +522,10 @@ function initOsmoBoilerplate() {
             if (reducedMotion) {
                 window.__mgEnteringFromHome = false;
                 next._deferAppear = false;
+                if (indexList) {
+                    indexList.classList.remove("is-appearing");
+                    indexList.style.pointerEvents = "";
+                }
                 if (section) {
                     section.classList.remove("is-marquee-paused");
                     section.classList.add("is-marquee-active");

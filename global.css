@@ -976,6 +976,13 @@ a {
     display: none !important;
 }
 
+/* Disable hover effects during appear animation */
+.index-list.is-appearing,
+.index-list.is-appearing .index-row,
+.index-list.is-appearing .index-row * {
+    pointer-events: none !important;
+}
+
 /* Base Index Row */
 .index-row {
     width: 100%;

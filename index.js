@@ -151,6 +151,8 @@
     // ----------------------------------------------------
     // APPEAR ANIMATION (Subtle Floating Column Stagger)
     // ----------------------------------------------------
+    let isAppearAnimating = false;
+
     const playAppearAnimation = (list) => {
         if (!list) return;
 
@@ -171,6 +173,10 @@
                 appearTimeline = null;
             }
 
+            isAppearAnimating = true;
+            list.classList.add("is-appearing");
+            list.style.pointerEvents = "none";
+
             const allTargets = [...colNums, ...colClients, ...colTitles];
             gsap.set(allTargets, { opacity: 0, y: 22, force3D: true });
 
@@ -178,6 +184,15 @@
                 onComplete: () => {
                     gsap.set(allTargets, { clearProps: "transform,opacity" });
                     appearTimeline = null;
+                    isAppearAnimating = false;
+                    list.classList.remove("is-appearing");
+                    list.style.pointerEvents = "";
+
+                    const hoveredRow = list.querySelector(".index-row:hover");
+                    if (hoveredRow && !isMobileLayout()) {
+                        list.classList.add("has-hovered-item");
+                        hoveredRow.classList.add("is-hovered");
+                    }
                 }
             });
 
@@ -588,6 +603,7 @@
                     btn.setAttribute("aria-label", `Show media ${media.label}`);
 
                     btn.addEventListener("pointerenter", () => {
+                        if (isAppearAnimating || row.closest(".index-list")?.classList.contains("is-appearing")) return;
                         desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                         btn.classList.add("is-active");
                         showDesktopPreview(media);
@@ -704,6 +720,7 @@
             // Desktop Hover Handlers
             row.addEventListener("pointerenter", () => {
                 if (isMobileLayout()) return;
+                if (isAppearAnimating || list.classList.contains("is-appearing")) return;
                 list.classList.add("has-hovered-item");
                 row.classList.add("is-hovered");
 
@@ -772,6 +789,7 @@
             appearTimeline.kill();
             appearTimeline = null;
         }
+        isAppearAnimating = false;
 
         if (indexAbortController) {
             indexAbortController.abort();
