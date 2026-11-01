@@ -182,9 +182,9 @@
             });
 
             appearTimeline
-                .to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.08)
-                .to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.20)
-                .to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.32);
+                .to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.02)
+                .to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.12)
+                .to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.22);
         };
 
         if (typeof gsap !== "undefined") {
