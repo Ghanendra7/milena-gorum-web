@@ -525,12 +525,21 @@ function initOsmoBoilerplate() {
             }
 
             // 3. Gracefully fade out nav & filter controls as page descends
-            const navElements = [navTop, filterList, subFilterList, zoomControls].filter(Boolean);
+            const navElements = [filterList, subFilterList, zoomControls].filter(Boolean);
             if (navElements.length) {
                 tl.to(navElements, {
                     opacity: 0,
                     y: 0,
-                    duration: 0.5,
+                    duration: 0.4,
+                    ease: "power2.out",
+                }, 0.05);
+            }
+
+            if (navTop) {
+                tl.to(navElements, {
+                    opacity: 0,
+                    y: -7,
+                    duration: 0.4,
                     ease: "power2.out",
                 }, 0.05);
             }
