@@ -1367,7 +1367,7 @@ function initOsmoBoilerplate() {
                     opacity: 1,
                     y: 0,
                     duration: 0.85,
-                    ease: "power2.inOut",
+                    ease: "power1.inOut",
                     force3D: true,
                 }, 0);
             }
@@ -1379,7 +1379,7 @@ function initOsmoBoilerplate() {
                     y: 0,
                     duration: 0.75,
                     stagger: 0.08,
-                    ease: "power2.inOut",
+                    ease: "power1.inOut",
                     force3D: true,
                 }, richText ? 0.28 : 0);
             }
@@ -1394,7 +1394,7 @@ function initOsmoBoilerplate() {
                     opacity: 1,
                     yPercent: 0,
                     duration: 0.85,
-                    ease: "power2.out",
+                    ease: "power1.out",
                     force3D: true,
                 }, picDelay);
             }
