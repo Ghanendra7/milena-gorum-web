@@ -16,7 +16,9 @@
     const TABLET_PORTRAIT_BREAKPOINT = 1024;
     const projectMediaCache = new Map();
 
-    const isMobileLayout = () => window.innerWidth <= TABLET_PORTRAIT_BREAKPOINT;
+    const isMobileLayout = () => {
+        return window.matchMedia ? window.matchMedia("(max-width: 1024px)").matches : window.innerWidth <= TABLET_PORTRAIT_BREAKPOINT;
+    };
 
     const padTwoDigits = (val) => {
         if (val === undefined || val === null) return "";
@@ -773,9 +775,13 @@
             }
         });
 
-        // Window resize handler: collapse mobile drawer if transitioning to desktop
+        // Window resize handler: collapse mobile drawer if transitioning to desktop, or clean desktop hover if transitioning to mobile
         window.addEventListener("resize", () => {
-            if (!isMobileLayout() && activeMobileRow) {
+            if (isMobileLayout()) {
+                hideDesktopPreview();
+                list.classList.remove("has-hovered-item");
+                list.querySelectorAll(".index-row.is-hovered").forEach((r) => r.classList.remove("is-hovered"));
+            } else if (activeMobileRow) {
                 collapseRow(activeMobileRow);
             }
         }, { signal, passive: true });

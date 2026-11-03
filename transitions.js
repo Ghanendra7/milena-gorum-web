@@ -388,7 +388,7 @@ function initOsmoBoilerplate() {
     function runHomeToProjectsEnter(next, data) {
         return new Promise((resolve) => {
             const nextNs = next.getAttribute("data-barba-namespace") || "";
-            const isDesktop = window.innerWidth > 1024;
+            const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 1025px)").matches : window.innerWidth > 1024;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
             ensureNavbarInContainer(next, data?.next?.html);
