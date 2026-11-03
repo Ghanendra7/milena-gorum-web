@@ -1674,69 +1674,18 @@ if (typeof document !== "undefined") {
 (function initMediaProtection() {
     if (typeof document === "undefined") return;
 
-    const mediaSelector = [
-        "img",
-        "video",
-        "picture",
-        "canvas",
-        "svg image",
-        "[data-media]",
-        "[data-video-id]",
-        "[data-img]",
-        ".project-img",
-        ".home-media-img",
-        ".slide-video",
-        ".home-slide-video",
-        ".project-preview-video",
-        ".mobile-main-video",
-        ".thumb-img",
-        ".main-media-img",
-        ".index-preview-img",
-        ".index-mobile-img",
-        ".home-media-wrap",
-        ".project-media-wrap",
-        ".mobile-media-box",
-        ".mobile-thumb-img-wrap",
-        ".video-container",
-        ".video-wrapper",
-        ".video-embed",
-        ".video-parallax-container",
-        ".image-wrapper",
-        ".image-parallax-container",
-        ".index-preview-stage",
-        ".index-mobile-media-box",
-        ".pic-wrapper",
-        ".pic-container",
-        ".mg-pic-wrapper",
-        ".desktop-gallery-card",
-        ".mobile-gallery-card",
-        ".home-slide",
-        ".main-swiper",
-        ".thumb-swiper",
-        ".swiper-slide"
-    ].join(", ");
+    const mediaSelector = "img, video, picture, canvas, svg image, [data-media], [data-video-id], [class*='media'], [class*='preview'], [class*='thumb'], .swiper-slide";
 
     const isMediaTarget = (target) => {
         if (!target || !(target instanceof Element)) return false;
         return !!target.closest(mediaSelector);
     };
 
-    // Check if target is inside a project card link (allows users to right-click to open in new tab)
-    const isProjectCardLink = (target) => {
-        if (!target || !(target instanceof Element)) return false;
-        return !!target.closest(
-            "a.project-link, a.mobile-main-link, a.home-slide-link, " +
-            ".project-card a, a.project-card, .desktop-gallery-card a, .mobile-gallery-card a, " +
-            "a[href*='/projects/'], a[href*='/detail_projects/']"
-        );
-    };
-
-    // 1. Prevent right-click / context menu on all images, videos, and media containers
-    // EXCEPTION: Allow native link context menu on project card links so users can "Open link in new tab"
+    // 1. Right-click context menu:
+    // If clicking on ANY link (e.g. project card), allow browser to show "Open link in new tab".
+    // Otherwise, block context menu on all images, videos, and media wrappers.
     document.addEventListener("contextmenu", (e) => {
-        if (isProjectCardLink(e.target)) {
-            return;
-        }
+        if (e.target.closest("a[href]")) return;
 
         if (isMediaTarget(e.target)) {
             e.preventDefault();

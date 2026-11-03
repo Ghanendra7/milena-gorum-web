@@ -108,23 +108,16 @@ a {
 }
 
 /* ========================================================
-   MEDIA PROTECTION: DISABLE DIRECT DOWNLOAD, DRAG, RIGHT-CLICK & SELECTION
+   MEDIA PROTECTION: DISABLE DIRECT DOWNLOAD, DRAG, & SELECTION
    ======================================================== */
 img,
 video,
 picture,
 canvas,
-svg image,
-.project-img,
-.home-media-img,
-.slide-video,
-.home-slide-video,
-.project-preview-video,
-.mobile-main-video,
-.thumb-img,
-.main-media-img,
-.index-preview-img,
-.index-mobile-img {
+[class*="media"],
+[class*="preview"],
+[class*="thumb"],
+.swiper-slide {
     -webkit-user-drag: none !important;
     -khtml-user-drag: none !important;
     -moz-user-drag: none !important;
@@ -141,41 +134,11 @@ img,
 .home-slide-video,
 .project-preview-video,
 .mobile-main-video {
-    pointer-events: none; /* Prevents ghost dragging and direct click-jacking; clicks and right-clicks pass through to parent card links */
+    pointer-events: none; /* Prevents ghost dragging; clicks & right-clicks pass through to parent cards/links */
 }
 
 video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video) {
     pointer-events: auto;
-}
-
-/* Protect all media wrapper containers against selection, drag, and touch callout sheets */
-.home-media-wrap,
-.project-media-wrap,
-.mobile-media-box,
-.mobile-thumb-img-wrap,
-.video-container,
-.video-wrapper,
-.video-embed,
-.video-parallax-container,
-.image-wrapper,
-.image-parallax-container,
-.index-preview-stage,
-.index-mobile-media-box,
-.pic-wrapper,
-.pic-container,
-.mg-pic-wrapper,
-.main-swiper .swiper-slide,
-.thumb-swiper .swiper-slide,
-.desktop-gallery-card,
-.mobile-gallery-card,
-.home-slide {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    -webkit-user-drag: none !important;
-    user-drag: none !important;
 }
 
 
