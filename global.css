@@ -256,6 +256,7 @@ a {
 /* Homepage: Mobile & Tablet Portrait (<= 1024px) */
 @media (max-width: 767px),
 (max-width: 1024px) and (orientation: portrait) {
+
     .home-section,
     .home-gallery-stage,
     .home-track-wrapper {
@@ -1131,10 +1132,7 @@ a {
    ======================================================== */
 @media (max-width: 1024px) {
 
-    /* Hide desktop left spacer box and adjust wrapper padding */
-    .left-box.no-mobile {
-        display: none !important;
-    }
+
 
     .index-wrapper {
         padding-left: var(--padding) !important;
@@ -1245,6 +1243,12 @@ a {
 }
 
 @media (max-width: 479px) {
+
+    /* Hide desktop left spacer box and adjust wrapper padding */
+    .left-box.no-mobile {
+        display: none !important;
+    }
+
     .index-row-header {
         grid-column-gap: 8px;
         grid-row-gap: 8px;
