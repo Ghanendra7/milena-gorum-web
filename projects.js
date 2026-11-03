@@ -1120,8 +1120,8 @@
                     speed: 350,
                     grabCursor: true,
                     roundLengths: true,
-                    observer: true,
-                    observeParents: true
+                    observer: false,
+                    observeParents: false
                 });
 
                 if (targetProjIdx > 0 && isMobileInfinite) {
@@ -1312,6 +1312,12 @@
         }
 
         const animateGallery = (now) => {
+            if (window.__mgIsTransitioning) {
+                lastFrameTime = now;
+                projectsRafId = requestAnimationFrame(animateGallery);
+                return;
+            }
+
             animateDesktop(now);
 
             if (isMobileLayout() && mobileThumbTrack && mobileThumbItems.length > 0) {

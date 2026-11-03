@@ -320,8 +320,8 @@
                 watchSlidesProgress: true,
                 grabCursor: true,
                 a11y: { enabled: true },
-                observer: true,
-                observeParents: true
+                observer: false,
+                observeParents: false
             });
 
             mainSwiperInstance = new Swiper(mainEl, {

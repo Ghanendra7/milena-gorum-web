@@ -900,6 +900,12 @@
     let lastActiveCheck = 0;
 
     function rafLoop(now) {
+      if (window.__mgIsTransitioning) {
+        lastFrameTime = now;
+        homeRafId = requestAnimationFrame(rafLoop);
+        return;
+      }
+
       const dt = Math.min(34, Math.max(4, now - lastFrameTime));
       lastFrameTime = now;
       const dtScale = dt / 16.667;

@@ -56,19 +56,10 @@ body:not(.homepage) {
 }
 
 /* ========================================================
-   BARBA & PAGE TRANSITIONS HARDWARE COMPOSITING
-   Optimized for Android Chromium (120Hz) & Mobile WebKit
+   BARBA & PAGE TRANSITIONS STYLES
    ======================================================== */
-[data-barba="container"] {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-}
-
 [data-barba="container"].is-transitioning,
 body.is-transitioning [data-barba="container"] {
-    will-change: transform;
     pointer-events: none !important;
 }
 
@@ -76,17 +67,6 @@ body.is-transitioning {
     pointer-events: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
-    touch-action: none !important;
-}
-
-.gallery-section,
-.home-section,
-.projects-section,
-.index-section,
-.info-main {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
 }
 
 :root {
