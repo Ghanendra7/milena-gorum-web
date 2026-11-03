@@ -1132,12 +1132,6 @@ a {
    ======================================================== */
 @media (max-width: 1024px) {
 
-
-
-    .index-wrapper {
-        padding-left: var(--padding) !important;
-    }
-
     .index-list-wrapper {
         flex: 0 auto !important;
         width: 100% !important;
