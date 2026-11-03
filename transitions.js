@@ -1721,119 +1721,23 @@ if (typeof document !== "undefined") {
         return !!target.closest(mediaSelector);
     };
 
-    // 1. Prevent right-click / context menu on all images, videos, and media containers
-    document.addEventListener("contextmenu", (e) => {
-        if (isMediaTarget(e.target)) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }
-    }, { capture: true, passive: false });
-
-    // 2. Prevent dragging images, videos, and media cards
-    document.addEventListener("dragstart", (e) => {
-        if (isMediaTarget(e.target)) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }
-    }, { capture: true, passive: false });
-
-    // 3. Prevent selection on images and videos
-    document.addEventListener("selectstart", (e) => {
-        if (isMediaTarget(e.target)) {
-            e.preventDefault();
-            return false;
-        }
-    }, { capture: true, passive: false });
-
-    // 4. Harden all image and video tags against native download buttons, dragging, and PiP
-    const hardenMedia = (root = document) => {
-        if (!root || !root.querySelectorAll) return;
-        root.querySelectorAll("img").forEach((img) => {
-            try {
-                img.setAttribute("draggable", "false");
-                img.setAttribute("oncontextmenu", "return false;");
-            } catch (_) { }
-        });
-        root.querySelectorAll("video").forEach((vid) => {
-            try {
-                vid.setAttribute("controlsList", "nodownload");
-                vid.setAttribute("disablePictureInPicture", "true");
-                vid.setAttribute("oncontextmenu", "return false;");
-                vid.setAttribute("draggable", "false");
-                vid.controlsList = "nodownload";
-                vid.disablePictureInPicture = true;
-            } catch (_) { }
-        });
-    };
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => hardenMedia(document));
-    } else {
-        hardenMedia(document);
-    }
-
-    if (typeof window !== "undefined") {
-        window.addEventListener("mg-transition-complete", () => hardenMedia(document));
-    }
-})();
-
-// -----------------------------------------
-// GLOBAL MEDIA PROTECTION (NO DOWNLOAD, NO DRAG, NO CONTEXTMENU)
-// -----------------------------------------
-(function initMediaProtection() {
-    if (typeof document === "undefined") return;
-
-    const mediaSelector = [
-        "img",
-        "video",
-        "picture",
-        "canvas",
-        "svg image",
-        "[data-media]",
-        "[data-video-id]",
-        "[data-img]",
-        ".project-img",
-        ".home-media-img",
-        ".slide-video",
-        ".home-slide-video",
-        ".project-preview-video",
-        ".mobile-main-video",
-        ".thumb-img",
-        ".main-media-img",
-        ".index-preview-img",
-        ".index-mobile-img",
-        ".home-media-wrap",
-        ".project-media-wrap",
-        ".mobile-media-box",
-        ".mobile-thumb-img-wrap",
-        ".video-container",
-        ".video-wrapper",
-        ".video-embed",
-        ".video-parallax-container",
-        ".image-wrapper",
-        ".image-parallax-container",
-        ".index-preview-stage",
-        ".index-mobile-media-box",
-        ".pic-wrapper",
-        ".pic-container",
-        ".mg-pic-wrapper",
-        ".desktop-gallery-card",
-        ".mobile-gallery-card",
-        ".home-slide",
-        ".main-swiper",
-        ".thumb-swiper",
-        ".swiper-slide"
-    ].join(", ");
-
-    const isMediaTarget = (target) => {
+    // Check if target is inside a project card link (allows users to right-click to open in new tab)
+    const isProjectCardLink = (target) => {
         if (!target || !(target instanceof Element)) return false;
-        return !!target.closest(mediaSelector);
+        return !!target.closest(
+            "a.project-link, a.mobile-main-link, a.home-slide-link, " +
+            ".project-card a, a.project-card, .desktop-gallery-card a, .mobile-gallery-card a, " +
+            "a[href*='/projects/'], a[href*='/detail_projects/']"
+        );
     };
 
     // 1. Prevent right-click / context menu on all images, videos, and media containers
+    // EXCEPTION: Allow native link context menu on project card links so users can "Open link in new tab"
     document.addEventListener("contextmenu", (e) => {
+        if (isProjectCardLink(e.target)) {
+            return;
+        }
+
         if (isMediaTarget(e.target)) {
             e.preventDefault();
             e.stopPropagation();

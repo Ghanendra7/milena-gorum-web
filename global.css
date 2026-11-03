@@ -137,11 +137,14 @@ svg image,
     user-select: none !important;
 }
 
-img {
-    pointer-events: none; /* Prevents ghost dragging and direct click-jacking; clicks pass through to parent cards and links */
+img,
+.home-slide-video,
+.project-preview-video,
+.mobile-main-video {
+    pointer-events: none; /* Prevents ghost dragging and direct click-jacking; clicks and right-clicks pass through to parent card links */
 }
 
-video {
+video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video) {
     pointer-events: auto;
 }
 
