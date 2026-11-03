@@ -1158,8 +1158,6 @@ a {
 
     /* Expandable Accordion Drawer */
     .index-row-drawer {
-        grid-column-gap: 16px;
-        grid-row-gap: 16px;
         display: flex !important;
         overflow: hidden;
         height: 0;
@@ -1176,8 +1174,6 @@ a {
     .index-media-mobile {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        min-width: 52px;
     }
 
     .index-media-item.is-mobile {
@@ -1185,23 +1181,17 @@ a {
     }
 
     /* Column 2: Inline Media Preview below Client Name */
-    .index-col-drawer-media {
-        width: 219px;
-    }
 
     .index-mobile-media-box {
         width: 100%;
         position: relative;
         overflow: hidden;
-        margin-top: 4px;
-        margin-bottom: 4px;
         -webkit-backface-visibility: hidden;
         backface-visibility: hidden;
     }
 
     .index-mobile-img {
         max-width: 100%;
-        max-height: 200px;
         height: auto;
         display: block;
     }
@@ -1211,7 +1201,6 @@ a {
         position: absolute;
         inset: 0;
         max-width: 100%;
-        max-height: 200px;
         height: 100%;
         display: none;
         z-index: 2;
