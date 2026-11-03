@@ -46,6 +46,29 @@
             backLink.setAttribute("aria-label", "Back to projects");
         }
 
+        const prjNum = gallerySection?.getAttribute("data-project-number") || "";
+        const currentSlug = window.location.pathname.split("/").filter(Boolean).pop() || "";
+        if (currentSlug && currentSlug !== "projects") {
+            try {
+                sessionStorage.setItem("mg_restore_project_slug", currentSlug);
+                sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
+                if (prjNum) sessionStorage.setItem("mg_restore_project_num", prjNum);
+            } catch (_) { }
+        }
+
+        window.addEventListener("pagehide", () => {
+            try {
+                const s = window.location.pathname.split("/").filter(Boolean).pop() || "";
+                const n = gallerySection?.getAttribute("data-project-number") || "";
+                if (s && s !== "projects") {
+                    sessionStorage.setItem("mg_restore_project_slug", s);
+                    sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
+                    sessionStorage.setItem("mg_restore_from_detail", "true");
+                    if (n) sessionStorage.setItem("mg_restore_project_num", n);
+                }
+            } catch (_) { }
+        }, { signal });
+
         const navigateToProjects = () => {
             const targetUrl = "/projects";
             if (typeof barba !== "undefined" && typeof barba.go === "function") {
@@ -77,10 +100,12 @@
             // Preserve current project so Homepage and Projects can restore to this exact slide
             try {
                 const currentSlug = window.location.pathname.split("/").filter(Boolean).pop() || "";
+                const n = gallerySection?.getAttribute("data-project-number") || "";
                 if (currentSlug) {
                     sessionStorage.setItem("mg_restore_project_slug", currentSlug);
                     sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
                     sessionStorage.setItem("mg_restore_from_detail", "true");
+                    if (n) sessionStorage.setItem("mg_restore_project_num", n);
                 }
             } catch (_) { }
 

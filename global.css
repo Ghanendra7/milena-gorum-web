@@ -702,6 +702,8 @@ a {
     .mobile-thumb-img-wrap {
         height: 100px;
         width: auto;
+        min-width: 60px;
+        aspect-ratio: 16 / 9;
         overflow: hidden;
         background-color: var(--media-bg-color);
     }

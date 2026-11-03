@@ -1111,6 +1111,12 @@ function initOsmoBoilerplate() {
                     stage.style.visibility = "visible";
                     stage.style.transition = "none";
                 }
+                const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
+                if (mobileStage) {
+                    mobileStage.style.opacity = "1";
+                    mobileStage.style.visibility = "visible";
+                    mobileStage.style.transition = "none";
+                }
             }
 
             // Position next container off-screen to the left with parallax (-80%)
@@ -1138,6 +1144,10 @@ function initOsmoBoilerplate() {
                 if (projectsSection) {
                     projectsSection.classList.remove("is-marquee-paused");
                     projectsSection.classList.add("is-marquee-active");
+                    const stage = projectsSection.querySelector(".desktop-gallery-stage");
+                    if (stage) stage.style.transition = "";
+                    const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
+                    if (mobileStage) mobileStage.style.transition = "";
                 }
                 resetPage(next);
                 window.dispatchEvent(new Event("resize"));
@@ -1148,6 +1158,10 @@ function initOsmoBoilerplate() {
                 if (projectsSection) {
                     projectsSection.classList.remove("is-marquee-paused");
                     projectsSection.classList.add("is-marquee-active");
+                    const stage = projectsSection.querySelector(".desktop-gallery-stage");
+                    if (stage) stage.style.transition = "";
+                    const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
+                    if (mobileStage) mobileStage.style.transition = "";
                 }
                 gsap.set(next, { autoAlpha: 1, xPercent: 0 });
                 done();
@@ -1179,28 +1193,42 @@ function initOsmoBoilerplate() {
             sessionStorage.setItem("mg_session_history_count", String(currentCount + 1));
 
             const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
-            const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
+            const currentPath = data.current.url?.path || window.location.pathname || "";
+            const nextPath = data.next.url?.path || "";
 
-            if (currentNs === "project-detail") {
+            const isComingFromDetail = currentNs === "project-detail" ||
+                currentPath.includes("/projects/") ||
+                currentPath.includes("/detail_projects/");
+
+            if (isComingFromDetail) {
                 // Navigating back from project detail
                 sessionStorage.setItem("mg_restore_from_detail", "true");
+                const slug = currentPath.split("/").filter(Boolean).pop() || "";
+                if (slug && slug !== "projects") {
+                    sessionStorage.setItem("mg_restore_project_slug", slug);
+                    sessionStorage.setItem("mg_restore_project_url", currentPath);
+                }
+                const prjNum = data.current.container?.getAttribute("data-project-number") || "";
+                if (prjNum) {
+                    sessionStorage.setItem("mg_restore_project_num", prjNum);
+                }
             } else {
                 // If navigating to projects from anywhere other than project-detail (e.g. from home or nav),
                 // clear all restoration data so projects always starts from the 1st project.
-                if (nextNs === "projects" || currentNs === "home") {
+                if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home") {
                     sessionStorage.removeItem("mg_restore_from_detail");
                     sessionStorage.removeItem("mg_projects_saved_scroll");
                     sessionStorage.removeItem("mg_restore_project_slug");
                     sessionStorage.removeItem("mg_restore_project_url");
+                    sessionStorage.removeItem("mg_restore_project_num");
                 }
             }
 
-            if (nextNs === "project-detail") {
-                const nextUrl = data.next.url?.path || window.location.pathname;
-                const slug = nextUrl.split("/").filter(Boolean).pop() || "";
-                if (slug) {
+            if (nextPath.includes("/projects/") || nextPath.includes("/detail_projects/")) {
+                const slug = nextPath.split("/").filter(Boolean).pop() || "";
+                if (slug && slug !== "projects") {
                     sessionStorage.setItem("mg_restore_project_slug", slug);
-                    sessionStorage.setItem("mg_restore_project_url", nextUrl);
+                    sessionStorage.setItem("mg_restore_project_url", nextPath);
                 }
             }
         } catch (_) { }
@@ -1209,6 +1237,19 @@ function initOsmoBoilerplate() {
     barba.hooks.beforeEnter(async (data) => {
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
+
+        if (nextNs === "project-detail") {
+            const nextUrl = data.next.url?.path || window.location.pathname;
+            const slug = nextUrl.split("/").filter(Boolean).pop() || "";
+            const prjNum = data.next.container?.getAttribute("data-project-number") || "";
+            if (slug && slug !== "projects") {
+                sessionStorage.setItem("mg_restore_project_slug", slug);
+                sessionStorage.setItem("mg_restore_project_url", nextUrl);
+            }
+            if (prjNum) {
+                sessionStorage.setItem("mg_restore_project_num", prjNum);
+            }
+        }
 
         ensureNavbarInContainer(data.next.container, data.next.html);
 

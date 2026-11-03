@@ -90,6 +90,21 @@
         let zoomStartTime = 0;
         let isZoomAnimating = false;
 
+        let isRestoreFromDetail = false;
+        let restoreSlug = "";
+        let restoreUrl = "";
+        let restoreNum = "";
+        let savedScroll = null;
+        try {
+            isRestoreFromDetail = sessionStorage.getItem("mg_restore_from_detail") === "true";
+            if (isRestoreFromDetail) {
+                restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
+                restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
+                restoreNum = (sessionStorage.getItem("mg_restore_project_num") || "").trim();
+                savedScroll = sessionStorage.getItem("mg_projects_saved_scroll");
+            }
+        } catch (_) { }
+
         const formatNum = (str) => {
             const clean = (str || "").trim();
             if (!clean) return "";
@@ -279,28 +294,21 @@
         };
 
         const getRestoredScrollPos = () => {
-            let savedScroll = null;
-            let restoreSlug = "";
-            let restoreUrl = "";
-            try {
-                if (sessionStorage.getItem("mg_restore_from_detail") !== "true") {
-                    return null;
-                }
-                savedScroll = sessionStorage.getItem("mg_projects_saved_scroll");
-                restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
-                restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
-            } catch (_) { }
+            if (!isRestoreFromDetail) return null;
 
             if (savedScroll !== null && !isNaN(parseFloat(savedScroll))) {
                 return parseFloat(savedScroll);
             }
 
-            if (restoreSlug || restoreUrl) {
+            if (restoreSlug || restoreUrl || restoreNum) {
                 const matchIdx = trackCards.findIndex((card) => {
                     const link = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    const cardSlug = link.split("/").filter(Boolean).pop() || "";
+                    const numText = card.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
                     return (
+                        (restoreSlug && (cardSlug === restoreSlug || link.includes(restoreSlug))) ||
                         (restoreUrl && (link.includes(restoreUrl) || restoreUrl.includes(link))) ||
-                        (restoreSlug && link.includes(restoreSlug))
+                        (restoreNum && parseInt(numText, 10) === parseInt(restoreNum, 10))
                     );
                 });
                 if (matchIdx !== -1 && cachedCardMetrics[matchIdx]) {
@@ -502,10 +510,13 @@
                     }
                     const href = link.getAttribute("href") || "";
                     const slug = href.split("/").filter(Boolean).pop() || "";
+                    const num = card.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
                     try {
                         sessionStorage.setItem("mg_restore_project_url", href);
                         if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
+                        if (num) sessionStorage.setItem("mg_restore_project_num", num);
                         sessionStorage.setItem("mg_projects_saved_scroll", String(scrollPos));
+                        sessionStorage.setItem("mg_restore_from_detail", "true");
                     } catch (_) { }
                 }, { signal });
             }
@@ -996,7 +1007,12 @@
             if (bestCloneIdx !== -1) {
                 setActiveThumbByIdx(bestCloneIdx, false);
                 thumbTargetPos = getScrollPosForThumbIdx(bestCloneIdx);
-                if (immediate) thumbScrollPos = thumbTargetPos;
+                if (immediate) {
+                    thumbScrollPos = thumbTargetPos;
+                    if (mobileThumbTrack) {
+                        mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+                    }
+                }
             }
         };
 
@@ -1006,8 +1022,6 @@
             mobileFilteredTemplates = filteredTemplates;
             mobileThumbItems = [];
             cachedThumbCenters = [];
-            activeMobileProjectIdx = 0;
-            activeThumbCloneIdx = -1;
 
             if (mobileMainSwiper) {
                 mobileMainSwiper.destroy(true, true);
@@ -1023,6 +1037,25 @@
             const count = filteredTemplates.length;
             if (count === 0) return;
 
+            // 1. Determine targetProjIdx BEFORE building slides & Swiper so it starts immediately on the target project!
+            let targetProjIdx = 0;
+            if (isRestoreFromDetail && (restoreSlug || restoreUrl || restoreNum)) {
+                const foundIdx = filteredTemplates.findIndex((tpl) => {
+                    const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    const tplSlug = link.split("/").filter(Boolean).pop() || "";
+                    const numText = tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
+                    return (
+                        (restoreSlug && (tplSlug === restoreSlug || link.includes(restoreSlug))) ||
+                        (restoreUrl && (link.includes(restoreUrl) || restoreUrl.includes(link))) ||
+                        (restoreNum && parseInt(numText, 10) === parseInt(restoreNum, 10))
+                    );
+                });
+                if (foundIdx !== -1) targetProjIdx = foundIdx;
+            }
+
+            activeMobileProjectIdx = targetProjIdx;
+            updateMobileMeta(targetProjIdx);
+
             isMobileInfinite = count > MIN_LOOP_THRESHOLD;
             const mainRepeats = isMobileInfinite && count < 6 ? Math.ceil(6 / count) : 1;
 
@@ -1037,14 +1070,14 @@
                     const rawVidId = validVid?.getAttribute("data-video-id") || "";
                     const previewSrc = rawVidId ? getBunnyPreviewUrl(rawVidId) : "";
 
-                    const isFirstMobile = r === 0 && idx === 0;
+                    const isTargetSlide = idx === targetProjIdx;
                     const mainSlide = document.createElement("div");
                     mainSlide.className = "swiper-slide";
                     mainSlide.setAttribute("data-project-idx", String(idx));
                     mainSlide.innerHTML = `
             <a href="${linkHref}" class="mobile-main-link">
               <div class="mobile-media-box">
-                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} loading="${isFirstMobile ? "eager" : "lazy"}" decoding="async" alt="" />
+                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} loading="${isTargetSlide ? "eager" : "lazy"}" decoding="async" alt="" />
                 ${previewSrc
                             ? `<video class="mobile-main-video" playsinline webkit-playsinline="true" muted loop preload="none" data-preview-src="${previewSrc}"></video>`
                             : ""
@@ -1053,6 +1086,22 @@
             </a>
           `;
 
+                    // Bind click on mobile main link to preserve restoration data
+                    const mainLink = mainSlide.querySelector(".mobile-main-link");
+                    if (mainLink) {
+                        mainLink.addEventListener("click", () => {
+                            const href = mainLink.getAttribute("href") || "";
+                            const slug = href.split("/").filter(Boolean).pop() || "";
+                            const num = tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
+                            try {
+                                sessionStorage.setItem("mg_restore_project_url", href);
+                                if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
+                                if (num) sessionStorage.setItem("mg_restore_project_num", num);
+                                sessionStorage.setItem("mg_restore_from_detail", "true");
+                            } catch (_) { }
+                        }, { signal });
+                    }
+
                     const slideImg = mainSlide.querySelector("img");
                     const mediaBox = mainSlide.querySelector(".mobile-media-box");
                     lockNaturalAspect(slideImg, mediaBox);
@@ -1060,8 +1109,10 @@
                 });
             }
 
+            // 2. Initialize Swiper directly with targetProjIdx
             if (typeof Swiper !== "undefined") {
                 mobileMainSwiper = new Swiper(mobileMainEl, {
+                    initialSlide: targetProjIdx,
                     loop: isMobileInfinite,
                     slidesPerView: 1,
                     spaceBetween: 0,
@@ -1072,21 +1123,24 @@
                     observeParents: true
                 });
 
-                requestAnimationFrame(() => {
-                    if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
-                        mobileMainSwiper.update();
-                    }
-                });
+                if (targetProjIdx > 0 && isMobileInfinite) {
+                    try {
+                        mobileMainSwiper.slideToLoop(targetProjIdx, 0, false);
+                    } catch (_) { }
+                }
 
                 const handleMainSwipeChange = () => {
-                    syncMobileVideos();
-                    if (isThumbTouching || isThumbCoasting) return;
-                    const activeSlide = mobileMainSwiper.slides[mobileMainSwiper.activeIndex];
-                    let newProjIdx = activeSlide ? parseInt(activeSlide.getAttribute("data-project-idx") || "-1", 10) : -1;
-
-                    if (newProjIdx < 0 || isNaN(newProjIdx)) {
-                        newProjIdx = mobileMainSwiper.realIndex % count;
+                    if (!section.classList.contains("is-marquee-paused")) {
+                        syncMobileVideos();
                     }
+                    if (isThumbTouching || isThumbCoasting) return;
+
+                    let newProjIdx = typeof mobileMainSwiper.realIndex === "number" ? (mobileMainSwiper.realIndex % count) : -1;
+                    if (newProjIdx < 0 || isNaN(newProjIdx)) {
+                        const activeSlide = mobileMainSwiper.slides[mobileMainSwiper.activeIndex];
+                        newProjIdx = activeSlide ? parseInt(activeSlide.getAttribute("data-project-idx") || "-1", 10) : -1;
+                    }
+                    if (newProjIdx < 0 || isNaN(newProjIdx)) newProjIdx = 0;
 
                     activeMobileProjectIdx = newProjIdx;
                     updateMobileMeta(newProjIdx);
@@ -1097,6 +1151,7 @@
                 mobileMainSwiper.on("transitionStart", handleMainSwipeChange);
             }
 
+            // 3. Build scrubber strip thumbnails
             const thumbSetsNeeded = isMobileInfinite ? Math.max(8, Math.ceil(36 / count) + 4) : 1;
             const thumbFragment = document.createDocumentFragment();
             let cloneIdxCounter = 0;
@@ -1121,11 +1176,17 @@
 
                     const thumbImg = item.querySelector("img");
                     const thumbWrap = item.querySelector(".mobile-thumb-img-wrap");
+                    if (imgEl && imgEl.naturalWidth && imgEl.naturalHeight) {
+                        thumbWrap.style.aspectRatio = `${imgEl.naturalWidth} / ${imgEl.naturalHeight}`;
+                    }
                     lockNaturalAspect(thumbImg, thumbWrap, () => {
                         measureMobileThumbMetrics();
                         if (!isThumbTouching && !isThumbCoasting && activeThumbCloneIdx >= 0) {
                             thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
                             thumbScrollPos = thumbTargetPos;
+                            if (mobileThumbTrack) {
+                                mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+                            }
                         }
                     });
 
@@ -1137,35 +1198,24 @@
 
             mobileThumbTrack.appendChild(thumbFragment);
 
-            let targetProjIdx = 0;
-            let restoreSlug = "";
-            let restoreUrl = "";
-            let isRestoreFromDetail = false;
-            try {
-                isRestoreFromDetail = sessionStorage.getItem("mg_restore_from_detail") === "true";
-                if (isRestoreFromDetail) {
-                    restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
-                    restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
-                }
-            } catch (_) { }
-
-            if (isRestoreFromDetail && (restoreSlug || restoreUrl)) {
-                const foundIdx = mobileFilteredTemplates.findIndex((tpl) => {
-                    const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
-                    return (
-                        (restoreUrl && (link.includes(restoreUrl) || restoreUrl.includes(link))) ||
-                        (restoreSlug && link.includes(restoreSlug))
-                    );
-                });
-                if (foundIdx !== -1) targetProjIdx = foundIdx;
-            }
-
+            // 4. Synchronously position the active thumbnail
             const initialCloneIdx = isMobileInfinite
                 ? Math.floor(thumbSetsNeeded / 2) * count + targetProjIdx
                 : targetProjIdx;
 
-            updateMobileMeta(targetProjIdx);
+            activeThumbCloneIdx = initialCloneIdx;
+            if (mobileThumbItems[initialCloneIdx]) {
+                mobileThumbItems[initialCloneIdx].classList.add("is-active");
+            }
 
+            measureMobileThumbMetrics();
+            if (cachedThumbCenters.length > 0) {
+                thumbTargetPos = getScrollPosForThumbIdx(initialCloneIdx);
+                thumbScrollPos = thumbTargetPos;
+                mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+            }
+
+            // 5. Post-layout sync verification
             requestAnimationFrame(() => {
                 measureMobileThumbMetrics();
                 if (mobileThumbItems[initialCloneIdx]) {
@@ -1176,19 +1226,25 @@
                         mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
                     }
                 }
-                if (mobileMainSwiper && targetProjIdx > 0) {
-                    try {
-                        mobileMainSwiper.slideToLoop(targetProjIdx, 0);
-                    } catch (_) { }
+                if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
+                    if (targetProjIdx > 0 && isMobileInfinite && mobileMainSwiper.realIndex !== targetProjIdx) {
+                        try {
+                            mobileMainSwiper.slideToLoop(targetProjIdx, 0, false);
+                        } catch (_) { }
+                    }
+                    mobileMainSwiper.update();
                 }
                 if (isRestoreFromDetail) {
                     try {
                         sessionStorage.removeItem("mg_restore_from_detail");
                         sessionStorage.removeItem("mg_restore_project_slug");
                         sessionStorage.removeItem("mg_restore_project_url");
+                        sessionStorage.removeItem("mg_restore_project_num");
                     } catch (_) { }
                 }
-                if (isMobileLayout()) syncMobileVideos();
+                if (isMobileLayout() && !section.classList.contains("is-marquee-paused")) {
+                    syncMobileVideos();
+                }
             });
         };
 
@@ -1258,11 +1314,19 @@
             animateDesktop(now);
 
             if (isMobileLayout() && mobileThumbTrack && mobileThumbItems.length > 0) {
+                // When section is paused during page transition, freeze thumb strip to eliminate stutter & frame drops
+                if (section.classList.contains("is-marquee-paused")) {
+                    mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+                    projectsRafId = requestAnimationFrame(animateGallery);
+                    return;
+                }
+
                 if (cachedThumbCenters.length === 0) {
                     measureMobileThumbMetrics();
                     if (cachedThumbCenters.length > 0 && activeThumbCloneIdx >= 0) {
                         thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
                         thumbScrollPos = thumbTargetPos;
+                        mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
                         syncMobileVideos();
                     }
                 }
@@ -1435,6 +1499,7 @@
                         sessionStorage.removeItem("mg_projects_saved_scroll");
                         sessionStorage.removeItem("mg_restore_project_slug");
                         sessionStorage.removeItem("mg_restore_project_url");
+                        sessionStorage.removeItem("mg_restore_project_num");
                     } catch (_) { }
                 }
 
@@ -1506,8 +1571,13 @@
                 if (activeThumbCloneIdx >= 0 && cachedThumbCenters.length > 0) {
                     thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
                     thumbScrollPos = thumbTargetPos;
+                    if (mobileThumbTrack) {
+                        mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+                    }
                 }
-                syncMobileVideos();
+                if (!section.classList.contains("is-marquee-paused")) {
+                    syncMobileVideos();
+                }
             }
         }, { signal });
     }
