@@ -177,6 +177,10 @@
             videoEl.playsInline = true;
             videoEl.setAttribute("playsinline", "");
             videoEl.setAttribute("webkit-playsinline", "true");
+            videoEl.setAttribute("controlsList", "nodownload");
+            videoEl.setAttribute("disablePictureInPicture", "true");
+            videoEl.setAttribute("oncontextmenu", "return false;");
+            videoEl.setAttribute("draggable", "false");
 
             if (rawInput.trim().startsWith("http") && videoId === rawInput.trim()) {
                 videoEl.src = rawInput.trim();
@@ -442,6 +446,15 @@
         allVideoElements.forEach((video) => {
             if (processedVideos.has(video)) return;
             processedVideos.add(video);
+
+            try {
+                video.setAttribute("controlsList", "nodownload");
+                video.setAttribute("disablePictureInPicture", "true");
+                video.setAttribute("oncontextmenu", "return false;");
+                video.setAttribute("draggable", "false");
+                video.controlsList = "nodownload";
+                video.disablePictureInPicture = true;
+            } catch (_) { }
 
             const slide = video.closest(".swiper-slide");
             const wrapper = video.closest(".video-wrapper") || video.closest(".video-container") || video.parentElement;

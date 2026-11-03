@@ -261,6 +261,10 @@
             previewVideoEl.setAttribute("loop", "");
             previewVideoEl.autoplay = true;
             previewVideoEl.setAttribute("autoplay", "");
+            previewVideoEl.setAttribute("controlsList", "nodownload");
+            previewVideoEl.setAttribute("disablePictureInPicture", "true");
+            previewVideoEl.setAttribute("oncontextmenu", "return false;");
+            previewVideoEl.setAttribute("draggable", "false");
             previewVideoEmbed.appendChild(previewVideoEl);
         }
 
@@ -425,6 +429,10 @@
                 mobileVideoEl.setAttribute("loop", "");
                 mobileVideoEl.autoplay = true;
                 mobileVideoEl.setAttribute("autoplay", "");
+                mobileVideoEl.setAttribute("controlsList", "nodownload");
+                mobileVideoEl.setAttribute("disablePictureInPicture", "true");
+                mobileVideoEl.setAttribute("oncontextmenu", "return false;");
+                mobileVideoEl.setAttribute("draggable", "false");
                 mobileVideoEmbed.appendChild(mobileVideoEl);
             }
 

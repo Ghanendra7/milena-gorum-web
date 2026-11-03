@@ -289,6 +289,10 @@
       video.setAttribute("webkit-playsinline", "true");
       video.setAttribute("muted", "");
       video.setAttribute("loop", "");
+      video.setAttribute("controlsList", "nodownload");
+      video.setAttribute("disablePictureInPicture", "true");
+      video.setAttribute("oncontextmenu", "return false;");
+      video.setAttribute("draggable", "false");
 
       video.addEventListener("playing", () => {
         slide.classList.add("is-video-playing");

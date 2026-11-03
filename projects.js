@@ -431,6 +431,10 @@
             video.setAttribute("muted", "");
             video.loop = true;
             video.setAttribute("loop", "");
+            video.setAttribute("controlsList", "nodownload");
+            video.setAttribute("disablePictureInPicture", "true");
+            video.setAttribute("oncontextmenu", "return false;");
+            video.setAttribute("draggable", "false");
 
             if (video.getAttribute("src") !== previewSrc) {
                 video.setAttribute("src", previewSrc);
@@ -1078,9 +1082,9 @@
                     mainSlide.innerHTML = `
             <a href="${linkHref}" class="mobile-main-link">
               <div class="mobile-media-box">
-                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} loading="${isTargetSlide ? "eager" : "lazy"}" decoding="async" alt="" />
+                <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}"` : ""} loading="${isTargetSlide ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
                 ${previewSrc
-                            ? `<video class="mobile-main-video" playsinline webkit-playsinline="true" muted loop preload="none" data-preview-src="${previewSrc}"></video>`
+                            ? `<video class="mobile-main-video" playsinline webkit-playsinline="true" muted loop preload="none" controlslist="nodownload" disablepictureinpicture oncontextmenu="return false;" draggable="false" data-preview-src="${previewSrc}"></video>`
                             : ""
                         }
               </div>
@@ -1171,7 +1175,7 @@
                     item.innerHTML = `
             <div class="mobile-thumb-num">${numText}</div>
             <div class="mobile-thumb-img-wrap">
-              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} decoding="async" alt="" />
+              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} decoding="async" alt="" draggable="false" />
             </div>
           `;
 
