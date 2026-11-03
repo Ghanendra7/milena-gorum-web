@@ -372,6 +372,11 @@
 
             syncActiveSequence(activeRealIndex);
 
+            if (window.__mgIsTransitioning) {
+                // Defer video play during Barba transitions to prevent Android hardware decoder frame-drops
+                return;
+            }
+
             mainSwiperInstance.slides.forEach((slide, idx) => {
                 const isNearby = Math.abs(idx - activeDomIndex) <= 1;
                 if (isNearby) {
@@ -426,6 +431,10 @@
         if (mainSwiperInstance) {
             mainSwiperInstance.on("slideChange", handleSlideMedia);
         }
+
+        window.addEventListener("mg-transition-complete", () => {
+            handleSlideMedia();
+        }, { signal });
 
         const processedVideos = new Set();
         const allVideoElements = Array.from(mainEl.querySelectorAll("video.slide-video, video"));

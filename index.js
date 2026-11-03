@@ -323,7 +323,7 @@
         // DESKTOP PREVIEW CONTROLLER
         // ----------------------------------------------------
         const showDesktopPreview = (media) => {
-            if (!previewStage || isMobileLayout()) return;
+            if (!previewStage || isMobileLayout() || window.__mgIsTransitioning) return;
 
             // 1. Always display the thumbnail/poster image first
             const posterSrc = media.poster || media.imgSrc;
@@ -407,7 +407,7 @@
         // ----------------------------------------------------
         const selectMobileMedia = (row, media) => {
             const mobileMediaBox = row.querySelector(".index-mobile-media-box");
-            if (!mobileMediaBox) return;
+            if (!mobileMediaBox || window.__mgIsTransitioning) return;
 
             const mobileImg = mobileMediaBox.querySelector(".index-mobile-img");
             const mobileVideoEmbed = mobileMediaBox.querySelector(".index-mobile-video-embed, .index-preview-video-embed, .w-embed");

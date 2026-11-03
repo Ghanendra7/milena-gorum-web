@@ -413,7 +413,7 @@
         };
 
         const startHoverVideo = (card) => {
-            if (isWheelActive || isDragging) return;
+            if (isWheelActive || isDragging || window.__mgIsTransitioning) return;
             const video = getValidVideo(card);
             if (!video) return;
 
@@ -839,6 +839,7 @@
 
         const syncMobileVideos = () => {
             if (!mobileMainSwiper || !mobileMainSwiper.slides) return;
+            if (window.__mgIsTransitioning) return;
             const activeSlideEl = mobileMainSwiper.slides[mobileMainSwiper.activeIndex];
 
             for (let i = 0; i < mobileMainSwiper.slides.length; i++) {
@@ -1578,6 +1579,12 @@
                 if (!section.classList.contains("is-marquee-paused")) {
                     syncMobileVideos();
                 }
+            }
+        }, { signal });
+
+        window.addEventListener("mg-transition-complete", () => {
+            if (isMobileLayout()) {
+                syncMobileVideos();
             }
         }, { signal });
     }

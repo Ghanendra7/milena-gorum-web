@@ -51,9 +51,37 @@ function initOsmoBoilerplate() {
     let reducedMotion = rmMQ.matches;
     rmMQ.addEventListener?.("change", (e) => (reducedMotion = e.matches));
 
-    let staggerDefault = 0.12;
+    function isMobileOrTablet() {
+        return (
+            (typeof window !== "undefined" && window.innerWidth <= 1024) ||
+            (typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+        );
+    }
+
+    function getTransitionDurations() {
+        const isMob = isMobileOrTablet();
+        return {
+            slideDuration: isMob ? 0.70 : 0.95,
+            pushDuration: isMob ? 0.65 : 0.85,
+            stagger: isMob ? 0.07 : 0.10,
+        };
+    }
+
+    function notifyTransitionComplete(namespace) {
+        window.__mgIsTransitioning = false;
+        document.body.classList.remove("is-transitioning");
+        document.querySelectorAll('[data-barba="container"].is-transitioning').forEach((el) => {
+            el.classList.remove("is-transitioning");
+        });
+        try {
+            window.dispatchEvent(new CustomEvent("mg-transition-complete", { detail: { namespace } }));
+        } catch (_) { }
+    }
+
+    let staggerDefault = 0.10;
     let durationDefault = 0.8;
-    let slideDuration = 1.35;
+    let slideDuration = 0.95;
+    let pushDuration = 0.85;
 
     CustomEase.create("smooth", "M0,0 C0.38,0.005 0.215,1 1,1");
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
@@ -205,9 +233,9 @@ function initOsmoBoilerplate() {
             }
 
             const tl = gsap.timeline({ onComplete: done });
-            tl.to(current, { autoAlpha: 0, duration: 0.4, ease: "power2.out" });
+            tl.to(current, { autoAlpha: 0, duration: 0.3, ease: "power2.out", force3D: true });
 
-            setTimeout(done, 700);
+            setTimeout(done, 500);
         });
     }
 
@@ -218,6 +246,7 @@ function initOsmoBoilerplate() {
                 if (resolved) return;
                 resolved = true;
                 resetPage(next);
+                notifyTransitionComplete(next?.getAttribute("data-barba-namespace") || "");
                 resolve();
             };
 
@@ -230,9 +259,9 @@ function initOsmoBoilerplate() {
             }
 
             const tl = gsap.timeline({ onComplete: done });
-            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 0.15);
+            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35, ease: "power2.out", force3D: true }, 0.08);
 
-            setTimeout(done, 1000);
+            setTimeout(done, 600);
         });
     }
 
@@ -290,9 +319,9 @@ function initOsmoBoilerplate() {
             createNavOverlay(current, next);
 
             const tl = gsap.timeline({ onComplete: done });
-            tl.to(current, { autoAlpha: 0, duration: 0.35, ease: "power2.out" });
+            tl.to(current, { autoAlpha: 0, duration: 0.28, ease: "power2.out", force3D: true });
 
-            setTimeout(done, 700);
+            setTimeout(done, 500);
         });
     }
 
@@ -304,6 +333,7 @@ function initOsmoBoilerplate() {
                 resolved = true;
                 removeNavOverlay(next);
                 resetPage(next);
+                notifyTransitionComplete(next?.getAttribute("data-barba-namespace") || "");
                 resolve();
             };
 
@@ -318,9 +348,9 @@ function initOsmoBoilerplate() {
             }
 
             const tl = gsap.timeline({ onComplete: done });
-            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, ease: "power2.out" }, 0.08);
+            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.32, ease: "power2.out", force3D: true }, 0.05);
 
-            setTimeout(done, 900);
+            setTimeout(done, 600);
         });
     }
 
@@ -329,6 +359,7 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     function runHomeToProjectsLeave(current, next) {
         return new Promise((resolve) => {
+            const { slideDuration } = getTransitionDurations();
             let resolved = false;
             const done = () => {
                 if (resolved) return;
@@ -352,9 +383,13 @@ function initOsmoBoilerplate() {
                 position: "fixed",
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "100dvh",
+                right: 0,
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 zIndex: 1,
+                overflow: "hidden",
+                force3D: true,
             });
 
             const navHome = current.querySelector(".navbar-home");
@@ -387,8 +422,9 @@ function initOsmoBoilerplate() {
 
     function runHomeToProjectsEnter(next, data) {
         return new Promise((resolve) => {
+            const { slideDuration, stagger } = getTransitionDurations();
             const nextNs = next.getAttribute("data-barba-namespace") || "";
-            const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 1025px)").matches : window.innerWidth > 1024;
+            const isDesktop = !isMobileOrTablet();
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
             ensureNavbarInContainer(next, data?.next?.html);
@@ -399,12 +435,14 @@ function initOsmoBoilerplate() {
                 top: 0,
                 left: 0,
                 right: 0,
-                width: "100vw",
-                height: "100dvh",
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 backgroundColor: "#ffffff",
                 zIndex: 2,
                 autoAlpha: 1,
                 yPercent: 100,
+                overflow: "hidden",
                 force3D: true,
             });
 
@@ -516,6 +554,7 @@ function initOsmoBoilerplate() {
                     gsap.set(allInfoTargets, { clearProps: "transform,opacity" });
                 }
                 resetPage(next);
+                notifyTransitionComplete(nextNs);
                 resolve();
             };
 
@@ -564,13 +603,13 @@ function initOsmoBoilerplate() {
             tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
 
             // Stagger entrance plays as the page rises into the viewport
-            const cardsStart = 0.85;
+            const cardsStart = slideDuration * 0.55;
             if (visibleCards.length) {
                 tl.to(visibleCards, {
                     opacity: 1,
                     yPercent: 0,
-                    duration: 0.85,
-                    stagger: 0.10,
+                    duration: 0.70,
+                    stagger: stagger,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
@@ -581,17 +620,17 @@ function initOsmoBoilerplate() {
                 tl.to(mobileStage, {
                     opacity: 1,
                     yPercent: 0,
-                    duration: 0.6,
+                    duration: Math.min(0.5, slideDuration * 0.65),
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
                         gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                     },
-                }, cardsStart + 0.08); // delays mobile float-in
+                }, cardsStart * 0.7);
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
-            const marqueeReleaseTime = 1.60;
+            const marqueeReleaseTime = slideDuration + 0.12;
             tl.add("releaseMarquee", marqueeReleaseTime);
             tl.call(() => {
                 if (section) {
@@ -600,15 +639,15 @@ function initOsmoBoilerplate() {
                 }
             }, null, "releaseMarquee");
 
-            const hitTopLead = 0.3;
+            const hitTopLead = 0.20;
             const hitTopTime = Math.max(0, slideDuration - hitTopLead);
 
             if (navTop) {
-                tl.to(navTop, { opacity: 1, duration: 0.4, ease: "power2.out" }, hitTopTime);
+                tl.to(navTop, { opacity: 1, duration: 0.35, ease: "power2.out" }, hitTopTime);
             }
 
             if (filterItems.length) {
-                tl.to(filterItems, { opacity: 1, y: 0, duration: 0.85, stagger: staggerDefault, ease: "power2.out", force3D: true }, hitTopTime);
+                tl.to(filterItems, { opacity: 1, y: 0, duration: 0.65, stagger: stagger, ease: "power2.out", force3D: true }, hitTopTime);
             }
 
             if (zoomBtns.length) {
@@ -617,62 +656,61 @@ function initOsmoBoilerplate() {
                     tl.to(validZoomBtns, {
                         opacity: (i, el) => (el.classList.contains("is-disabled") ? 0.3 : 1),
                         y: 0,
-                        duration: 0.85,
-                        stagger: staggerDefault,
+                        duration: 0.65,
+                        stagger: stagger,
                         ease: "power2.out",
                         force3D: true,
-                    }, hitTopTime + 0.20);
+                    }, hitTopTime + 0.10);
                 }
             }
 
             // Right after navTop appears: trigger appear animations for Index & Information
-            const appearStartTime = hitTopTime - 0.25;
-            const indexAppearStart = hitTopTime - 0.25;
+            const appearStartTime = Math.max(0, hitTopTime - 0.12);
+            const indexAppearStart = Math.max(0, hitTopTime - 0.12);
 
             // Index appear animation: numbers -> client name -> subtitle
             if (allIndexTargets.length) {
                 if (colNums.length) {
-                    tl.to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart);
+                    tl.to(colNums, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", force3D: true }, indexAppearStart);
                 }
                 if (colClients.length) {
-                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.10);
+                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", force3D: true }, indexAppearStart + 0.08);
                 }
                 if (colTitles.length) {
-                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.20);
+                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", force3D: true }, indexAppearStart + 0.16);
                 }
             }
 
             // Information appear animation: bio text -> grid items -> portrait picture
             if (allInfoTargets.length) {
                 if (richText) {
-                    tl.to(richText, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, appearStartTime);
+                    tl.to(richText, { opacity: 1, y: 0, duration: 0.65, ease: "power2.out", force3D: true }, appearStartTime);
                 }
                 if (gridItems.length) {
                     tl.to(gridItems, {
                         opacity: 1,
                         y: 0,
-                        duration: 0.75,
-                        stagger: 0.08,
+                        duration: 0.55,
+                        stagger: 0.06,
                         ease: "power2.out",
                         force3D: true,
-                    }, appearStartTime + (richText ? 0.28 : 0));
+                    }, appearStartTime + (richText ? 0.20 : 0));
                 }
                 if (picWrapper) {
                     const picDelay = gridItems.length
-                        ? 0.09 + (gridItems.length * 0.08) - 0.04
-                        : (richText ? 0.35 : 0);
+                        ? 0.08 + (gridItems.length * 0.06) - 0.03
+                        : (richText ? 0.25 : 0);
                     tl.to(picWrapper, {
                         opacity: 1,
                         yPercent: 0,
-                        duration: 0.85,
+                        duration: 0.65,
                         ease: "power2.out",
                         force3D: true,
                     }, appearStartTime + picDelay);
                 }
             }
 
-            // Guaranteed resolution fallback for Safari
-            setTimeout(done, (appearStartTime + 2.0) * 1000);
+            setTimeout(done, (slideDuration + 0.5) * 1000);
         });
     }
 
@@ -681,6 +719,7 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     function runProjectsToHomeLeave(current, next) {
         return new Promise((resolve) => {
+            const { slideDuration } = getTransitionDurations();
             let resolved = false;
             const done = () => {
                 if (resolved) return;
@@ -708,8 +747,10 @@ function initOsmoBoilerplate() {
                 position: "fixed",
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "100dvh",
+                right: 0,
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 backgroundColor: "#ffffff",
                 zIndex: 2,
                 overflow: "hidden",
@@ -778,18 +819,18 @@ function initOsmoBoilerplate() {
                 tl.to(fadeElements, {
                     opacity: 0,
                     y: -9,
-                    duration: 0.4,
+                    duration: Math.min(0.35, slideDuration * 0.45),
                     ease: "power2.out",
                 }, 0.05);
             }
 
-            // Guaranteed resolution fallback for Safari
             setTimeout(done, (slideDuration + 0.3) * 1000);
         });
     }
 
     function runProjectsToHomeEnter(next) {
         return new Promise((resolve) => {
+            const { slideDuration } = getTransitionDurations();
             // Neutralize any editorial curtain overlay on the incoming home page so it appears immediately
             const curtain = next.querySelector(".home-curtain");
             if (curtain) {
@@ -803,10 +844,12 @@ function initOsmoBoilerplate() {
                 top: 0,
                 left: 0,
                 right: 0,
-                width: "100vw",
-                height: "100dvh",
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 zIndex: 1,
                 autoAlpha: 1,
+                overflow: "hidden",
                 force3D: true,
             });
 
@@ -831,6 +874,7 @@ function initOsmoBoilerplate() {
                     gsap.set(projectInfo, { clearProps: "transform,y,opacity" });
                 }
                 resetPage(next);
+                notifyTransitionComplete("home");
                 resolve();
             };
 
@@ -897,18 +941,16 @@ function initOsmoBoilerplate() {
                 }, 0);
             }
 
-            // Guaranteed resolution fallback for Safari
-            setTimeout(done, (slideDuration + 0.6) * 1000);
+            setTimeout(done, (slideDuration + 0.4) * 1000);
         });
     }
 
     // -----------------------------------------
     // HOME/PROJECTS -> PROJECT DETAILS TRANSITION
     // -----------------------------------------
-    let pushDuration = 1.2;
-
     function runToProjectDetailLeave(current, next) {
         return new Promise((resolve) => {
+            const { pushDuration } = getTransitionDurations();
             let resolved = false;
             const done = () => {
                 if (resolved) return;
@@ -932,8 +974,10 @@ function initOsmoBoilerplate() {
                 position: "fixed",
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "100dvh",
+                right: 0,
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 zIndex: 1,
                 overflow: "hidden",
                 force3D: true,
@@ -968,20 +1012,22 @@ function initOsmoBoilerplate() {
                 force3D: true,
             }, 0);
 
-            setTimeout(done, (pushDuration + 0.5) * 1000);
+            setTimeout(done, (pushDuration + 0.3) * 1000);
         });
     }
 
     function runToProjectDetailEnter(next) {
         return new Promise((resolve) => {
+            const { pushDuration } = getTransitionDurations();
             // Position project details off-screen to the right
             gsap.set(next, {
                 position: "fixed",
                 top: 0,
                 left: 0,
                 right: 0,
-                width: "100vw",
-                height: "100dvh",
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 backgroundColor: "#ffffff",
                 zIndex: 2,
                 autoAlpha: 1,
@@ -1009,6 +1055,7 @@ function initOsmoBoilerplate() {
                     try { thumbEl.swiper.update(); } catch (e) { }
                 }
                 window.dispatchEvent(new Event("resize"));
+                notifyTransitionComplete("project-detail");
 
                 resolve();
             };
@@ -1029,7 +1076,7 @@ function initOsmoBoilerplate() {
                 force3D: true,
             }, 0);
 
-            setTimeout(done, (pushDuration + 0.5) * 1000);
+            setTimeout(done, (pushDuration + 0.3) * 1000);
         });
     }
 
@@ -1038,6 +1085,7 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     function runFromProjectDetailLeave(current, next) {
         return new Promise((resolve) => {
+            const { pushDuration } = getTransitionDurations();
             let resolved = false;
             const done = () => {
                 if (resolved) return;
@@ -1061,8 +1109,10 @@ function initOsmoBoilerplate() {
                 position: "fixed",
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "100dvh",
+                right: 0,
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 backgroundColor: "#ffffff",
                 zIndex: 2,
                 overflow: "hidden",
@@ -1079,12 +1129,13 @@ function initOsmoBoilerplate() {
                 force3D: true,
             }, 0);
 
-            setTimeout(done, (pushDuration + 0.5) * 1000);
+            setTimeout(done, (pushDuration + 0.3) * 1000);
         });
     }
 
     function runFromProjectDetailEnter(next) {
         return new Promise((resolve) => {
+            const { pushDuration } = getTransitionDurations();
             const nextNs = next.getAttribute("data-barba-namespace") || "";
             const isProjects = nextNs === "projects";
             const isHome = nextNs === "home";
@@ -1125,8 +1176,9 @@ function initOsmoBoilerplate() {
                 top: 0,
                 left: 0,
                 right: 0,
-                width: "100vw",
-                height: "100dvh",
+                bottom: 0,
+                width: "100%",
+                height: "100%",
                 backgroundColor: "#ffffff",
                 zIndex: 1,
                 autoAlpha: 1,
@@ -1151,6 +1203,7 @@ function initOsmoBoilerplate() {
                 }
                 resetPage(next);
                 window.dispatchEvent(new Event("resize"));
+                notifyTransitionComplete(nextNs);
                 resolve();
             };
 
@@ -1178,7 +1231,7 @@ function initOsmoBoilerplate() {
                 force3D: true,
             }, 0);
 
-            setTimeout(done, (pushDuration + 0.5) * 1000);
+            setTimeout(done, (pushDuration + 0.3) * 1000);
         });
     }
 
@@ -1186,6 +1239,11 @@ function initOsmoBoilerplate() {
     // BARBA HOOKS & INIT
     // -----------------------------------------
     barba.hooks.before((data) => {
+        window.__mgIsTransitioning = true;
+        document.body.classList.add("is-transitioning");
+        if (data.current && data.current.container) {
+            data.current.container.classList.add("is-transitioning");
+        }
         window.__mgHasInternalHistory = true;
         removeNavOverlay();
         try {
@@ -1235,6 +1293,9 @@ function initOsmoBoilerplate() {
     });
 
     barba.hooks.beforeEnter(async (data) => {
+        if (data.next && data.next.container) {
+            data.next.container.classList.add("is-transitioning");
+        }
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
 
@@ -1265,8 +1326,11 @@ function initOsmoBoilerplate() {
             top: 0,
             left: 0,
             right: 0,
-            height: "100svh",
-            overflow: "clip",
+            bottom: 0,
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            force3D: true,
         };
 
         if (nextNs === "project-detail") {
@@ -1306,6 +1370,10 @@ function initOsmoBoilerplate() {
 
     barba.hooks.afterEnter((data) => {
         initAfterEnterFunctions(data.next.container);
+    });
+
+    barba.hooks.after((data) => {
+        notifyTransitionComplete(data.next?.container?.getAttribute("data-barba-namespace") || "");
     });
 
     if (typeof window.barbaPrefetch !== "undefined") {
@@ -1422,8 +1490,9 @@ function initOsmoBoilerplate() {
 
     function resetPage(container) {
         window.scrollTo(0, 0);
+        if (container) container.classList.remove("is-transitioning");
         gsap.set(container, {
-            clearProps: "position,top,left,right,width,height,zIndex,yPercent,xPercent,transform,overflow,backgroundColor",
+            clearProps: "position,top,left,right,bottom,width,height,zIndex,yPercent,xPercent,transform,overflow,backgroundColor,willChange",
         });
     }
 

@@ -688,6 +688,7 @@
 
     function manageVideoPlayback() {
       if (!slideMetrics.length) return;
+      if (window.__mgIsTransitioning) return;
 
       const BUFFER = 250;
       const screenLeftBound = -BUFFER;
@@ -945,7 +946,7 @@
 
         track.style.transform = "translate3d(" + currentX.toFixed(2) + "px, 0, 0)";
 
-        if (isDragging || now - lastActiveCheck > 100) {
+        if (!window.__mgIsTransitioning && (isDragging || now - lastActiveCheck > 100)) {
           lastActiveCheck = now;
           updateActiveProject(false);
           manageVideoPlayback();
@@ -954,6 +955,10 @@
 
       homeRafId = requestAnimationFrame(rafLoop);
     }
+
+    window.addEventListener("mg-transition-complete", () => {
+      manageVideoPlayback();
+    }, { signal });
 
     homeRafId = requestAnimationFrame(rafLoop);
   }
