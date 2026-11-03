@@ -1150,15 +1150,6 @@ a {
         -webkit-tap-highlight-color: transparent;
     }
 
-    .index-col-num {
-        min-width: 52px;
-    }
-
-    .index-col-client {
-        flex: none;
-        width: 219px;
-    }
-
     .index-col-title {
         flex: 1;
         width: auto;
@@ -1238,39 +1229,7 @@ a {
     }
 }
 
-@media (max-width: 479px) {
 
-    /* Hide desktop left spacer box and adjust wrapper padding */
-    .left-box.no-mobile {
-        display: none !important;
-    }
-
-    .index-row-header {
-        grid-column-gap: 8px;
-        grid-row-gap: 8px;
-    }
-
-    .index-col-num {
-        min-width: 36px;
-    }
-
-    .index-col-client {
-        width: 154px;
-    }
-
-    .index-row-drawer {
-        grid-column-gap: 8px;
-        grid-row-gap: 8px;
-    }
-
-    .index-media-mobile {
-        min-width: 36px;
-    }
-
-    .index-col-drawer-media {
-        width: 154px;
-    }
-}
 
 /* ==========================================================================
    INFORMATION PAGE: PRESS & LINK LIST HOVER & FLOATING ANIMATION
