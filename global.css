@@ -446,10 +446,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     pointer-events: none;
 }
 
-/* Indent first project header on desktop across infinite sets and filtered states */
+/* Indent first project header on desktop when filtered to <= 3 projects (bounded layout) */
 @media (min-width: 1025px) {
 
-    .project-card[data-is-first-item="true"] .project-header,
     .projects-track.is-no-loop .project-card:first-child .project-header {
         padding-left: 16px;
     }
