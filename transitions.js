@@ -1320,7 +1320,7 @@ function initOsmoBoilerplate() {
             currentNs === "home"
         ) {
             initialProps.yPercent = 100;
-        } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home")) {
+        } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home" || nextNs === "index")) {
             initialProps.xPercent = -80;
         }
 
@@ -1394,7 +1394,7 @@ function initOsmoBoilerplate() {
             {
                 name: "to-project-detail",
                 sync: true,
-                from: { namespace: ["home", "projects"] },
+                from: { namespace: ["home", "projects", "index"] },
                 to: { namespace: ["project-detail"] },
                 async leave(data) {
                     return runToProjectDetailLeave(data.current.container, data.next.container);
@@ -1407,7 +1407,7 @@ function initOsmoBoilerplate() {
                 name: "from-project-detail",
                 sync: true,
                 from: { namespace: ["project-detail"] },
-                to: { namespace: ["home", "projects"] },
+                to: { namespace: ["home", "projects", "index"] },
                 async leave(data) {
                     return runFromProjectDetailLeave(data.current.container, data.next.container);
                 },

@@ -315,6 +315,28 @@
 
         const thumbGap = thumbSlides[0] ? parseFloat(window.getComputedStyle(thumbSlides[0]).marginRight) || 6 : 6;
 
+        let targetInitialIndex = 0;
+        try {
+            const sessionTarget = sessionStorage.getItem("mg_target_slide");
+            if (sessionTarget !== null && !isNaN(parseInt(sessionTarget, 10))) {
+                targetInitialIndex = parseInt(sessionTarget, 10);
+                sessionStorage.removeItem("mg_target_slide");
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const querySlide = urlParams.get("slide") || urlParams.get("media");
+                if (querySlide !== null && !isNaN(parseInt(querySlide, 10))) {
+                    const parsed = parseInt(querySlide, 10);
+                    targetInitialIndex = parsed > 0 ? parsed - 1 : 0;
+                }
+            }
+        } catch (_) { }
+
+        if (totalSlides > 0) {
+            targetInitialIndex = Math.max(0, Math.min(targetInitialIndex, totalSlides - 1));
+        } else {
+            targetInitialIndex = 0;
+        }
+
         if (typeof Swiper !== "undefined") {
             thumbSwiperInstance = new Swiper(thumbEl, {
                 slidesPerView: "auto",
@@ -329,6 +351,7 @@
             });
 
             mainSwiperInstance = new Swiper(mainEl, {
+                initialSlide: targetInitialIndex,
                 loop: totalSlides > 1,
                 speed: DESKTOP_SWIPE_SPEED,
                 slidesPerView: 1,
@@ -434,6 +457,11 @@
 
         if (mainSwiperInstance) {
             mainSwiperInstance.on("slideChange", handleSlideMedia);
+            if (targetInitialIndex > 0) {
+                jumpToSlideInstant(targetInitialIndex);
+            } else {
+                syncActiveSequence(0);
+            }
         }
 
         window.addEventListener("mg-transition-complete", () => {

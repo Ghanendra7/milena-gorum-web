@@ -1066,7 +1066,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-row-header {
     align-items: baseline;
     box-sizing: border-box;
-    cursor: default;
+    cursor: pointer;
 }
 
 .index-details-stack,
@@ -1146,6 +1146,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
+    cursor: pointer;
 }
 
 .index-preview-stage.is-visible {

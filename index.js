@@ -194,6 +194,16 @@
                     if (hoveredRow && !isMobileLayout()) {
                         list.classList.add("has-hovered-item");
                         hoveredRow.classList.add("is-hovered");
+
+                        const slug = getProjectSlug(hoveredRow);
+                        const desktopMediaContainer = hoveredRow.querySelector(".index-media-desktop");
+                        const currentMedia = hoveredRow._mediaItems || [];
+                        if (desktopMediaContainer && currentMedia.length) {
+                            desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
+                                b.classList.toggle("is-active", idx === 0);
+                            });
+                            showDesktopPreview(currentMedia[0], slug);
+                        }
                     }
                 }
             });
@@ -268,6 +278,18 @@
             previewVideoEmbed.appendChild(previewVideoEl);
         }
 
+        // Preview stage click: links to the project page for the currently previewed media
+        if (previewStage) {
+            previewStage.addEventListener("click", () => {
+                if (isMobileLayout()) return;
+                const slug = previewStage.dataset.currentSlug;
+                const idx = parseInt(previewStage.dataset.currentIdx || "0", 10);
+                if (slug) {
+                    navigateToProject(slug, idx);
+                }
+            }, { signal });
+        }
+
         // ----------------------------------------------------
         // MEDIA DATA EXTRACTION
         // ----------------------------------------------------
@@ -324,10 +346,51 @@
         };
 
         // ----------------------------------------------------
+        // PROJECT NAVIGATION HANDLER
+        // ----------------------------------------------------
+        const navigateToProject = (slug, slideIndex = 0) => {
+            if (!slug) return;
+            const cleanSlug = slug.replace(/^\/projects\//, "").replace(/^\//, "").trim();
+            if (!cleanSlug) return;
+
+            const safeSlide = Math.max(0, parseInt(slideIndex || 0, 10));
+
+            // Store target slide in sessionStorage (0-based)
+            try {
+                sessionStorage.setItem("mg_target_slide", String(safeSlide));
+            } catch (_) { }
+
+            // Target URL (1-based query parameter for human-readable URLs)
+            const targetUrl = safeSlide > 0 ? `/projects/${cleanSlug}?slide=${safeSlide + 1}` : `/projects/${cleanSlug}`;
+
+            if (typeof barba !== "undefined" && barba.go) {
+                if (barba.transitions && barba.transitions.isRunning) {
+                    setTimeout(() => {
+                        if (barba.transitions && !barba.transitions.isRunning) {
+                            try { barba.go(targetUrl); return; } catch (_) { }
+                        }
+                        window.location.href = targetUrl;
+                    }, 100);
+                    return;
+                }
+                try {
+                    barba.go(targetUrl);
+                    return;
+                } catch (err) {
+                    console.warn("[Index] barba.go failed:", err);
+                }
+            }
+            window.location.href = targetUrl;
+        };
+
+        // ----------------------------------------------------
         // DESKTOP PREVIEW CONTROLLER
         // ----------------------------------------------------
-        const showDesktopPreview = (media) => {
+        const showDesktopPreview = (media, slug) => {
             if (!previewStage || isMobileLayout() || window.__mgIsTransitioning) return;
+
+            if (slug) previewStage.dataset.currentSlug = slug;
+            if (media && media.idx !== undefined) previewStage.dataset.currentIdx = String(media.idx);
 
             // 1. Always display the thumbnail/poster image first
             const posterSrc = media.poster || media.imgSrc;
@@ -390,6 +453,8 @@
         const hideDesktopPreview = () => {
             if (!previewStage) return;
             previewStage.classList.remove("is-visible");
+            delete previewStage.dataset.currentSlug;
+            delete previewStage.dataset.currentIdx;
 
             if (activeDesktopVideo) {
                 try {
@@ -599,24 +664,37 @@
         // ----------------------------------------------------
         const buildMediaButtons = (row, mediaList, signalToUse) => {
             row._mediaItems = mediaList;
+            const slug = getProjectSlug(row);
 
             // 1. Desktop buttons
             const desktopMediaContainer = row.querySelector(".index-media-desktop");
             if (desktopMediaContainer) {
+                const currentActiveIdx = desktopMediaContainer.querySelector(".index-media-item.is-active")?.getAttribute("data-media-idx");
+                const activeIdxNum = currentActiveIdx ? parseInt(currentActiveIdx, 10) : (row.classList.contains("is-hovered") ? 0 : -1);
+
                 desktopMediaContainer.innerHTML = "";
                 mediaList.forEach((media, mIdx) => {
                     const btn = document.createElement("button");
                     btn.type = "button";
-                    btn.className = "index-media-item";
+                    btn.className = `index-media-item${mIdx === activeIdxNum ? " is-active" : ""}`;
                     btn.textContent = media.label;
                     btn.setAttribute("data-media-idx", String(mIdx));
                     btn.setAttribute("aria-label", `Show media ${media.label}`);
 
-                    btn.addEventListener("pointerenter", () => {
+                    btn.addEventListener("pointerenter", (e) => {
+                        e.stopPropagation();
                         if (isAppearAnimating || row.closest(".index-list")?.classList.contains("is-appearing")) return;
                         desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                         btn.classList.add("is-active");
-                        showDesktopPreview(media);
+                        showDesktopPreview(media, slug);
+                    }, { signal: signalToUse });
+
+                    btn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (slug) {
+                            navigateToProject(slug, mIdx);
+                        }
                     }, { signal: signalToUse });
 
                     desktopMediaContainer.appendChild(btn);
@@ -734,13 +812,20 @@
                 list.classList.add("has-hovered-item");
                 row.classList.add("is-hovered");
 
-                // Preload first media
-                if (row._mediaItems && row._mediaItems.length) {
-                    const preloadSrc = row._mediaItems[0].poster || row._mediaItems[0].imgSrc;
-                    if (preloadSrc) {
-                        const preloadImg = new Image();
-                        preloadImg.src = preloadSrc;
-                    }
+                const slug = getProjectSlug(row);
+                const desktopMediaContainer = row.querySelector(".index-media-desktop");
+                const currentMedia = row._mediaItems || [];
+
+                if (desktopMediaContainer && currentMedia.length) {
+                    const hoveredBtn = desktopMediaContainer.querySelector(".index-media-item:hover");
+                    const targetIdx = hoveredBtn ? parseInt(hoveredBtn.getAttribute("data-media-idx") || "0", 10) : 0;
+                    const safeIdx = (targetIdx >= 0 && targetIdx < currentMedia.length) ? targetIdx : 0;
+
+                    desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
+                        b.classList.toggle("is-active", idx === safeIdx);
+                    });
+
+                    showDesktopPreview(currentMedia[safeIdx], slug);
                 }
             }, { signal });
 
@@ -759,19 +844,65 @@
                 }
             }, { signal });
 
-            // Mobile Tap to Expand/Collapse
+            // If cursor moves back from media buttons to the name or title on this line, re-highlight 1st image
+            const nameStack = row.querySelector(".index-details-stack");
+            const titleCol = row.querySelector(".index-col-title");
+            const reHighlightFirstMedia = () => {
+                if (isMobileLayout()) return;
+                if (isAppearAnimating || list.classList.contains("is-appearing")) return;
+                const desktopMediaContainer = row.querySelector(".index-media-desktop");
+                const currentMedia = row._mediaItems || [];
+                const slug = getProjectSlug(row);
+                if (!desktopMediaContainer || !currentMedia.length) return;
+
+                desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
+                    b.classList.toggle("is-active", idx === 0);
+                });
+                showDesktopPreview(currentMedia[0], slug);
+            };
+
+            if (nameStack) nameStack.addEventListener("pointerenter", reHighlightFirstMedia, { signal });
+            if (titleCol) titleCol.addEventListener("pointerenter", reHighlightFirstMedia, { signal });
+
+            // Row Click Handler: Mobile accordion expand/collapse OR Desktop project link (opens image 01)
             const rowHeader = row.querySelector(".index-row-header") || row;
             rowHeader.addEventListener("click", (e) => {
-                if (!isMobileLayout()) return;
-                if (e.target.closest("a")) return;
-                if (e.target.closest(".index-row-drawer")) return;
+                if (isMobileLayout()) {
+                    if (e.target.closest("a")) return;
+                    if (e.target.closest(".index-row-drawer")) return;
 
-                if (row.classList.contains("is-expanded")) {
-                    collapseRow(row);
-                } else {
-                    expandRow(row);
+                    if (row.classList.contains("is-expanded")) {
+                        collapseRow(row);
+                    } else {
+                        expandRow(row);
+                    }
+                    return;
+                }
+
+                // Desktop Click: Clicking the name or any part of the line opens image 01
+                if (e.target.closest("a")) return;
+                if (e.target.closest(".index-media-desktop")) return; // Individual media buttons handle their own click
+
+                const slug = getProjectSlug(row);
+                if (slug) {
+                    navigateToProject(slug, 0);
                 }
             }, { signal });
+
+            // Mobile Media Box Click: links to project detail opening the active mobile media
+            const mobileMediaBox = row.querySelector(".index-mobile-media-box");
+            if (mobileMediaBox) {
+                mobileMediaBox.addEventListener("click", (e) => {
+                    if (!isMobileLayout()) return;
+                    e.stopPropagation();
+                    const slug = getProjectSlug(row);
+                    const activeBtn = row.querySelector(".index-media-mobile .index-media-item.is-active");
+                    const activeIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : 0;
+                    if (slug) {
+                        navigateToProject(slug, activeIdx);
+                    }
+                }, { signal });
+            }
 
             // ----------------------------------------------------
             // ASYNC HYDRATION (> 5 ITEMS)
