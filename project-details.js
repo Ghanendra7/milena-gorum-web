@@ -783,7 +783,7 @@
                 detailsContainer.classList.add("is-overflowing");
 
                 // Subtle reading speed: ~25px per second, min 3.5s
-                const duration = Math.max(3.5, overflowDistance / 1);
+                const duration = Math.max(3.5, overflowDistance / 25);
                 const isDrawerOpen = drawerTimeline ? drawerTimeline.isOpen() : false;
 
                 detailsMarqueeTimeline = gsap.timeline({
