@@ -540,7 +540,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 
 .project-number-text,
@@ -556,6 +556,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     overflow: hidden !important;
     position: relative !important;
     white-space: nowrap !important;
+    padding-top: 4px !important;
+    margin-top: -4px !important;
+    padding-bottom: 8px !important;
+    margin-bottom: -8px !important;
 }
 
 .project-texts-inner {
@@ -566,6 +570,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: max-content !important;
     max-width: none !important;
     will-change: transform;
+    line-height: normal !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
 }
 
 .project-texts-inner .project-client,
