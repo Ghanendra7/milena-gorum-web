@@ -1257,6 +1257,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         display: block;
     }
 
+    .index-mobile-img[src*="placeholder"],
+    .index-preview-img[src*="placeholder"] {
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
     .index-mobile-video-embed,
     .index-mobile-media-box .index-preview-video-embed {
         position: absolute;

@@ -276,6 +276,15 @@
         const rows = Array.from(list.querySelectorAll(".index-row"));
         if (!rows.length) return;
 
+        // Neutralize broken 403 Webflow SVG placeholders
+        const TRANSPARENT_PIXEL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E";
+        scope.querySelectorAll(".index-mobile-img, .index-preview-img").forEach((img) => {
+            const s = img.getAttribute("src") || "";
+            if (s.includes("placeholder")) {
+                img.src = TRANSPARENT_PIXEL;
+            }
+        });
+
         // Desktop Preview Stage Elements
         const previewStage = scope.querySelector(".index-preview-stage");
         const previewImg = previewStage ? previewStage.querySelector(".index-preview-img") : null;
@@ -511,8 +520,9 @@
         // MOBILE ACCORDION & MEDIA SWITCHER
         // ----------------------------------------------------
         const selectMobileMedia = (row, media) => {
+            if (!row || !media) return;
             const mobileMediaBox = row.querySelector(".index-mobile-media-box");
-            if (!mobileMediaBox || window.__mgIsTransitioning) return;
+            if (!mobileMediaBox) return;
 
             const mobileImg = mobileMediaBox.querySelector(".index-mobile-img");
             const mobileVideoEmbed = mobileMediaBox.querySelector(".index-mobile-video-embed, .index-preview-video-embed, .w-embed");
@@ -544,6 +554,8 @@
                 mobileImg.removeAttribute("sizes");
                 mobileImg.src = posterSrc;
                 mobileImg.style.display = "block";
+                mobileImg.style.opacity = "1";
+                mobileImg.style.visibility = "visible";
             }
 
             // 2. Play 480p video if motion item
@@ -577,18 +589,27 @@
                         mobileVideoEmbed.style.display = "block";
                     }
 
-                    const playPromise = mobileVideoEl.play();
-                    if (playPromise && typeof playPromise.catch === "function") {
-                        playPromise.catch(() => {
-                            const onCanPlay = () => {
-                                mobileVideoEl.removeEventListener("canplay", onCanPlay);
-                                mobileVideoEl.removeEventListener("loadeddata", onCanPlay);
-                                mobileVideoEl.play().catch(() => { });
-                            };
-                            mobileVideoEl.addEventListener("canplay", onCanPlay, { once: true });
-                            mobileVideoEl.addEventListener("loadeddata", onCanPlay, { once: true });
-                        });
+                    const tryPlay = () => {
+                        const playPromise = mobileVideoEl.play();
+                        if (playPromise && typeof playPromise.catch === "function") {
+                            playPromise.catch(() => {
+                                const onCanPlay = () => {
+                                    mobileVideoEl.removeEventListener("canplay", onCanPlay);
+                                    mobileVideoEl.removeEventListener("loadeddata", onCanPlay);
+                                    mobileVideoEl.play().catch(() => { });
+                                };
+                                mobileVideoEl.addEventListener("canplay", onCanPlay, { once: true });
+                                mobileVideoEl.addEventListener("loadeddata", onCanPlay, { once: true });
+                            });
+                        }
+                    };
+
+                    if (window.__mgIsTransitioning) {
+                        window.addEventListener("mg-transition-complete", tryPlay, { once: true });
+                    } else {
+                        tryPlay();
                     }
+
                     activeMobileVideo = mobileVideoEl;
                 }
             } else {
@@ -1049,6 +1070,20 @@
                 collapseRow(activeMobileRow);
             }
         }, { signal, passive: true });
+
+        // Transition completion: ensure active mobile media preview is fully rendered
+        window.addEventListener("mg-transition-complete", (e) => {
+            if (e.detail?.namespace === "index" || !e.detail?.namespace) {
+                if (isMobileLayout() && activeMobileRow) {
+                    const currentMedia = activeMobileRow._mediaItems || [];
+                    const activeBtn = activeMobileRow.querySelector(".index-media-mobile .index-media-item.is-active");
+                    const aIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : 0;
+                    if (currentMedia.length && currentMedia[aIdx]) {
+                        selectMobileMedia(activeMobileRow, currentMedia[aIdx]);
+                    }
+                }
+            }
+        }, { signal });
     }
 
     // ----------------------------------------------------
