@@ -1578,6 +1578,15 @@ function initOsmoBoilerplate() {
         if (container) container._isMounted = true;
         infoScope = scope;
 
+        // Clean invisible Unicode line-separator characters (U+2028 / U+2029)
+        // introduced when copying/pasting from Figma/Notes, which cause double gaps on iOS Safari
+        const infoLists = scope.querySelectorAll(".info-link-list, .info-grid-item");
+        infoLists.forEach((el) => {
+            if (/[\u2028\u2029]/.test(el.innerHTML)) {
+                el.innerHTML = el.innerHTML.replace(/[\u2028\u2029]/g, "");
+            }
+        });
+
         const richText = scope.querySelector(".info-rich-text");
         const gridItems = scope.querySelectorAll(".info-grid-item");
         const picWrapper = scope.querySelector(".mg-pic-wrapper");
