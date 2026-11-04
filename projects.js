@@ -7,6 +7,7 @@
     let projectsRafId = null;
     let projectsAbortController = null;
     let projectsScope = null;
+    let projectsMarqueeDelayTimer = null;
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -69,6 +70,17 @@
         const BASE_MARQUEE_SPEED = 0.55;
         const MARQUEE_DECEL_RATE = 0.16;
         const MARQUEE_ACCEL_RATE = 0.16;
+        const MARQUEE_START_DELAY = 1500;
+        let isMarqueeDelayed = true;
+
+        const startMarqueeDelay = () => {
+            if (projectsMarqueeDelayTimer) clearTimeout(projectsMarqueeDelayTimer);
+            isMarqueeDelayed = true;
+            projectsMarqueeDelayTimer = setTimeout(() => {
+                isMarqueeDelayed = false;
+                projectsMarqueeDelayTimer = null;
+            }, MARQUEE_START_DELAY);
+        };
         const DRAG_LERP_FACTOR = 0.11;
         const WHEEL_SMOOTH_STAGE1 = 0.16;
         const WHEEL_SMOOTH_STAGE2 = 0.09;
@@ -754,8 +766,8 @@
                 }
 
                 if (isDesktopInfinite) {
-                    const isPaused = !isGalleryRevealed || isTrackHovered || isDragging || isWheelActive || section.classList.contains("is-marquee-paused");
-                    if (section.classList.contains("is-marquee-paused")) {
+                    const isPaused = !isGalleryRevealed || isMarqueeDelayed || isTrackHovered || isDragging || isWheelActive || section.classList.contains("is-marquee-paused");
+                    if (section.classList.contains("is-marquee-paused") || isMarqueeDelayed) {
                         currentMarqueeSpeed = 0;
                         rawTargetPos = scrollPos;
                         targetPos = scrollPos;
@@ -1315,11 +1327,28 @@
             mobileThumbEl.addEventListener("pointercancel", endThumbTouch, { signal });
         }
 
+        let wasTransitioning = false;
+        let wasMarqueePaused = false;
+
         const animateGallery = (now) => {
             if (window.__mgIsTransitioning) {
+                wasTransitioning = true;
                 lastFrameTime = now;
                 projectsRafId = requestAnimationFrame(animateGallery);
                 return;
+            }
+
+            if (wasTransitioning) {
+                wasTransitioning = false;
+                startMarqueeDelay();
+            }
+
+            const isMarqueePausedClass = section.classList.contains("is-marquee-paused");
+            if (isMarqueePausedClass) {
+                wasMarqueePaused = true;
+            } else if (wasMarqueePaused) {
+                wasMarqueePaused = false;
+                startMarqueeDelay();
             }
 
             animateDesktop(now);
@@ -1454,6 +1483,7 @@
             activeFilteredCount = filtered.length;
             buildDesktopLoop(filtered);
             buildMobileGallery(filtered);
+            startMarqueeDelay();
         };
 
         parentFilterBtns.forEach((btn) => {
@@ -1524,6 +1554,7 @@
                 if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
                     mobileMainSwiper.update();
                 }
+                startMarqueeDelay();
             };
 
             // If section was already prepared by page transition, reveal immediately without Safari decode delay
@@ -1611,6 +1642,10 @@
         if (projectsAbortController) {
             projectsAbortController.abort();
             projectsAbortController = null;
+        }
+        if (projectsMarqueeDelayTimer) {
+            clearTimeout(projectsMarqueeDelayTimer);
+            projectsMarqueeDelayTimer = null;
         }
     }
 

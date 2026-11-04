@@ -11,6 +11,7 @@
   let wheelIdleTimer = null;
   let fadeTimer = null;
   let curtainSafetyTimer = null;
+  let homeMarqueeDelayTimer = null;
   let homeActiveVideoPool = [];
 
   function initHome(container) {
@@ -29,6 +30,7 @@
     const BASE_MARQUEE_SPEED = 0.55;
     const MARQUEE_DECEL_RATE = 0.16;
     const MARQUEE_ACCEL_RATE = 0.16;
+    const MARQUEE_START_DELAY = 1500;
 
     const WHEEL_MULTIPLIER = 1.15;
     const WHEEL_SMOOTH_STAGE1 = 0.22;
@@ -87,11 +89,26 @@
     let activeCenterSlide = null;
     let activeOrigIndex = -1;
 
+    let isMarqueeDelayed = true;
+    let wasTransitioning = false;
+
+    function startMarqueeDelay() {
+      if (homeMarqueeDelayTimer) clearTimeout(homeMarqueeDelayTimer);
+      isMarqueeDelayed = true;
+      homeMarqueeDelayTimer = setTimeout(() => {
+        isMarqueeDelayed = false;
+        homeMarqueeDelayTimer = null;
+      }, MARQUEE_START_DELAY);
+    }
+
     let isDragging = false;
     let dragDistance = 0;
     let curtainRevealed = !curtain || curtain.classList.contains("is-revealed");
-    if (curtainRevealed && scope && scope.classList) {
-      scope.classList.add("is-marquee-active");
+    if (curtainRevealed) {
+      if (scope && scope.classList) {
+        scope.classList.add("is-marquee-active");
+      }
+      startMarqueeDelay();
     }
     const startTime = performance.now();
 
@@ -128,6 +145,7 @@
       if (scope && scope.classList) {
         scope.classList.add("is-marquee-active");
       }
+      startMarqueeDelay();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           measureGeometry();
@@ -905,9 +923,15 @@
 
     function rafLoop(now) {
       if (window.__mgIsTransitioning) {
+        wasTransitioning = true;
         lastFrameTime = now;
         homeRafId = requestAnimationFrame(rafLoop);
         return;
+      }
+
+      if (wasTransitioning) {
+        wasTransitioning = false;
+        startMarqueeDelay();
       }
 
       const dt = Math.min(34, Math.max(4, now - lastFrameTime));
@@ -922,13 +946,13 @@
             scope && scope.classList && scope.classList.contains("is-marquee-paused")
           );
 
-          if (isMarqueePausedClass) {
+          if (isMarqueePausedClass || isMarqueeDelayed) {
             currentMarqueeSpeed = 0;
             rawTargetX = currentX;
             targetX = currentX;
           }
 
-          const isPaused = !curtainRevealed || isDragging || isWheelActive || isMarqueePausedClass;
+          const isPaused = !curtainRevealed || isMarqueeDelayed || isDragging || isWheelActive || isMarqueePausedClass;
           const desiredMarqueeSpeed = isPaused ? 0 : BASE_MARQUEE_SPEED;
 
           const rate = isPaused ? MARQUEE_DECEL_RATE : MARQUEE_ACCEL_RATE;
@@ -1004,6 +1028,10 @@
     if (curtainSafetyTimer) {
       clearTimeout(curtainSafetyTimer);
       curtainSafetyTimer = null;
+    }
+    if (homeMarqueeDelayTimer) {
+      clearTimeout(homeMarqueeDelayTimer);
+      homeMarqueeDelayTimer = null;
     }
     homeActiveVideoPool.forEach((item) => {
       if (item.video) {
