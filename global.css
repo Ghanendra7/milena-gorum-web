@@ -533,10 +533,15 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     pointer-events: none;
 }
 
-.projects-section.is-min-size .project-client,
+.projects-section.is-min-size .project-card:not(.is-hovered) .project-client,
 .projects-section.is-min-size .project-subtitle {
     opacity: 0 !important;
     pointer-events: none;
+}
+
+.projects-section.is-min-size .project-card.is-hovered .project-client {
+    opacity: 1 !important;
+    pointer-events: auto;
 }
 
 .btn-zoom-in,
