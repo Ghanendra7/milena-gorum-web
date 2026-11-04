@@ -787,6 +787,13 @@
 
     function stepSlide(dir) {
       userInteracted = true;
+      if (isMarqueeDelayed) {
+        isMarqueeDelayed = false;
+        if (homeMarqueeDelayTimer) {
+          clearTimeout(homeMarqueeDelayTimer);
+          homeMarqueeDelayTimer = null;
+        }
+      }
       if (isMobile) {
         mobileIndex = Math.max(0, Math.min(allSlides.length - 1, mobileIndex + dir));
         const targetMetric = slideMetrics[mobileIndex];
@@ -812,6 +819,13 @@
         if (e.ctrlKey || e.metaKey) return;
 
         userInteracted = true;
+        if (isMarqueeDelayed) {
+          isMarqueeDelayed = false;
+          if (homeMarqueeDelayTimer) {
+            clearTimeout(homeMarqueeDelayTimer);
+            homeMarqueeDelayTimer = null;
+          }
+        }
         e.preventDefault();
 
         let delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -853,6 +867,13 @@
       if (isInteractiveUI(e.target)) return;
 
       userInteracted = true;
+      if (isMarqueeDelayed) {
+        isMarqueeDelayed = false;
+        if (homeMarqueeDelayTimer) {
+          clearTimeout(homeMarqueeDelayTimer);
+          homeMarqueeDelayTimer = null;
+        }
+      }
       isDragging = true;
       isWheelActive = false;
       clearTimeout(wheelIdleTimer);
@@ -915,6 +936,13 @@
     window.addEventListener("pointercancel", onPointerEnd, { passive: true, signal });
 
     window.addEventListener("keydown", (e) => {
+      if (isMarqueeDelayed) {
+        isMarqueeDelayed = false;
+        if (homeMarqueeDelayTimer) {
+          clearTimeout(homeMarqueeDelayTimer);
+          homeMarqueeDelayTimer = null;
+        }
+      }
       if (e.key === "ArrowRight") stepSlide(1);
       else if (e.key === "ArrowLeft") stepSlide(-1);
     }, { signal });
@@ -946,10 +974,12 @@
             scope && scope.classList && scope.classList.contains("is-marquee-paused")
           );
 
-          if (isMarqueePausedClass || isMarqueeDelayed) {
+          if (isMarqueePausedClass) {
             currentMarqueeSpeed = 0;
             rawTargetX = currentX;
             targetX = currentX;
+          } else if (isMarqueeDelayed) {
+            currentMarqueeSpeed = 0;
           }
 
           const isPaused = !curtainRevealed || isMarqueeDelayed || isDragging || isWheelActive || isMarqueePausedClass;

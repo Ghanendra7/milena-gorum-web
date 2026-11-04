@@ -684,6 +684,13 @@
 
                 e.preventDefault();
                 userHasInteractedDesktop = true;
+                if (isMarqueeDelayed) {
+                    isMarqueeDelayed = false;
+                    if (projectsMarqueeDelayTimer) {
+                        clearTimeout(projectsMarqueeDelayTimer);
+                        projectsMarqueeDelayTimer = null;
+                    }
+                }
 
                 if (!isDesktopInfinite && maxBoundedScroll <= minBoundedScroll) return;
 
@@ -727,6 +734,13 @@
         trackWrapper.addEventListener("pointerdown", (e) => {
             if (isMobileLayout() || e.button !== 0) return;
             userHasInteractedDesktop = true;
+            if (isMarqueeDelayed) {
+                isMarqueeDelayed = false;
+                if (projectsMarqueeDelayTimer) {
+                    clearTimeout(projectsMarqueeDelayTimer);
+                    projectsMarqueeDelayTimer = null;
+                }
+            }
             isDragging = true;
             isWheelActive = false;
             track.classList.remove("is-wheel-scrolling");
@@ -826,10 +840,12 @@
 
                 if (isDesktopInfinite) {
                     const isPaused = !isGalleryRevealed || isMarqueeDelayed || isTrackHovered || isDragging || isWheelActive || section.classList.contains("is-marquee-paused");
-                    if (section.classList.contains("is-marquee-paused") || isMarqueeDelayed) {
+                    if (section.classList.contains("is-marquee-paused")) {
                         currentMarqueeSpeed = 0;
                         rawTargetPos = scrollPos;
                         targetPos = scrollPos;
+                    } else if (isMarqueeDelayed) {
+                        currentMarqueeSpeed = 0;
                     }
                     const desiredMarqueeSpeed = isPaused ? 0 : BASE_MARQUEE_SPEED;
 
@@ -1308,6 +1324,13 @@
                     isThumbTouching = false;
                     isThumbCoasting = false;
                     thumbVelocity = 0;
+                    if (isMarqueeDelayed) {
+                        isMarqueeDelayed = false;
+                        if (projectsMarqueeDelayTimer) {
+                            clearTimeout(projectsMarqueeDelayTimer);
+                            projectsMarqueeDelayTimer = null;
+                        }
+                    }
                     if (projectsMobileVideoTimer) {
                         clearTimeout(projectsMobileVideoTimer);
                         projectsMobileVideoTimer = null;
@@ -1418,6 +1441,13 @@
 
             mobileThumbEl.addEventListener("pointerdown", (e) => {
                 if (!isMobileLayout()) return;
+                if (isMarqueeDelayed) {
+                    isMarqueeDelayed = false;
+                    if (projectsMarqueeDelayTimer) {
+                        clearTimeout(projectsMarqueeDelayTimer);
+                        projectsMarqueeDelayTimer = null;
+                    }
+                }
                 if (projectsMobileVideoTimer) {
                     clearTimeout(projectsMobileVideoTimer);
                     projectsMobileVideoTimer = null;
