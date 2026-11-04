@@ -838,6 +838,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     -webkit-tap-highlight-color: transparent;
 }
 
+.thumb-swiper .swiper-slide {
+    margin-right: 4px;
+}
+
 .video-wrapper,
 .slide-video,
 .btn-play,

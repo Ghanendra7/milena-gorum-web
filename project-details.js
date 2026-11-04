@@ -313,7 +313,7 @@
             }
         });
 
-        const thumbGap = thumbSlides[0] ? parseFloat(window.getComputedStyle(thumbSlides[0]).marginRight) || 6 : 6;
+        const thumbGap = 4;
 
         let targetInitialIndex = 0;
         try {
