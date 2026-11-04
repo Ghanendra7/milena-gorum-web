@@ -795,12 +795,14 @@
                     .to(detailsText, {
                         x: -overflowDistance,
                         duration: duration,
-                        ease: "sine.inOut"
+                        ease: "sine.inOut",
+                        force3D: true
                     }, "+=2.0")
                     .to(detailsText, {
                         x: 0,
                         duration: duration,
-                        ease: "sine.inOut"
+                        ease: "sine.inOut",
+                        force3D: true
                     }, "+=2.0");
             } else {
                 detailsContainer.classList.remove("is-overflowing");
@@ -913,11 +915,9 @@
                     }
 
                     // 5. Subtle ping-pong marquee for overflowing details text
+                    setupDetailsMarquee();
                     if (detailsMarqueeTimeline) {
                         detailsMarqueeTimeline.restart();
-                    } else {
-                        setupDetailsMarquee();
-                        if (detailsMarqueeTimeline) detailsMarqueeTimeline.restart();
                     }
                 };
 
@@ -1007,16 +1007,6 @@
             });
         }
 
-        if (detailsContainer) {
-            detailsContainer.addEventListener("mouseenter", () => {
-                if (detailsMarqueeTimeline) detailsMarqueeTimeline.pause();
-            }, { signal });
-            detailsContainer.addEventListener("mouseleave", () => {
-                if (detailsMarqueeTimeline && drawerTimeline && drawerTimeline.isOpen()) {
-                    detailsMarqueeTimeline.play();
-                }
-            }, { signal });
-        }
 
         let resizeMarqueeTimer = null;
         window.addEventListener("resize", () => {
