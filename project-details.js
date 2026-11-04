@@ -835,8 +835,8 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.4,
-                                delay: 0.6,
+                                duration: 0.3,
+                                delay: 0.4,
                                 ease: "power1.inOut",
                                 overwrite: "auto"
                             }
@@ -850,9 +850,9 @@
                                 { autoAlpha: 0 },
                                 {
                                     autoAlpha: 1,
-                                    duration: 1,
+                                    duration: 0.6,
                                     stagger: 0.15,
-                                    delay: 0.4,
+                                    delay: 0.3,
                                     ease: typeof CustomEase !== "undefined"
                                         ? CustomEase.create("thumbCurve", "M0,0 C0.532,0 0.818,1 1,1 ")
                                         : "power2.out",
