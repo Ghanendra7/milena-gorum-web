@@ -297,6 +297,7 @@
         let trackCards = [];
         let cachedCardMetrics = [];
         let hoveredCardIndex = -1;
+        let initialFirstCardIndex = -1;
         let lastFrameTime = performance.now();
         let renderedTrackPos = null;
 
@@ -616,6 +617,7 @@
 
             track.appendChild(fragment);
             measureDesktopMetrics();
+            initialFirstCardIndex = isDesktopInfinite ? activeFilteredCount : 0;
 
             const restored = getRestoredScrollPos();
             const initPos = restored !== null ? restored : getInitialScrollPos();
@@ -770,9 +772,11 @@
             const dtScale = dt / 16.667;
 
             if (!isMobileLayout()) {
-                if (track.classList.contains("is-at-start")) {
-                    const initPos = getInitialScrollPos();
-                    if (userHasInteractedDesktop || Math.abs(scrollPos - initPos) > 8) {
+                if (track.classList.contains("is-at-start") && initialFirstCardIndex >= 0 && cachedCardMetrics[initialFirstCardIndex]) {
+                    const metric = cachedCardMetrics[initialFirstCardIndex];
+                    const cardLeft = metric.left - scrollPos;
+                    const cardRight = cardLeft + metric.width;
+                    if (cardRight <= 0 || cardLeft >= window.innerWidth) {
                         track.classList.remove("is-at-start");
                     }
                 }
