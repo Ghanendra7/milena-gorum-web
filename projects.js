@@ -883,8 +883,10 @@
         const mobileThumbTrack = mobileThumbEl?.querySelector(".swiper-wrapper");
         const mobileClientEl = scope.querySelector(".mobile-client-title");
         const mobileTitleEl = scope.querySelector(".mobile-project-title");
+        const mobileMetaBar = scope.querySelector(".mobile-meta-bar");
 
         mobileMainSwiper = null;
+        let isNavigatingToDetail = false;
         let mobileFilteredTemplates = [];
         let mobileThumbItems = [];
         let cachedThumbCenters = [];
@@ -911,6 +913,37 @@
             if (mobileClientEl) mobileClientEl.textContent = clientText;
             if (mobileTitleEl) mobileTitleEl.textContent = titleText;
         };
+
+        const navigateToProject = (projectIdx) => {
+            if (isNavigatingToDetail) return;
+            const tpl = mobileFilteredTemplates[projectIdx];
+            if (!tpl) return;
+            const linkHref = tpl.querySelector(".project-link")?.getAttribute("href") || "";
+            if (!linkHref || linkHref === "#") return;
+
+            isNavigatingToDetail = true;
+            const slug = linkHref.split("/").filter(Boolean).pop() || "";
+            const num = tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
+            try {
+                sessionStorage.setItem("mg_restore_project_url", linkHref);
+                if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
+                if (num) sessionStorage.setItem("mg_restore_project_num", num);
+                sessionStorage.setItem("mg_restore_from_detail", "true");
+            } catch (_) { }
+
+            if (typeof barba !== "undefined" && typeof barba.go === "function") {
+                barba.go(linkHref);
+            } else {
+                window.location.href = linkHref;
+            }
+        };
+
+        if (mobileMetaBar) {
+            mobileMetaBar.addEventListener("click", () => {
+                if (!isMobileLayout()) return;
+                navigateToProject(activeMobileProjectIdx);
+            }, { signal });
+        }
 
         const syncMobileVideos = () => {
             if (!mobileMainSwiper || !mobileMainSwiper.slides) return;
@@ -1421,6 +1454,13 @@
                     const tappedItem = document.elementFromPoint(e.clientX, e.clientY)?.closest(".mobile-thumb-item");
                     if (tappedItem && tappedItem.dataset.cloneIdx !== undefined) {
                         const tappedIdx = parseInt(tappedItem.dataset.cloneIdx, 10);
+                        const tappedProjIdx = parseInt(tappedItem.dataset.projectIdx || "-1", 10);
+
+                        if (tappedItem.classList.contains("is-active") || tappedProjIdx === activeMobileProjectIdx) {
+                            navigateToProject(activeMobileProjectIdx);
+                            return;
+                        }
+
                         isThumbCoasting = false;
                         thumbVelocity = 0;
                         setActiveThumbByIdx(tappedIdx, true);
@@ -1443,6 +1483,14 @@
 
             mobileThumbEl.addEventListener("pointerup", endThumbTouch, { signal });
             mobileThumbEl.addEventListener("pointercancel", endThumbTouch, { signal });
+
+            mobileThumbEl.addEventListener("click", (e) => {
+                if (!isMobileLayout()) return;
+                const tappedItem = e.target.closest(".mobile-thumb-item");
+                if (tappedItem && (tappedItem.classList.contains("is-active") || parseInt(tappedItem.dataset.projectIdx || "-1", 10) === activeMobileProjectIdx)) {
+                    navigateToProject(activeMobileProjectIdx);
+                }
+            }, { signal });
         }
 
         let wasTransitioning = false;
