@@ -10,6 +10,7 @@
     let projectsMarqueeDelayTimer = null;
     let projectsDesktopHoverTimer = null;
     let projectsMobileVideoTimer = null;
+    let mobileMainSwiper = null;
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -23,10 +24,20 @@
 
         if (!section || !track || !trackWrapper) return;
         if (scope && scope._isProjectsMounted) return;
-        if (scope) scope._isProjectsMounted = true;
-        projectsScope = scope;
+        if (section && section._isProjectsMounted) return;
 
         destroyProjects();
+
+        if (scope) {
+            scope._isProjectsMounted = true;
+            scope._isMounted = true;
+        }
+        if (section) {
+            section._isProjectsMounted = true;
+            section._isMounted = true;
+        }
+        projectsScope = section || scope;
+
         projectsAbortController = new AbortController();
         const { signal } = projectsAbortController;
 
@@ -873,7 +884,7 @@
         const mobileClientEl = scope.querySelector(".mobile-client-title");
         const mobileTitleEl = scope.querySelector(".mobile-project-title");
 
-        let mobileMainSwiper = null;
+        mobileMainSwiper = null;
         let mobileFilteredTemplates = [];
         let mobileThumbItems = [];
         let cachedThumbCenters = [];
@@ -1001,9 +1012,16 @@
 
         const getScrollPosForThumbIdx = (idx) => {
             if (cachedThumbCenters.length === 0) measureMobileThumbMetrics();
-            if (idx < 0 || idx >= cachedThumbCenters.length) return 0;
             const containerW = mobileThumbEl?.clientWidth || window.innerWidth;
-            return cachedThumbCenters[idx] - containerW / 2;
+            if (idx >= 0 && idx < cachedThumbCenters.length && cachedThumbCenters[idx] !== undefined) {
+                return cachedThumbCenters[idx] - containerW / 2;
+            }
+            const item = mobileThumbItems[idx];
+            if (item) {
+                const center = item.offsetLeft + item.offsetWidth / 2;
+                return center - containerW / 2;
+            }
+            return 0;
         };
 
         const clampBoundedMobileThumbPos = (pos) => {
@@ -1053,7 +1071,8 @@
             if (cachedThumbCenters.length === 0) measureMobileThumbMetrics();
             const total = cachedThumbCenters.length;
             if (total === 0) return -1;
-            const currentCenterInTrack = thumbScrollPos + window.innerWidth / 2;
+            const containerW = mobileThumbEl?.clientWidth || window.innerWidth;
+            const currentCenterInTrack = thumbScrollPos + containerW / 2;
             let closestIdx = 0;
             let minDiff = Infinity;
 
@@ -1072,6 +1091,7 @@
             if (total === 0) return;
             if (cachedThumbCenters.length === 0) measureMobileThumbMetrics();
 
+            const containerW = mobileThumbEl?.clientWidth || window.innerWidth;
             if (!isMobileInfinite) {
                 setActiveThumbByIdx(targetProjIdx, false);
                 thumbTargetPos = getScrollPosForThumbIdx(targetProjIdx);
@@ -1079,14 +1099,16 @@
                 return;
             }
 
-            const currentCenterInTrack = thumbScrollPos + window.innerWidth / 2;
+            const currentCenterInTrack = thumbScrollPos + containerW / 2;
             let bestCloneIdx = -1;
             let minDiff = Infinity;
 
             for (let i = 0; i < total; i++) {
                 const item = mobileThumbItems[i];
                 if (parseInt(item.dataset.projectIdx || "-1", 10) === targetProjIdx) {
-                    const centerVal = cachedThumbCenters[i] ?? (item.offsetLeft + item.offsetWidth / 2);
+                    const centerVal = (cachedThumbCenters && cachedThumbCenters[i] !== undefined)
+                        ? cachedThumbCenters[i]
+                        : (item.offsetLeft + item.offsetWidth / 2);
                     const diff = Math.abs(centerVal - currentCenterInTrack);
                     if (diff < minDiff) {
                         minDiff = diff;
@@ -1115,8 +1137,15 @@
             cachedThumbCenters = [];
 
             if (mobileMainSwiper) {
-                mobileMainSwiper.destroy(true, true);
+                try {
+                    mobileMainSwiper.destroy(true, true);
+                } catch (_) { }
                 mobileMainSwiper = null;
+            }
+            if (mobileMainEl.swiper) {
+                try {
+                    mobileMainEl.swiper.destroy(true, true);
+                } catch (_) { }
             }
 
             const mainWrapper = mobileMainEl.querySelector(".swiper-wrapper");
@@ -1240,7 +1269,12 @@
 
                 mobileMainSwiper.on("slideChange", handleMainSwipeChange);
                 mobileMainSwiper.on("transitionStart", handleMainSwipeChange);
+                mobileMainSwiper.on("transitionEnd", handleMainSwipeChange);
+                mobileMainSwiper.on("slideChangeTransitionEnd", handleMainSwipeChange);
                 mobileMainSwiper.on("touchStart", () => {
+                    isThumbTouching = false;
+                    isThumbCoasting = false;
+                    thumbVelocity = 0;
                     if (projectsMobileVideoTimer) {
                         clearTimeout(projectsMobileVideoTimer);
                         projectsMobileVideoTimer = null;
@@ -1715,6 +1749,18 @@
     }
 
     function destroyProjects() {
+        if (mobileMainSwiper) {
+            try {
+                mobileMainSwiper.destroy(true, true);
+            } catch (_) { }
+            mobileMainSwiper = null;
+        }
+        const oldMainEl = projectsScope?.querySelector(".mobile-main-swiper") || document.querySelector(".mobile-main-swiper");
+        if (oldMainEl && oldMainEl.swiper) {
+            try {
+                oldMainEl.swiper.destroy(true, true);
+            } catch (_) { }
+        }
         if (projectsScope) {
             projectsScope._isProjectsMounted = false;
             projectsScope = null;
