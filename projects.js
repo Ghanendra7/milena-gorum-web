@@ -435,7 +435,7 @@
         };
 
         // Collision occlusion is deprecated since headers now ping-pong marquee within card width
-        const checkHeaderCollisions = () => {};
+        const checkHeaderCollisions = () => { };
 
         const VIDEO_AUTOPLAY_DELAY_MS = 750;
 
@@ -568,13 +568,13 @@
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=1.8")
+                    }, "+=0.8")
                     .to(inner, {
                         x: 0,
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=1.8");
+                    }, "+=0.8");
             } else {
                 gsap.set(inner, { x: 0 });
             }
