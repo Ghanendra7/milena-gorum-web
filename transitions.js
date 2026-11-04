@@ -1167,6 +1167,18 @@ function initOsmoBoilerplate() {
                 force3D: true,
             });
 
+            if (nextNs === "index") {
+                try {
+                    const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
+                    if (savedScroll !== null) {
+                        const sY = parseFloat(savedScroll);
+                        if (!isNaN(sY) && sY > 0) {
+                            next.scrollTop = sY;
+                        }
+                    }
+                } catch (_) { }
+            }
+
             mountPage(next);
 
             let resolved = false;
@@ -1253,12 +1265,17 @@ function initOsmoBoilerplate() {
             } else {
                 // If navigating to projects from anywhere other than project-detail (e.g. from home or nav),
                 // clear all restoration data so projects always starts from the 1st project.
-                if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home") {
+                if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home" || nextNs === "home" || nextPath === "/") {
                     sessionStorage.removeItem("mg_restore_from_detail");
                     sessionStorage.removeItem("mg_projects_saved_scroll");
                     sessionStorage.removeItem("mg_restore_project_slug");
                     sessionStorage.removeItem("mg_restore_project_url");
                     sessionStorage.removeItem("mg_restore_project_num");
+                    if (nextNs === "home" || nextPath === "/") {
+                        sessionStorage.removeItem("mg_index_restore_slug");
+                        sessionStorage.removeItem("mg_index_restore_slide");
+                        sessionStorage.removeItem("mg_index_restore_scroll");
+                    }
                 }
             }
 
@@ -1469,11 +1486,44 @@ function initOsmoBoilerplate() {
     }
 
     function resetPage(container) {
-        window.scrollTo(0, 0);
+        const ns = container?.getAttribute("data-barba-namespace") || "";
+        let restoredScroll = false;
+        let sY = 0;
+        if (ns === "index") {
+            try {
+                const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
+                if (savedScroll !== null) {
+                    sY = parseFloat(savedScroll);
+                    if (!isNaN(sY) && sY > 0) {
+                        restoredScroll = true;
+                    }
+                }
+            } catch (_) { }
+        }
+
+        if (restoredScroll) {
+            window.scrollTo(0, sY);
+            if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                try { window.lenis.scrollTo(sY, { immediate: true }); } catch (_) { }
+            }
+        } else {
+            window.scrollTo(0, 0);
+            if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                try { window.lenis.scrollTo(0, { immediate: true }); } catch (_) { }
+            }
+        }
+
         if (container) container.classList.remove("is-transitioning");
         gsap.set(container, {
             clearProps: "position,top,left,right,bottom,width,height,zIndex,yPercent,xPercent,transform,overflow,backgroundColor,willChange",
         });
+
+        if (restoredScroll) {
+            window.scrollTo(0, sY);
+            if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                try { window.lenis.scrollTo(sY, { immediate: true }); } catch (_) { }
+            }
+        }
     }
 
     function cleanupMediaInContainer(container) {
