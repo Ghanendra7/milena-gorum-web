@@ -730,11 +730,15 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     }
 
     .mobile-thumb-swiper .swiper-wrapper {
-        display: flex;
-        flex-direction: row;
-        align-items: flex-end;
-        gap: 4px;
-        width: max-content;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-end !important;
+        gap: 4px !important;
+        column-gap: 4px !important;
+        row-gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: max-content !important;
         will-change: transform;
         -webkit-backface-visibility: hidden;
         backface-visibility: hidden;
@@ -742,12 +746,16 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     }
 
     .mobile-thumb-item {
-        width: auto;
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        width: auto !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        row-gap: 8px !important;
+        column-gap: 0 !important;
         opacity: 0.28;
         transition: opacity 0.2s ease;
         -webkit-tap-highlight-color: transparent;
@@ -762,24 +770,35 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     .mobile-thumb-num {
         line-height: 1;
         color: #000000;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto;
+        max-width: 100%;
+        white-space: nowrap;
     }
 
     .mobile-thumb-img-wrap {
-        height: 100px;
-        width: auto;
-        min-width: 60px;
+        height: 100px !important;
+        width: auto !important;
+        min-width: 0 !important;
         aspect-ratio: 16 / 9;
-        overflow: hidden;
-        background-color: var(--media-bg-color);
+        overflow: hidden !important;
+        background-color: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
     }
 
     .mobile-thumb-img-wrap img {
-        height: 100%;
-        width: auto;
-        max-width: none;
-        object-fit: cover;
-        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        object-fit: cover !important;
+        display: block !important;
         pointer-events: none;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
     }
 }
 
