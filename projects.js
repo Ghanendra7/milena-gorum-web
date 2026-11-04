@@ -8,6 +8,8 @@
     let projectsAbortController = null;
     let projectsScope = null;
     let projectsMarqueeDelayTimer = null;
+    let projectsDesktopHoverTimer = null;
+    let projectsMobileVideoTimer = null;
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -424,7 +426,14 @@
             }
         };
 
+        const VIDEO_AUTOPLAY_DELAY_MS = 750;
+
         const startHoverVideo = (card) => {
+            if (projectsDesktopHoverTimer) {
+                clearTimeout(projectsDesktopHoverTimer);
+                projectsDesktopHoverTimer = null;
+            }
+
             if (isWheelActive || isDragging || window.__mgIsTransitioning) return;
             const video = getValidVideo(card);
             if (!video) return;
@@ -433,44 +442,55 @@
             const previewSrc = getBunnyPreviewUrl(rawVal);
             if (!previewSrc) return;
 
-            registerWarmVideo(video);
+            projectsDesktopHoverTimer = setTimeout(() => {
+                projectsDesktopHoverTimer = null;
+                if (!card || !card.classList.contains("is-hovered")) return;
+                if (isWheelActive || isDragging || window.__mgIsTransitioning) return;
 
-            video.playsInline = true;
-            video.setAttribute("playsinline", "");
-            video.setAttribute("webkit-playsinline", "true");
-            video.muted = true;
-            video.defaultMuted = true;
-            video.setAttribute("muted", "");
-            video.loop = true;
-            video.setAttribute("loop", "");
-            video.setAttribute("controlsList", "nodownload");
-            video.setAttribute("disablePictureInPicture", "true");
-            video.setAttribute("oncontextmenu", "return false;");
-            video.setAttribute("draggable", "false");
+                registerWarmVideo(video);
 
-            if (video.getAttribute("src") !== previewSrc) {
-                video.setAttribute("src", previewSrc);
-                video.load();
-            }
+                video.playsInline = true;
+                video.setAttribute("playsinline", "");
+                video.setAttribute("webkit-playsinline", "true");
+                video.muted = true;
+                video.defaultMuted = true;
+                video.setAttribute("muted", "");
+                video.loop = true;
+                video.setAttribute("loop", "");
+                video.setAttribute("controlsList", "nodownload");
+                video.setAttribute("disablePictureInPicture", "true");
+                video.setAttribute("oncontextmenu", "return false;");
+                video.setAttribute("draggable", "false");
 
-            if (video.readyState >= 2) {
-                card.classList.add("is-video-playing");
-            } else {
-                const onPlaying = () => {
-                    if (card.classList.contains("is-hovered")) {
-                        card.classList.add("is-video-playing");
-                    }
-                };
-                video.addEventListener("playing", onPlaying, { once: true });
-            }
+                if (video.getAttribute("src") !== previewSrc) {
+                    video.setAttribute("src", previewSrc);
+                    video.load();
+                }
 
-            video.muted = true;
-            video.loop = true;
-            const playPromise = video.play();
-            if (playPromise !== undefined) playPromise.catch(() => { });
+                if (video.readyState >= 2) {
+                    card.classList.add("is-video-playing");
+                } else {
+                    const onPlaying = () => {
+                        if (card.classList.contains("is-hovered")) {
+                            card.classList.add("is-video-playing");
+                        }
+                    };
+                    video.addEventListener("playing", onPlaying, { once: true });
+                }
+
+                video.muted = true;
+                video.loop = true;
+                const playPromise = video.play();
+                if (playPromise !== undefined) playPromise.catch(() => { });
+            }, VIDEO_AUTOPLAY_DELAY_MS);
         };
 
         const stopHoverVideo = (card) => {
+            if (projectsDesktopHoverTimer) {
+                clearTimeout(projectsDesktopHoverTimer);
+                projectsDesktopHoverTimer = null;
+            }
+            if (!card) return;
             card.classList.remove("is-video-playing");
             const video = getValidVideo(card);
             if (!video) return;
@@ -691,6 +711,20 @@
             isDragging = true;
             isWheelActive = false;
             track.classList.remove("is-wheel-scrolling");
+            if (projectsDesktopHoverTimer) {
+                clearTimeout(projectsDesktopHoverTimer);
+                projectsDesktopHoverTimer = null;
+            }
+            if (hoveredCardIndex !== -1) {
+                const prevCard = trackCards[hoveredCardIndex];
+                if (prevCard) {
+                    prevCard.classList.remove("is-hovered");
+                    stopHoverVideo(prevCard);
+                }
+                hoveredCardIndex = -1;
+                track.classList.remove("is-hovering-card");
+                checkHeaderCollisions();
+            }
             dragMovedDist = 0;
             startPointerX = e.clientX;
             lastPointerX = e.clientX;
@@ -853,6 +887,12 @@
         const syncMobileVideos = () => {
             if (!mobileMainSwiper || !mobileMainSwiper.slides) return;
             if (window.__mgIsTransitioning) return;
+
+            if (projectsMobileVideoTimer) {
+                clearTimeout(projectsMobileVideoTimer);
+                projectsMobileVideoTimer = null;
+            }
+
             const activeSlideEl = mobileMainSwiper.slides[mobileMainSwiper.activeIndex];
 
             for (let i = 0; i < mobileMainSwiper.slides.length; i++) {
@@ -860,38 +900,58 @@
                 const video = slide.querySelector(".mobile-main-video");
                 if (!video) continue;
 
-                if (slide === activeSlideEl) {
-                    const previewSrc = video.getAttribute("data-preview-src");
-                    if (previewSrc) {
-                        registerWarmVideo(video);
-                        if (video.getAttribute("src") !== previewSrc) {
-                            video.setAttribute("src", previewSrc);
-                            video.load();
-                        }
-
-                        if (video.readyState >= 2) {
-                            slide.classList.add("is-video-playing");
-                        } else {
-                            video.addEventListener("playing", () => {
-                                if (mobileMainSwiper && mobileMainSwiper.slides[mobileMainSwiper.activeIndex] === slide) {
-                                    slide.classList.add("is-video-playing");
-                                }
-                            }, { once: true });
-                        }
-
-                        video.muted = true;
-                        video.defaultMuted = true;
-                        video.loop = true;
-                        video.playsInline = true;
-                        const p = video.play();
-                        if (p !== undefined) p.catch(() => { });
-                    }
-                } else {
+                if (slide !== activeSlideEl) {
                     slide.classList.remove("is-video-playing");
                     if (!video.paused) video.pause();
                     video.currentTime = 0;
                 }
             }
+
+            if (isThumbTouching || isThumbCoasting) return;
+            if (!activeSlideEl) return;
+
+            const video = activeSlideEl.querySelector(".mobile-main-video");
+            if (!video) return;
+
+            const previewSrc = video.getAttribute("data-preview-src");
+            if (!previewSrc) return;
+
+            if (activeSlideEl.classList.contains("is-video-playing") && !video.paused) {
+                return;
+            }
+
+            projectsMobileVideoTimer = setTimeout(() => {
+                projectsMobileVideoTimer = null;
+                if (!mobileMainSwiper || !mobileMainSwiper.slides) return;
+                if (window.__mgIsTransitioning || isThumbTouching || isThumbCoasting) return;
+
+                const currentActive = mobileMainSwiper.slides[mobileMainSwiper.activeIndex];
+                if (currentActive !== activeSlideEl) return;
+
+                registerWarmVideo(video);
+                if (video.getAttribute("src") !== previewSrc) {
+                    video.setAttribute("src", previewSrc);
+                    video.load();
+                }
+
+                if (video.readyState >= 2) {
+                    activeSlideEl.classList.add("is-video-playing");
+                } else {
+                    const onPlaying = () => {
+                        if (mobileMainSwiper && mobileMainSwiper.slides && mobileMainSwiper.slides[mobileMainSwiper.activeIndex] === activeSlideEl) {
+                            activeSlideEl.classList.add("is-video-playing");
+                        }
+                    };
+                    video.addEventListener("playing", onPlaying, { once: true });
+                }
+
+                video.muted = true;
+                video.defaultMuted = true;
+                video.loop = true;
+                video.playsInline = true;
+                const p = video.play();
+                if (p !== undefined) p.catch(() => { });
+            }, VIDEO_AUTOPLAY_DELAY_MS);
         };
 
         const measureMobileThumbMetrics = () => {
@@ -1163,6 +1223,12 @@
 
                 mobileMainSwiper.on("slideChange", handleMainSwipeChange);
                 mobileMainSwiper.on("transitionStart", handleMainSwipeChange);
+                mobileMainSwiper.on("touchStart", () => {
+                    if (projectsMobileVideoTimer) {
+                        clearTimeout(projectsMobileVideoTimer);
+                        projectsMobileVideoTimer = null;
+                    }
+                });
             }
 
             // 3. Build scrubber strip thumbnails
@@ -1265,6 +1331,10 @@
         if (mobileThumbEl) {
             mobileThumbEl.addEventListener("pointerdown", (e) => {
                 if (!isMobileLayout()) return;
+                if (projectsMobileVideoTimer) {
+                    clearTimeout(projectsMobileVideoTimer);
+                    projectsMobileVideoTimer = null;
+                }
                 if (cachedThumbCenters.length === 0) measureMobileThumbMetrics();
                 isThumbTouching = true;
                 isThumbCoasting = false;
@@ -1643,6 +1713,14 @@
         if (projectsMarqueeDelayTimer) {
             clearTimeout(projectsMarqueeDelayTimer);
             projectsMarqueeDelayTimer = null;
+        }
+        if (projectsDesktopHoverTimer) {
+            clearTimeout(projectsDesktopHoverTimer);
+            projectsDesktopHoverTimer = null;
+        }
+        if (projectsMobileVideoTimer) {
+            clearTimeout(projectsMobileVideoTimer);
+            projectsMobileVideoTimer = null;
         }
     }
 
