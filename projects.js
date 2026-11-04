@@ -434,33 +434,8 @@
             }
         };
 
-        const checkHeaderCollisions = () => {
-            const total = trackCards.length;
-            if (total === 0 || cachedCardMetrics.length !== total) return;
-
-            for (let i = 0; i < total; i++) {
-                trackCards[i].classList.remove("is-label-occluded");
-            }
-
-            if (currentVh <= MIN_DETAIL_THRESHOLD) return;
-
-            for (let i = 0; i < total; i++) {
-                const card = trackCards[i];
-                if (card.classList.contains("is-label-occluded")) continue;
-
-                const metric = cachedCardMetrics[i];
-                const visibleWidth = i === hoveredCardIndex ? metric.fullHeaderWidth : metric.baseHeaderWidth;
-                const headerRightEdge = metric.left + visibleWidth;
-
-                for (let j = i + 1; j < Math.min(i + 5, total); j++) {
-                    if (headerRightEdge + 10 > cachedCardMetrics[j].left) {
-                        trackCards[j].classList.add("is-label-occluded");
-                    } else {
-                        break;
-                    }
-                }
-            }
-        };
+        // Collision occlusion is deprecated since headers now ping-pong marquee within card width
+        const checkHeaderCollisions = () => {};
 
         const VIDEO_AUTOPLAY_DELAY_MS = 750;
 

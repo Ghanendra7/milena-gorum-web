@@ -582,10 +582,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     flex-shrink: 0 !important;
 }
 
-.project-card.is-label-occluded .project-header {
-    opacity: 0 !important;
-    pointer-events: none;
-}
 
 .projects-section.is-min-size .project-card:not(.is-hovered) .project-client,
 .projects-section.is-min-size .project-subtitle {
