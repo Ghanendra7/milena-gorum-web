@@ -525,8 +525,54 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     transition: none !important;
 }
 
+.project-subtitle {
+    opacity: 0;
+}
+
 .project-card.is-hovered .project-subtitle {
-    opacity: 1;
+    opacity: 1 !important;
+}
+
+/* Project Header Layout & Ping-Pong Marquee */
+.project-header {
+    display: flex !important;
+    align-items: baseline !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+.project-number-text,
+.project-num {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.project-texts-wrap {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+    white-space: nowrap !important;
+}
+
+.project-texts-inner {
+    display: inline-flex !important;
+    align-items: baseline !important;
+    gap: 0.5em !important;
+    white-space: nowrap !important;
+    width: max-content !important;
+    max-width: none !important;
+    will-change: transform;
+}
+
+.project-texts-inner .project-client,
+.project-texts-inner .project-subtitle {
+    white-space: nowrap !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
 }
 
 .project-card.is-label-occluded .project-header {

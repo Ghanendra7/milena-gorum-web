@@ -11,6 +11,8 @@
     let projectsDesktopHoverTimer = null;
     let projectsMobileVideoTimer = null;
     let mobileMainSwiper = null;
+    let activeHeaderMarqueeTimeline = null;
+    let activeHeaderMarqueeCard = null;
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -182,6 +184,28 @@
             card.classList.add("project-card");
             const numEl = card.querySelector(".project-number-text, .project-num, .project-number");
             if (numEl) numEl.textContent = formatNum(numEl.textContent);
+
+            // Ensure project-texts-wrap & project-texts-inner exist for marquee
+            let textsWrap = card.querySelector(".project-texts-wrap");
+            if (!textsWrap) {
+                const clientEl = card.querySelector(".project-client");
+                const subtitleEl = card.querySelector(".project-subtitle");
+                if (clientEl) {
+                    textsWrap = document.createElement("div");
+                    textsWrap.className = "project-texts-wrap";
+                    clientEl.parentNode.insertBefore(textsWrap, clientEl);
+                    textsWrap.appendChild(clientEl);
+                    if (subtitleEl) textsWrap.appendChild(subtitleEl);
+                }
+            }
+            if (textsWrap && !textsWrap.querySelector(".project-texts-inner")) {
+                const inner = document.createElement("span");
+                inner.className = "project-texts-inner";
+                while (textsWrap.firstChild) {
+                    inner.appendChild(textsWrap.firstChild);
+                }
+                textsWrap.appendChild(inner);
+            }
 
             const nestedTags = Array.from(card.querySelectorAll(".card-sub-tag")).map((el) => el.textContent);
             const attrTags = (card.getAttribute("data-subcategories") || "").split(",");
@@ -365,8 +389,8 @@
                 const header = card.querySelector(".project-header");
                 const clientEl = card.querySelector(".project-client") || card.querySelector(".project-number-text, .project-num, .project-number");
 
-                const fullHeaderWidth = header ? header.offsetWidth : 0;
-                const baseHeaderWidth = clientEl ? clientEl.offsetLeft + clientEl.offsetWidth : fullHeaderWidth;
+                const fullHeaderWidth = header ? Math.min(header.offsetWidth, width) : 0;
+                const baseHeaderWidth = clientEl ? Math.min(clientEl.offsetLeft + clientEl.offsetWidth, width) : fullHeaderWidth;
 
                 cachedCardMetrics[i] = {
                     left,
@@ -510,6 +534,77 @@
             video.currentTime = 0;
         };
 
+        const stopHeaderMarquee = (card) => {
+            if (activeHeaderMarqueeTimeline) {
+                try { activeHeaderMarqueeTimeline.kill(); } catch (_) { }
+                activeHeaderMarqueeTimeline = null;
+            }
+            const targetCard = card || activeHeaderMarqueeCard;
+            if (targetCard) {
+                const inner = targetCard.querySelector(".project-texts-inner");
+                if (inner) {
+                    gsap.killTweensOf(inner);
+                    gsap.to(inner, {
+                        x: 0,
+                        duration: 0.35,
+                        ease: "power2.out",
+                        overwrite: "auto",
+                        onComplete: () => {
+                            gsap.set(inner, { clearProps: "transform,x" });
+                        }
+                    });
+                }
+            }
+            activeHeaderMarqueeCard = null;
+        };
+
+        const startHeaderMarquee = (card) => {
+            if (!card) return;
+            const textsWrap = card.querySelector(".project-texts-wrap");
+            const inner = textsWrap ? textsWrap.querySelector(".project-texts-inner") : null;
+            if (!textsWrap || !inner) return;
+
+            if (activeHeaderMarqueeCard === card && activeHeaderMarqueeTimeline) {
+                return;
+            }
+
+            stopHeaderMarquee();
+
+            gsap.killTweensOf(inner);
+            gsap.set(inner, { x: 0 });
+
+            const containerWidth = textsWrap.clientWidth;
+            const textWidth = Math.ceil(inner.scrollWidth || inner.getBoundingClientRect().width);
+            const overflowDistance = textWidth - containerWidth;
+
+            if (overflowDistance > 4) {
+                activeHeaderMarqueeCard = card;
+
+                // Subtle reading speed ~28px/sec, minimum 3.0s duration
+                const duration = Math.max(3.0, overflowDistance / 28);
+
+                activeHeaderMarqueeTimeline = gsap.timeline({
+                    repeat: -1
+                });
+
+                activeHeaderMarqueeTimeline
+                    .to(inner, {
+                        x: -overflowDistance,
+                        duration: duration,
+                        ease: "sine.inOut",
+                        force3D: true
+                    }, "+=1.8")
+                    .to(inner, {
+                        x: 0,
+                        duration: duration,
+                        ease: "sine.inOut",
+                        force3D: true
+                    }, "+=1.8");
+            } else {
+                gsap.set(inner, { x: 0 });
+            }
+        };
+
         let metricRecalcScheduled = false;
         const scheduleMetricsRecalc = () => {
             if (metricRecalcScheduled) return;
@@ -518,6 +613,9 @@
                 metricRecalcScheduled = false;
                 measureDesktopMetrics();
                 checkHeaderCollisions();
+                if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
+                    startHeaderMarquee(trackCards[hoveredCardIndex]);
+                }
                 track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
             });
         };
@@ -529,6 +627,28 @@
                 lockNaturalAspect(img, mediaWrap, scheduleMetricsRecalc);
             }
 
+            // Ensure project-texts-wrap and project-texts-inner exist defensively
+            let textsWrap = card.querySelector(".project-texts-wrap");
+            if (!textsWrap) {
+                const clientEl = card.querySelector(".project-client");
+                const subtitleEl = card.querySelector(".project-subtitle");
+                if (clientEl) {
+                    textsWrap = document.createElement("div");
+                    textsWrap.className = "project-texts-wrap";
+                    clientEl.parentNode.insertBefore(textsWrap, clientEl);
+                    textsWrap.appendChild(clientEl);
+                    if (subtitleEl) textsWrap.appendChild(subtitleEl);
+                }
+            }
+            if (textsWrap && !textsWrap.querySelector(".project-texts-inner")) {
+                const inner = document.createElement("span");
+                inner.className = "project-texts-inner";
+                while (textsWrap.firstChild) {
+                    inner.appendChild(textsWrap.firstChild);
+                }
+                textsWrap.appendChild(inner);
+            }
+
             card.addEventListener("mouseenter", () => {
                 if (isWheelActive || isDragging) return;
                 hoveredCardIndex = cardIdx;
@@ -536,12 +656,14 @@
                 card.classList.add("is-hovered");
                 checkHeaderCollisions();
                 startHoverVideo(card);
+                startHeaderMarquee(card);
             }, { signal });
 
             card.addEventListener("mouseleave", () => {
                 if (hoveredCardIndex === cardIdx) hoveredCardIndex = -1;
                 card.classList.remove("is-hovered");
                 stopHoverVideo(card);
+                stopHeaderMarquee(card);
                 if (hoveredCardIndex === -1) {
                     track.classList.remove("is-hovering-card");
                 }
@@ -550,6 +672,27 @@
 
             const link = card.querySelector(".project-link");
             if (link) {
+                link.addEventListener("focus", () => {
+                    if (isWheelActive || isDragging) return;
+                    hoveredCardIndex = cardIdx;
+                    track.classList.add("is-hovering-card");
+                    card.classList.add("is-hovered");
+                    checkHeaderCollisions();
+                    startHoverVideo(card);
+                    startHeaderMarquee(card);
+                }, { signal });
+
+                link.addEventListener("blur", () => {
+                    if (hoveredCardIndex === cardIdx) hoveredCardIndex = -1;
+                    card.classList.remove("is-hovered");
+                    stopHoverVideo(card);
+                    stopHeaderMarquee(card);
+                    if (hoveredCardIndex === -1) {
+                        track.classList.remove("is-hovering-card");
+                    }
+                    checkHeaderCollisions();
+                }, { signal });
+
                 link.addEventListener("click", (e) => {
                     if (dragMovedDist > 6) {
                         e.preventDefault();
@@ -709,6 +852,7 @@
                         if (prevCard) {
                             prevCard.classList.remove("is-hovered");
                             stopHoverVideo(prevCard);
+                            stopHeaderMarquee(prevCard);
                         }
                         hoveredCardIndex = -1;
                         track.classList.remove("is-hovering-card");
@@ -753,6 +897,7 @@
                 if (prevCard) {
                     prevCard.classList.remove("is-hovered");
                     stopHoverVideo(prevCard);
+                    stopHeaderMarquee(prevCard);
                 }
                 hoveredCardIndex = -1;
                 track.classList.remove("is-hovering-card");
@@ -1817,6 +1962,9 @@
         window.addEventListener("resize", () => {
             measureDesktopMetrics();
             checkHeaderCollisions();
+            if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
+                startHeaderMarquee(trackCards[hoveredCardIndex]);
+            }
             measureMobileThumbMetrics();
             if (isMobileLayout()) {
                 if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
@@ -1843,6 +1991,11 @@
     }
 
     function destroyProjects() {
+        if (activeHeaderMarqueeTimeline) {
+            try { activeHeaderMarqueeTimeline.kill(); } catch (_) { }
+            activeHeaderMarqueeTimeline = null;
+        }
+        activeHeaderMarqueeCard = null;
         if (mobileMainSwiper) {
             try {
                 mobileMainSwiper.destroy(true, false);
