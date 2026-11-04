@@ -1413,6 +1413,9 @@
         };
 
         if (mobileThumbEl) {
+            let touchedThumbItem = null;
+            let touchedThumbWasActive = false;
+
             mobileThumbEl.addEventListener("pointerdown", (e) => {
                 if (!isMobileLayout()) return;
                 if (projectsMobileVideoTimer) {
@@ -1428,6 +1431,12 @@
                 thumbLastTouchTime = performance.now();
                 thumbDragTotalDist = 0;
                 thumbTargetPos = thumbScrollPos;
+
+                touchedThumbItem = e.target.closest(".mobile-thumb-item") || document.elementFromPoint(e.clientX, e.clientY)?.closest(".mobile-thumb-item");
+                touchedThumbWasActive = Boolean(
+                    touchedThumbItem && touchedThumbItem.classList.contains("is-active")
+                );
+
                 mobileThumbEl.setPointerCapture?.(e.pointerId);
             }, { signal });
 
@@ -1449,18 +1458,29 @@
             const endThumbTouch = (e) => {
                 if (!isThumbTouching) return;
                 isThumbTouching = false;
+                try {
+                    if (mobileThumbEl.hasPointerCapture?.(e.pointerId)) {
+                        mobileThumbEl.releasePointerCapture(e.pointerId);
+                    }
+                } catch (_) { }
 
-                if (thumbDragTotalDist < 6) {
-                    const tappedItem = document.elementFromPoint(e.clientX, e.clientY)?.closest(".mobile-thumb-item");
+                const wasActive = touchedThumbWasActive;
+                const touchedItem = touchedThumbItem;
+                touchedThumbWasActive = false;
+                touchedThumbItem = null;
+
+                if (e.type !== "pointercancel" && thumbDragTotalDist < 6) {
+                    const tappedItem = document.elementFromPoint(e.clientX, e.clientY)?.closest(".mobile-thumb-item") || touchedItem;
                     if (tappedItem && tappedItem.dataset.cloneIdx !== undefined) {
                         const tappedIdx = parseInt(tappedItem.dataset.cloneIdx, 10);
-                        const tappedProjIdx = parseInt(tappedItem.dataset.projectIdx || "-1", 10);
 
-                        if (tappedItem.classList.contains("is-active") || tappedProjIdx === activeMobileProjectIdx) {
+                        // ONLY navigate if this thumbnail was ALREADY active when the tap started
+                        if (wasActive && (tappedItem === touchedItem || tappedItem.classList.contains("is-active"))) {
                             navigateToProject(activeMobileProjectIdx);
                             return;
                         }
 
+                        // Inactive item tapped: activate and center it. NEVER navigate to project page!
                         isThumbCoasting = false;
                         thumbVelocity = 0;
                         setActiveThumbByIdx(tappedIdx, true);
@@ -1485,11 +1505,7 @@
             mobileThumbEl.addEventListener("pointercancel", endThumbTouch, { signal });
 
             mobileThumbEl.addEventListener("click", (e) => {
-                if (!isMobileLayout()) return;
-                const tappedItem = e.target.closest(".mobile-thumb-item");
-                if (tappedItem && (tappedItem.classList.contains("is-active") || parseInt(tappedItem.dataset.projectIdx || "-1", 10) === activeMobileProjectIdx)) {
-                    navigateToProject(activeMobileProjectIdx);
-                }
+                e.preventDefault();
             }, { signal });
         }
 
