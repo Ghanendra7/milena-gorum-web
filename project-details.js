@@ -388,9 +388,7 @@
             });
 
             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                if (drawerTimeline && drawerTimeline.isOpen()) {
-                    thumbSwiperInstance.slideTo(activeIndex, 300);
-                }
+                thumbSwiperInstance.slideTo(activeIndex, 300);
             }
         };
 
@@ -795,22 +793,6 @@
                 let isOpen = false;
                 let activeCloseTween = null;
 
-                const resetThumbSwiperToStart = () => {
-                    if (!thumbSwiperInstance || thumbSwiperInstance.destroyed) return;
-                    try {
-                        if (thumbSwiperInstance.animating) {
-                            thumbSwiperInstance.animating = false;
-                        }
-                        thumbSwiperInstance.setTranslate(0);
-                        thumbSwiperInstance.slideTo(0, 0);
-                        if (thumbSwiperInstance.wrapperEl) {
-                            thumbSwiperInstance.wrapperEl.style.transform = "translate3d(0px, 0px, 0px)";
-                            thumbSwiperInstance.wrapperEl.style.transitionDuration = "0ms";
-                        }
-                        if (thumbEl) thumbEl.scrollLeft = 0;
-                    } catch (_) { }
-                };
-
                 const openDrawer = () => {
                     if (activeCloseTween) {
                         activeCloseTween.kill();
@@ -819,9 +801,6 @@
                     isOpen = true;
                     trigger.setAttribute("aria-expanded", "true");
 
-                    // Always ensure thumb gallery starts from first media (slide 0)
-                    resetThumbSwiperToStart();
-
                     // 1. Drawer height expansion (power2.inOut, 1.1s)
                     gsap.to(drawer, {
                         height: targetHeight,
@@ -829,7 +808,6 @@
                         ease: "power2.inOut",
                         overwrite: "auto",
                         onStart: () => {
-                            resetThumbSwiperToStart();
                             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
                                 thumbSwiperInstance.update();
                             }
@@ -912,7 +890,6 @@
                             gsap.set(drawer, { height: 0, overflow: "hidden" });
                             if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
                             if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 0 });
-                            resetThumbSwiperToStart();
                             activeCloseTween = null;
                         }
                     });
@@ -957,7 +934,6 @@
                     if (icon) gsap.set(icon, { rotation: 0 });
                     if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 1 });
                     if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 1 });
-                    resetThumbSwiperToStart();
                 };
             });
         }
