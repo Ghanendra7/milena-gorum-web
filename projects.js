@@ -592,6 +592,9 @@
                 filteredTemplates.forEach((tpl, tplIdx) => {
                     const clone = tpl.cloneNode(true);
                     if (s > 0) clone.setAttribute("aria-hidden", "true");
+                    if (((s === 1 && isDesktopInfinite) || (!isDesktopInfinite && s === 0)) && tplIdx === 0) {
+                        clone.classList.add("is-initial-first");
+                    }
                     const isVisibleInitial = (s === 1 || (!isDesktopInfinite && s === 0)) && tplIdx < 4;
                     if (s === 1 || (!isDesktopInfinite && s === 0)) {
                         clone.setAttribute("data-initial-visible", "true");
@@ -621,6 +624,9 @@
             rawTargetPos = initPos;
             if (restored !== null) {
                 userHasInteractedDesktop = true;
+                track.classList.remove("is-at-start");
+            } else {
+                track.classList.add("is-at-start");
             }
             if (!isDesktopInfinite) {
                 currentMarqueeSpeed = 0;
@@ -764,6 +770,13 @@
             const dtScale = dt / 16.667;
 
             if (!isMobileLayout()) {
+                if (track.classList.contains("is-at-start")) {
+                    const initPos = getInitialScrollPos();
+                    if (userHasInteractedDesktop || Math.abs(scrollPos - initPos) > 8) {
+                        track.classList.remove("is-at-start");
+                    }
+                }
+
                 if (holdDirection !== 0 && now - holdStartTime >= 180) {
                     isHolding = true;
                     isZoomAnimating = false;

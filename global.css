@@ -446,11 +446,16 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     pointer-events: none;
 }
 
-/* Indent first project header on desktop when filtered to <= 3 projects (bounded layout) */
+/* Indent first project header on desktop at the beginning or in bounded layout */
 @media (min-width: 1025px) {
 
+    .projects-track.is-at-start .project-card.is-initial-first .project-header,
     .projects-track.is-no-loop .project-card:first-child .project-header {
         padding-left: 16px;
+    }
+
+    .project-card.is-initial-first .project-header {
+        transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), padding-left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
     }
 }
 
