@@ -1045,6 +1045,26 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     }
 }
 
+/* Project Details Credits Container & Subtle Ping-Pong Marquee */
+.project-details-container {
+    max-width: 60vw !important;
+    overflow: hidden !important;
+}
+
+.project-details-container.is-overflowing {
+    justify-content: flex-start !important;
+}
+
+.details-text {
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    display: inline-block !important;
+    width: max-content !important;
+    max-width: none !important;
+    will-change: transform;
+}
+
 
 /* ========================================================
    5. INDEX DIRECTORY PAGE STYLES

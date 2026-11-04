@@ -10,6 +10,7 @@
     let thumbSwiperInstance = null;
     let drawerMatchMedia = null;
     let drawerTimeline = null;
+    let detailsMarqueeTimeline = null;
 
     function initProjectDetails(container) {
         const scope = container || document.querySelector(".gallery-section") || document;
@@ -759,6 +760,53 @@
         const trigger = scope.querySelector(".btn-project-details");
         const icon = trigger ? trigger.querySelector(".plus-x") : null;
         const detailsContainer = scope.querySelector(".project-details-container");
+        const detailsText = detailsContainer
+            ? detailsContainer.querySelector(".details-text, [class*='details-text']") || detailsContainer.firstElementChild
+            : null;
+
+        const setupDetailsMarquee = () => {
+            if (!detailsContainer || !detailsText) return;
+
+            if (detailsMarqueeTimeline) {
+                detailsMarqueeTimeline.kill();
+                detailsMarqueeTimeline = null;
+            }
+            gsap.killTweensOf(detailsText);
+            gsap.set(detailsText, { clearProps: "transform,x" });
+            detailsContainer.classList.remove("is-overflowing");
+
+            const containerWidth = detailsContainer.clientWidth;
+            const textWidth = Math.ceil(detailsText.scrollWidth || detailsText.getBoundingClientRect().width);
+            const overflowDistance = textWidth - containerWidth;
+
+            if (overflowDistance > 4) {
+                detailsContainer.classList.add("is-overflowing");
+
+                // Subtle reading speed: ~25px per second, min 3.5s
+                const duration = Math.max(3.5, overflowDistance / 25);
+                const isDrawerOpen = drawerTimeline ? drawerTimeline.isOpen() : false;
+
+                detailsMarqueeTimeline = gsap.timeline({
+                    repeat: -1,
+                    paused: !isDrawerOpen
+                });
+
+                detailsMarqueeTimeline
+                    .to(detailsText, {
+                        x: -overflowDistance,
+                        duration: duration,
+                        ease: "sine.inOut"
+                    }, "+=2.0")
+                    .to(detailsText, {
+                        x: 0,
+                        duration: duration,
+                        ease: "sine.inOut"
+                    }, "+=2.0");
+            } else {
+                detailsContainer.classList.remove("is-overflowing");
+                gsap.set(detailsText, { x: 0 });
+            }
+        };
 
         if (trigger && drawer && typeof gsap !== "undefined") {
             // Webflow DOM Safety: If trigger was nested inside .bottom-stage in Webflow navigator,
@@ -863,11 +911,27 @@
                             gsap.set(thumbSlides, { autoAlpha: 1 });
                         }
                     }
+
+                    // 5. Subtle ping-pong marquee for overflowing details text
+                    if (detailsMarqueeTimeline) {
+                        detailsMarqueeTimeline.restart();
+                    } else {
+                        setupDetailsMarquee();
+                        if (detailsMarqueeTimeline) detailsMarqueeTimeline.restart();
+                    }
                 };
 
                 const closeDrawer = () => {
                     isOpen = false;
                     trigger.setAttribute("aria-expanded", "false");
+
+                    // Pause and reset marquee when drawer closes
+                    if (detailsMarqueeTimeline) {
+                        detailsMarqueeTimeline.pause(0);
+                    }
+                    if (detailsText) {
+                        gsap.set(detailsText, { x: 0 });
+                    }
 
                     // Keep thumbnails and credits visible as drawer slides down (no fade-out effect)
                     // 1. Plus icon rotates back quickly
@@ -929,14 +993,46 @@
                 return () => {
                     trigger.removeEventListener("click", handleToggle);
                     if (activeCloseTween) activeCloseTween.kill();
-                    gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
+                    if (detailsMarqueeTimeline) {
+                        detailsMarqueeTimeline.kill();
+                        detailsMarqueeTimeline = null;
+                    }
+                    gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides, detailsText]);
                     gsap.set(drawer, { height: 0 });
                     if (icon) gsap.set(icon, { rotation: 0 });
                     if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 1 });
                     if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 1 });
+                    if (detailsText) gsap.set(detailsText, { clearProps: "transform,x" });
                 };
             });
         }
+
+        if (detailsContainer) {
+            detailsContainer.addEventListener("mouseenter", () => {
+                if (detailsMarqueeTimeline) detailsMarqueeTimeline.pause();
+            }, { signal });
+            detailsContainer.addEventListener("mouseleave", () => {
+                if (detailsMarqueeTimeline && drawerTimeline && drawerTimeline.isOpen()) {
+                    detailsMarqueeTimeline.play();
+                }
+            }, { signal });
+        }
+
+        let resizeMarqueeTimer = null;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeMarqueeTimer);
+            resizeMarqueeTimer = setTimeout(() => {
+                setupDetailsMarquee();
+            }, 150);
+        }, { signal });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                setupDetailsMarquee();
+            }).catch(() => { });
+        }
+
+        setupDetailsMarquee();
 
         window.addEventListener("keydown", (e) => {
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
@@ -961,6 +1057,10 @@
     }
 
     function destroyProjectDetails() {
+        if (detailsMarqueeTimeline) {
+            detailsMarqueeTimeline.kill();
+            detailsMarqueeTimeline = null;
+        }
         if (drawerMatchMedia) {
             try { drawerMatchMedia.revert(); } catch (e) { }
             drawerMatchMedia = null;
