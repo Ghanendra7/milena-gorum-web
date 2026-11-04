@@ -1138,13 +1138,13 @@
 
             if (mobileMainSwiper) {
                 try {
-                    mobileMainSwiper.destroy(true, true);
+                    mobileMainSwiper.destroy(true, false);
                 } catch (_) { }
                 mobileMainSwiper = null;
             }
             if (mobileMainEl.swiper) {
                 try {
-                    mobileMainEl.swiper.destroy(true, true);
+                    mobileMainEl.swiper.destroy(true, false);
                 } catch (_) { }
             }
 
@@ -1751,14 +1751,14 @@
     function destroyProjects() {
         if (mobileMainSwiper) {
             try {
-                mobileMainSwiper.destroy(true, true);
+                mobileMainSwiper.destroy(true, false);
             } catch (_) { }
             mobileMainSwiper = null;
         }
         const oldMainEl = projectsScope?.querySelector(".mobile-main-swiper") || document.querySelector(".mobile-main-swiper");
         if (oldMainEl && oldMainEl.swiper) {
             try {
-                oldMainEl.swiper.destroy(true, true);
+                oldMainEl.swiper.destroy(true, false);
             } catch (_) { }
         }
         if (projectsScope) {
