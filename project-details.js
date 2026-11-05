@@ -797,13 +797,13 @@
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=2.0")
+                    }, "+=1.0")
                     .to(detailsText, {
                         x: 0,
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=2.0");
+                    }, "+=1.0");
             } else {
                 detailsContainer.classList.remove("is-overflowing");
                 gsap.set(detailsText, { x: 0 });
