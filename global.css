@@ -951,7 +951,43 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     object-fit: cover !important;
 }
 
-/* Fullscreen Mode: Always play in original aspect ratio (contain) */
+/* Fullscreen Video Mode (Standard HTML5 Fullscreen for Android, Tablets & Desktop) */
+.video-container:fullscreen,
+.video-container:-webkit-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: #000000 !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999999 !important;
+}
+
+.video-container:fullscreen .video-parallax-container,
+.video-container:fullscreen .video-wrapper,
+.video-container:-webkit-full-screen .video-parallax-container,
+.video-container:-webkit-full-screen .video-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+}
+
+.video-container:fullscreen .video-embed,
+.video-container:-webkit-full-screen .video-embed {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
 .video-container:fullscreen .slide-video,
 .video-container:-webkit-full-screen .slide-video,
 .slide-video:fullscreen,
@@ -961,7 +997,33 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     max-height: 100% !important;
     object-fit: contain !important;
     object-position: center center !important;
-    background-color: #000000;
+    background-color: #000000 !important;
+}
+
+.video-container:fullscreen .controls-container,
+.video-container:-webkit-full-screen .controls-container {
+    position: absolute !important;
+    bottom: 20px !important;
+    right: 24px !important;
+    z-index: 10 !important;
+}
+
+.video-container:fullscreen .seek-container,
+.video-container:-webkit-full-screen .seek-container {
+    position: absolute !important;
+    bottom: 16px !important;
+    left: 24px !important;
+    right: auto !important;
+    width: calc(100% - 240px) !important;
+    z-index: 10 !important;
+}
+
+.controls-container,
+.btn-fullscreen,
+.btn-play,
+.btn-sound {
+    touch-action: manipulation;
+    cursor: pointer;
 }
 
 /* Project Details: Mobile (<= 767px) */

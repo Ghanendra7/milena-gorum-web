@@ -502,11 +502,11 @@
             let lastTapTime = 0;
 
             const isFullscreenActive = () => {
-                return Boolean(
-                    document.fullscreenElement ||
+                const fsEl = document.fullscreenElement ||
                     document.webkitFullscreenElement ||
-                    video.webkitDisplayingFullscreen
-                );
+                    document.mozFullScreenElement ||
+                    document.msFullscreenElement;
+                return Boolean(fsEl || video.webkitDisplayingFullscreen);
             };
 
             const updateFullscreenButton = () => {
@@ -558,30 +558,44 @@
             };
 
             const toggleFullscreen = () => {
+                ensureVideoReady(video);
                 const isFs = isFullscreenActive();
 
                 if (isFs) {
-                    if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                    else if (video.webkitExitFullscreen) video.webkitExitFullscreen();
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => { });
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    } else if (video.webkitExitFullscreen) {
+                        video.webkitExitFullscreen();
+                    }
                     return;
                 }
 
-                const isMobile = window.matchMedia("(max-width: 767px)").matches;
-                if (isMobile && video.webkitEnterFullscreen) {
-                    ensureVideoReady(video);
-                    try { video.webkitEnterFullscreen(); return; } catch (_) { }
-                }
+                // Target video-container for standard HTML5 fullscreen (Android, desktop, tablets)
+                const container = video.closest(".video-container") || wrapper || video;
 
-                const target = isMobile ? video : wrapper || video;
-                if (target.requestFullscreen) {
-                    target.requestFullscreen().catch(() => {
-                        if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+                if (container.requestFullscreen) {
+                    container.requestFullscreen().catch(() => {
+                        if (video.requestFullscreen) {
+                            video.requestFullscreen().catch(() => {
+                                if (video.webkitEnterFullscreen) {
+                                    try { video.webkitEnterFullscreen(); } catch (_) { }
+                                }
+                            });
+                        } else if (video.webkitEnterFullscreen) {
+                            try { video.webkitEnterFullscreen(); } catch (_) { }
+                        }
                     });
-                } else if (target.webkitRequestFullscreen) {
-                    target.webkitRequestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
                 } else if (video.webkitEnterFullscreen) {
-                    video.webkitEnterFullscreen();
+                    // Native player fallback for iOS Safari (iPhone)
+                    try { video.webkitEnterFullscreen(); } catch (_) { }
                 }
             };
 
@@ -612,6 +626,8 @@
 
             document.addEventListener("fullscreenchange", updateFullscreenButton, { signal });
             document.addEventListener("webkitfullscreenchange", updateFullscreenButton, { signal });
+            document.addEventListener("mozfullscreenchange", updateFullscreenButton, { signal });
+            document.addEventListener("MSFullscreenChange", updateFullscreenButton, { signal });
             video.addEventListener("webkitbeginfullscreen", updateFullscreenButton, { signal });
             video.addEventListener("webkitendfullscreen", updateFullscreenButton, { signal });
 
@@ -620,41 +636,44 @@
             updateSoundButton();
             updateFullscreenButton();
 
-            // Button Click / Tap Listeners with synthetic click debouncing
+            // Button Click Listeners (standard click with debounce lock to prevent mobile double-triggers)
             if (playBtn) {
+                let playLock = false;
                 const handlePlayClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (performance.now() - lastTapTime < 400) return;
-                    lastTapTime = performance.now();
+                    if (playLock) return;
+                    playLock = true;
+                    setTimeout(() => { playLock = false; }, 300);
                     togglePlay();
                 };
                 playBtn.addEventListener("click", handlePlayClick, { signal });
-                playBtn.addEventListener("touchend", handlePlayClick, { signal });
             }
 
             if (soundBtn) {
+                let soundLock = false;
                 const handleSoundClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (performance.now() - lastTapTime < 400) return;
-                    lastTapTime = performance.now();
+                    if (soundLock) return;
+                    soundLock = true;
+                    setTimeout(() => { soundLock = false; }, 300);
                     toggleSound();
                 };
                 soundBtn.addEventListener("click", handleSoundClick, { signal });
-                soundBtn.addEventListener("touchend", handleSoundClick, { signal });
             }
 
             if (fullscreenBtn) {
+                let fsLock = false;
                 const handleFsClick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (performance.now() - lastTapTime < 400) return;
-                    lastTapTime = performance.now();
+                    if (fsLock) return;
+                    fsLock = true;
+                    setTimeout(() => { fsLock = false; }, 800);
                     toggleFullscreen();
                 };
                 fullscreenBtn.addEventListener("click", handleFsClick, { signal });
-                fullscreenBtn.addEventListener("touchend", handleFsClick, { signal });
             }
 
             // Seek Bar Drag and Touch Scrub
