@@ -135,7 +135,8 @@ canvas,
     -moz-user-drag: none !important;
     -o-user-drag: none !important;
     user-drag: none !important;
-    -webkit-touch-callout: none !important; /* Disables iOS Safari long-press menu ("Save to Photos", "Copy", "Share") */
+    -webkit-touch-callout: none !important;
+    /* Disables iOS Safari long-press menu ("Save to Photos", "Copy", "Share") */
     -webkit-user-select: none !important;
     -moz-user-select: none !important;
     -ms-user-select: none !important;
@@ -146,7 +147,8 @@ img,
 .home-slide-video,
 .project-preview-video,
 .mobile-main-video {
-    pointer-events: none; /* Prevents ghost dragging; clicks & right-clicks pass through to parent cards/links */
+    pointer-events: none;
+    /* Prevents ghost dragging; clicks & right-clicks pass through to parent cards/links */
 }
 
 video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video) {
@@ -1200,10 +1202,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .project-details-container {
     max-width: 60vw !important;
     overflow: hidden !important;
-    padding-top: 4px !important;
-    margin-top: -4px !important;
-    padding-bottom: 8px !important;
-    margin-bottom: -8px !important;
+
 }
 
 .project-details-container.is-overflowing {
