@@ -980,12 +980,9 @@
                         ease: "power2.inOut",
                         overwrite: "auto",
                         onStart: () => {
-                            setTimeout(() => {
-                                if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                                    thumbSwiperInstance.update();
-                                    scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
-                                }
-                            }, 80);
+                            if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                                thumbSwiperInstance.update();
+                            }
                         },
                         onComplete: () => {
                             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
@@ -1019,8 +1016,9 @@
                         );
                     }
 
-                    // 4. Thumbnail strip slides: staggered fade-in on desktop (>1024px), smooth fade-in on tablet & mobile (<=1024px)
+                    // 4. Thumbnail strip slides: staggered fade-in on desktop (>1024px), instant reveal on tablet & mobile (<=1024px)
                     if (thumbSlides.length) {
+                        scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
                         if (isDesktop) {
                             gsap.fromTo(thumbSlides,
                                 { autoAlpha: 0 },
@@ -1036,16 +1034,7 @@
                                 }
                             );
                         } else {
-                            gsap.fromTo(thumbSlides,
-                                { autoAlpha: 0 },
-                                {
-                                    autoAlpha: 1,
-                                    duration: 0.35,
-                                    delay: 0.2,
-                                    ease: "power2.out",
-                                    overwrite: "auto"
-                                }
-                            );
+                            gsap.set(thumbSlides, { autoAlpha: 1 });
                         }
                     }
 
