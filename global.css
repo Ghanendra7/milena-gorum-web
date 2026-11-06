@@ -1200,6 +1200,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .project-details-container {
     max-width: 60vw !important;
     overflow: hidden !important;
+    padding-top: 4px !important;
+    margin-top: -4px !important;
+    padding-bottom: 8px !important;
+    margin-bottom: -8px !important;
 }
 
 .project-details-container.is-overflowing {
@@ -1214,6 +1218,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: max-content !important;
     max-width: none !important;
     will-change: transform;
+    line-height: normal !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
 }
 
 

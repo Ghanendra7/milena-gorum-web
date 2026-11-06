@@ -1069,12 +1069,9 @@
                     isOpen = false;
                     trigger.setAttribute("aria-expanded", "false");
 
-                    // Pause and reset marquee when drawer closes
+                    // Pause marquee in place while drawer is closing (do NOT snap to x:0 on screen)
                     if (detailsMarqueeTimeline) {
-                        detailsMarqueeTimeline.pause(0);
-                    }
-                    if (detailsText) {
-                        gsap.set(detailsText, { x: 0 });
+                        detailsMarqueeTimeline.pause();
                     }
 
                     // Kill any active opening tweens
@@ -1099,6 +1096,13 @@
                         onComplete: () => {
                             gsap.set(drawer, { height: 0, overflow: "hidden" });
                             if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
+                            // Silently reset marquee to original position now that bottom stage is closed and hidden
+                            if (detailsMarqueeTimeline) {
+                                detailsMarqueeTimeline.pause(0);
+                            }
+                            if (detailsText) {
+                                gsap.set(detailsText, { x: 0 });
+                            }
                             activeCloseTween = null;
                         }
                     });
