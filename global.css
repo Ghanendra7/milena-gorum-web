@@ -1566,7 +1566,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 .info-link-list a {
-    color: inherit;
+    color: #000000;
     text-decoration: none;
     transition: color 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -1574,6 +1574,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 /* When any link is hovered: dim plain text items and sibling links to var(--grey) */
 .info-link-list:has(a:hover) {
     color: var(--grey, #ababab);
+}
+
+/* When the link is the only item in the list, keep parent solid black (prevents single-link hover flicker) */
+.info-link-list:has(a:only-child:hover) {
+    color: #000000;
 }
 
 .info-link-list:has(a:hover) a:not(:hover) {
