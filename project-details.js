@@ -979,7 +979,7 @@
                 isTabletOrMobile: "(max-width: 1024px)"
             }, (context) => {
                 const { isDesktop } = context.conditions;
-                const targetHeight = window.innerWidth >= 768 ? 220 : 180;
+                const targetHeight = window.innerWidth >= 768 ? 200 : 180;
 
                 let isOpen = false;
                 let activeCloseTween = null;
