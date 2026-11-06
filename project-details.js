@@ -407,8 +407,8 @@
                 watchSlidesProgress: true,
                 grabCursor: true,
                 a11y: { enabled: true },
-                observer: false,
-                observeParents: false
+                observer: true,
+                observeParents: true
             });
 
             mainSwiperInstance = new Swiper(mainEl, {
@@ -430,6 +430,50 @@
             applySlideFills();
         }
 
+        const scrollThumbToActive = (index, speed = 300) => {
+            if (!thumbSwiperInstance || thumbSwiperInstance.destroyed || !thumbEl) return;
+            if (!thumbSlides || !thumbSlides.length) return;
+
+            const targetIndex = Math.max(0, Math.min(index, thumbSlides.length - 1));
+            const targetSlide = thumbSlides[targetIndex];
+            if (!targetSlide) return;
+
+            // If slide width is not yet measured (e.g. drawer is closed/hidden), wait until opened
+            if (targetSlide.offsetWidth === 0) return;
+
+            const wrapper = thumbEl.querySelector(".swiper-wrapper");
+            if (!wrapper) return;
+
+            const lastSlide = thumbSlides[thumbSlides.length - 1];
+            const totalContentWidth = lastSlide ? (lastSlide.offsetLeft + lastSlide.offsetWidth) : wrapper.scrollWidth;
+
+            const computed = window.getComputedStyle(thumbEl);
+            const paddingLeft = parseFloat(computed.paddingLeft) || 16;
+            const paddingRight = parseFloat(computed.paddingRight) || 16;
+            const containerWidth = thumbEl.clientWidth || window.innerWidth;
+            const innerWidth = containerWidth - paddingLeft - paddingRight;
+
+            if (totalContentWidth <= innerWidth) {
+                thumbSwiperInstance.setTransition(speed);
+                thumbSwiperInstance.setTranslate(0);
+                thumbSwiperInstance.updateProgress();
+                return;
+            }
+
+            const minTranslate = -(totalContentWidth - innerWidth);
+            const maxTranslate = 0;
+
+            const slideCenterInWrapper = targetSlide.offsetLeft + (targetSlide.offsetWidth / 2);
+            const containerCenter = containerWidth / 2;
+            const targetTranslate = containerCenter - paddingLeft - slideCenterInWrapper;
+
+            const clampedTranslate = Math.min(maxTranslate, Math.max(minTranslate, targetTranslate));
+
+            thumbSwiperInstance.setTransition(speed);
+            thumbSwiperInstance.setTranslate(clampedTranslate);
+            thumbSwiperInstance.updateProgress();
+        };
+
         const syncActiveSequence = (activeIndex) => {
             topSeqButtons.forEach((btn, idx) => {
                 const isCurrent = idx === activeIndex;
@@ -449,9 +493,7 @@
                 if (label) label.classList.toggle("is-active", isCurrent);
             });
 
-            if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                thumbSwiperInstance.slideTo(activeIndex, 300);
-            }
+            scrollThumbToActive(activeIndex, 300);
         };
 
         const handleSlideMedia = () => {
@@ -945,6 +987,7 @@
                         onComplete: () => {
                             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
                                 thumbSwiperInstance.update();
+                                scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
                             }
                         }
                     });
@@ -975,6 +1018,7 @@
 
                     // 4. Thumbnail strip slides: staggered fade-in on desktop (>1024px), instant reveal on tablet & mobile (<=1024px)
                     if (thumbSlides.length) {
+                        scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
                         if (isDesktop) {
                             gsap.fromTo(thumbSlides,
                                 { autoAlpha: 0 },
@@ -1106,6 +1150,10 @@
                 if (mainSwiperInstance && !mainSwiperInstance.destroyed) {
                     mainSwiperInstance.update();
                 }
+                if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                    thumbSwiperInstance.update();
+                    scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
+                }
             }, 150);
         }, { signal });
 
@@ -1114,6 +1162,10 @@
                 applySlideFills();
                 if (mainSwiperInstance && !mainSwiperInstance.destroyed) {
                     mainSwiperInstance.update();
+                }
+                if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                    thumbSwiperInstance.update();
+                    scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
                 }
             }, 100);
         }, { signal });

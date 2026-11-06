@@ -913,8 +913,23 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     -webkit-tap-highlight-color: transparent;
 }
 
+.thumb-swiper {
+    padding-left: var(--padding, 16px) !important;
+    padding-right: var(--padding, 16px) !important;
+    box-sizing: border-box !important;
+}
+
+.thumb-swiper .swiper-wrapper {
+    box-sizing: border-box !important;
+}
+
 .thumb-swiper .swiper-slide {
     margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.thumb-swiper .swiper-slide:last-child {
+    margin-right: 0 !important;
 }
 
 .video-wrapper,
