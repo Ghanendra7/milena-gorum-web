@@ -17,6 +17,7 @@
         const gallerySection = scope.classList?.contains("gallery-section") ? scope : scope.querySelector(".gallery-section");
         const mainEl = scope.querySelector(".main-swiper");
         const thumbEl = scope.querySelector(".thumb-swiper");
+        const drawer = scope.querySelector(".bottom-stage");
         const topSeqContainer = scope.querySelector(".top-sequence-list");
         const backLink = scope.querySelector(".back-link");
 
@@ -438,14 +439,33 @@
             const targetSlide = thumbSlides[targetIndex];
             if (!targetSlide) return;
 
-            // If slide width is not yet measured (e.g. drawer is closed/hidden), wait until opened
-            if (targetSlide.offsetWidth === 0) return;
-
             const wrapper = thumbEl.querySelector(".swiper-wrapper");
             if (!wrapper) return;
 
-            const lastSlide = thumbSlides[thumbSlides.length - 1];
-            const totalContentWidth = lastSlide ? (lastSlide.offsetLeft + lastSlide.offsetWidth) : wrapper.scrollWidth;
+            let targetSlideWidth = targetSlide.offsetWidth;
+            let targetSlideLeft = targetSlide.offsetLeft;
+            let lastSlide = thumbSlides[thumbSlides.length - 1];
+            let totalContentWidth = lastSlide ? (lastSlide.offsetLeft + lastSlide.offsetWidth) : wrapper.scrollWidth;
+
+            // If slide width is not yet measured (e.g. drawer is closed with height: 0),
+            // temporarily measure with drawer's target height synchronously without any visual paint.
+            if ((targetSlideWidth === 0 || totalContentWidth === 0) && drawer) {
+                const prevHeight = drawer.style.height;
+                const prevVisibility = drawer.style.visibility;
+                drawer.style.visibility = "hidden";
+                drawer.style.height = (window.innerWidth >= 768 ? 220 : 180) + "px";
+                if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                    thumbSwiperInstance.update();
+                }
+                targetSlideWidth = targetSlide.offsetWidth;
+                targetSlideLeft = targetSlide.offsetLeft;
+                lastSlide = thumbSlides[thumbSlides.length - 1];
+                totalContentWidth = lastSlide ? (lastSlide.offsetLeft + lastSlide.offsetWidth) : wrapper.scrollWidth;
+                drawer.style.height = prevHeight;
+                drawer.style.visibility = prevVisibility;
+            }
+
+            if (targetSlideWidth === 0) return;
 
             const computed = window.getComputedStyle(thumbEl);
             const paddingLeft = parseFloat(computed.paddingLeft) || 16;
@@ -463,7 +483,7 @@
             const minTranslate = -(totalContentWidth - innerWidth);
             const maxTranslate = 0;
 
-            const slideCenterInWrapper = targetSlide.offsetLeft + (targetSlide.offsetWidth / 2);
+            const slideCenterInWrapper = targetSlideLeft + (targetSlideWidth / 2);
             const containerCenter = containerWidth / 2;
             const targetTranslate = containerCenter - paddingLeft - slideCenterInWrapper;
 
@@ -878,7 +898,6 @@
         // ----------------------------------------------------
         // BOTTOM STAGE DRAWER INTERACTION (.bottom-stage)
         // ----------------------------------------------------
-        const drawer = scope.querySelector(".bottom-stage");
         const trigger = scope.querySelector(".btn-project-details");
         const icon = trigger ? trigger.querySelector(".plus-x") : null;
         const detailsContainer = scope.querySelector(".project-details-container");
@@ -950,7 +969,7 @@
 
             gsap.set(drawer, { height: 0, overflow: "hidden" });
             if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
-            if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 0 });
+            if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 1 });
 
             const mm = gsap.matchMedia();
             drawerMatchMedia = mm;
@@ -976,6 +995,11 @@
                     // Kill any active tweens on drawer and its children for rock-solid stability
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
 
+                    // Position thumbnail strip BEFORE starting drawer expansion so active thumb is already centered
+                    if (thumbSlides.length) {
+                        scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
+                    }
+
                     // 1. Drawer height expansion (power2.inOut, 0.85s)
                     gsap.to(drawer, {
                         height: targetHeight,
@@ -985,7 +1009,6 @@
                         onComplete: () => {
                             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
                                 thumbSwiperInstance.update();
-                                scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
                             }
                         }
                     });
@@ -1014,14 +1037,8 @@
                         );
                     }
 
-                    // 4. Thumbnail strip slides: smooth fade-in after drawer has opened enough
+                    // 4. Thumbnail strip slides: keep visible without jarring fade/wobble
                     if (thumbSlides.length) {
-                        // Position silently while invisible
-                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                            thumbSwiperInstance.update();
-                        }
-                        scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
-
                         if (isDesktop) {
                             gsap.fromTo(thumbSlides,
                                 { autoAlpha: 0 },
@@ -1037,16 +1054,7 @@
                                 }
                             );
                         } else {
-                            gsap.fromTo(thumbSlides,
-                                { autoAlpha: 0 },
-                                {
-                                    autoAlpha: 1,
-                                    duration: 0.35,
-                                    delay: 0.2,
-                                    ease: "power2.out",
-                                    overwrite: "auto"
-                                }
-                            );
+                            gsap.set(thumbSlides, { autoAlpha: 1 });
                         }
                     }
 
@@ -1082,25 +1090,7 @@
                         });
                     }
 
-                    // 2. Smoothly fade out thumbnails and credits before drawer collapses to prevent any wobbling or shifting
-                    if (thumbSlides.length) {
-                        gsap.to(thumbSlides, {
-                            autoAlpha: 0,
-                            duration: 0.2,
-                            ease: "power2.out",
-                            overwrite: "auto"
-                        });
-                    }
-                    if (detailsContainer) {
-                        gsap.to(detailsContainer, {
-                            autoAlpha: 0,
-                            duration: 0.2,
-                            ease: "power2.out",
-                            overwrite: "auto"
-                        });
-                    }
-
-                    // 3. Drawer smoothly collapses down with power2.inOut
+                    // 2. Drawer smoothly collapses down with power2.inOut (NO FADE on thumbnails or credits!)
                     activeCloseTween = gsap.to(drawer, {
                         height: 0,
                         duration: 0.65,
@@ -1109,7 +1099,6 @@
                         onComplete: () => {
                             gsap.set(drawer, { height: 0, overflow: "hidden" });
                             if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 0 });
-                            if (thumbSlides.length) gsap.set(thumbSlides, { autoAlpha: 0 });
                             activeCloseTween = null;
                         }
                     });

@@ -932,6 +932,17 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     margin-right: 0 !important;
 }
 
+.thumb-img-wrap {
+    height: 110px !important;
+    flex-shrink: 0 !important;
+}
+
+@media screen and (max-width: 767px) {
+    .thumb-img-wrap {
+        height: 94px !important;
+    }
+}
+
 .video-wrapper,
 .slide-video,
 .btn-play,
@@ -1174,9 +1185,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 /* Bottom Stage Drawer Styles */
 .bottom-stage {
     height: 0;
-    overflow: hidden;
+    overflow: hidden !important;
     position: relative;
-    contain: layout paint;
+    contain: paint;
 }
 
 @media screen and (max-width: 767px) {
