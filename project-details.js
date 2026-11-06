@@ -407,8 +407,8 @@
                 watchSlidesProgress: true,
                 grabCursor: true,
                 a11y: { enabled: true },
-                observer: true,
-                observeParents: true
+                observer: false,
+                observeParents: false
             });
 
             mainSwiperInstance = new Swiper(mainEl, {
@@ -973,17 +973,15 @@
                     isOpen = true;
                     trigger.setAttribute("aria-expanded", "true");
 
-                    // 1. Drawer height expansion (power2.inOut, 1.1s)
+                    // Kill any active tweens on drawer and its children for rock-solid stability
+                    gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
+
+                    // 1. Drawer height expansion (power2.inOut, 0.85s)
                     gsap.to(drawer, {
                         height: targetHeight,
-                        duration: 1.1,
+                        duration: 0.85,
                         ease: "power2.inOut",
                         overwrite: "auto",
-                        onStart: () => {
-                            if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
-                                thumbSwiperInstance.update();
-                            }
-                        },
                         onComplete: () => {
                             if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
                                 thumbSwiperInstance.update();
@@ -992,11 +990,11 @@
                         }
                     });
 
-                    // 2. Plus icon rotation to 'x' (faster rotation)
+                    // 2. Plus icon rotation to 'x'
                     if (icon) {
                         gsap.to(icon, {
                             rotation: 45,
-                            duration: 0.5,
+                            duration: 0.45,
                             ease: "power2.out",
                             overwrite: "auto"
                         });
@@ -1008,25 +1006,30 @@
                             { autoAlpha: 0 },
                             {
                                 autoAlpha: 1,
-                                duration: 0.3,
-                                delay: 0.4,
+                                duration: 0.35,
+                                delay: 0.25,
                                 ease: "power1.inOut",
                                 overwrite: "auto"
                             }
                         );
                     }
 
-                    // 4. Thumbnail strip slides: staggered fade-in on desktop (>1024px), instant reveal on tablet & mobile (<=1024px)
+                    // 4. Thumbnail strip slides: smooth fade-in after drawer has opened enough
                     if (thumbSlides.length) {
+                        // Position silently while invisible
+                        if (thumbSwiperInstance && !thumbSwiperInstance.destroyed) {
+                            thumbSwiperInstance.update();
+                        }
                         scrollThumbToActive(mainSwiperInstance ? mainSwiperInstance.realIndex : 0, 0);
+
                         if (isDesktop) {
                             gsap.fromTo(thumbSlides,
                                 { autoAlpha: 0 },
                                 {
                                     autoAlpha: 1,
-                                    duration: 0.6,
-                                    stagger: 0.15,
-                                    delay: 0.3,
+                                    duration: 0.5,
+                                    stagger: 0.08,
+                                    delay: 0.2,
                                     ease: typeof CustomEase !== "undefined"
                                         ? CustomEase.create("thumbCurve", "M0,0 C0.532,0 0.818,1 1,1 ")
                                         : "power2.out",
@@ -1034,7 +1037,16 @@
                                 }
                             );
                         } else {
-                            gsap.set(thumbSlides, { autoAlpha: 1 });
+                            gsap.fromTo(thumbSlides,
+                                { autoAlpha: 0 },
+                                {
+                                    autoAlpha: 1,
+                                    duration: 0.35,
+                                    delay: 0.2,
+                                    ease: "power2.out",
+                                    overwrite: "auto"
+                                }
+                            );
                         }
                     }
 
@@ -1057,21 +1069,41 @@
                         gsap.set(detailsText, { x: 0 });
                     }
 
-                    // Keep thumbnails and credits visible as drawer slides down (no fade-out effect)
+                    // Kill any active opening tweens
+                    gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
+
                     // 1. Plus icon rotates back quickly
                     if (icon) {
                         gsap.to(icon, {
                             rotation: 0,
-                            duration: 0.5,
+                            duration: 0.45,
                             ease: "power2.out",
                             overwrite: "auto"
                         });
                     }
 
-                    // 2. Drawer smoothly collapses down with power2.inOut
+                    // 2. Smoothly fade out thumbnails and credits before drawer collapses to prevent any wobbling or shifting
+                    if (thumbSlides.length) {
+                        gsap.to(thumbSlides, {
+                            autoAlpha: 0,
+                            duration: 0.2,
+                            ease: "power2.out",
+                            overwrite: "auto"
+                        });
+                    }
+                    if (detailsContainer) {
+                        gsap.to(detailsContainer, {
+                            autoAlpha: 0,
+                            duration: 0.2,
+                            ease: "power2.out",
+                            overwrite: "auto"
+                        });
+                    }
+
+                    // 3. Drawer smoothly collapses down with power2.inOut
                     activeCloseTween = gsap.to(drawer, {
                         height: 0,
-                        duration: 0.9,
+                        duration: 0.65,
                         ease: "power2.inOut",
                         overwrite: "auto",
                         onComplete: () => {

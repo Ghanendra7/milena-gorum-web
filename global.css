@@ -1175,6 +1175,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .bottom-stage {
     height: 0;
     overflow: hidden;
+    position: relative;
+    contain: layout paint;
 }
 
 @media screen and (max-width: 767px) {
