@@ -263,23 +263,81 @@
             return !isNaN(cleaned) ? `${cleaned}%` : "50%";
         };
 
+        const checkFlagVisible = (el) => {
+            return !!(el && !el.classList.contains("w-condition-invisible"));
+        };
+
+        const getSlideFillConfig = (slide) => {
+            // Mobile toggle flag:
+            const mobileFlag = slide.querySelector(
+                ".fill-screen-mobile-flag, .fill-screen-mobile, .fill-mobile-flag, .fill-mobile, .fill-screen-flag.is-mobile, .fill-screen-flag.mobile"
+            );
+
+            // Desktop toggle flag:
+            const desktopFlag = slide.querySelector(
+                ".fill-screen-desktop-flag, .fill-screen-desktop, .fill-desktop-flag, .fill-desktop, .fill-screen-flag.is-desktop, .fill-screen-flag.desktop"
+            );
+            // Fallback: generic flag if user kept existing .fill-screen-flag for desktop
+            const genericFlag = slide.querySelector(
+                ".fill-screen-flag:not(.is-mobile):not(.mobile):not(.fill-screen-mobile-flag):not(.fill-screen-mobile)"
+            );
+
+            let desktopOn = false;
+            let mobileOn = false;
+
+            if (desktopFlag) {
+                desktopOn = checkFlagVisible(desktopFlag);
+            } else if (genericFlag) {
+                desktopOn = checkFlagVisible(genericFlag);
+            }
+
+            if (mobileFlag) {
+                mobileOn = checkFlagVisible(mobileFlag);
+            } else if (!desktopFlag && genericFlag) {
+                // Backwards compatibility: If only the single old .fill-screen-flag exists,
+                // apply it to both desktop and mobile until the mobile flag is configured in Webflow
+                mobileOn = checkFlagVisible(genericFlag);
+            }
+
+            // Also check data attributes if bound in Webflow
+            const dataDesktop = slide.getAttribute("data-fill-desktop");
+            const dataMobile = slide.getAttribute("data-fill-mobile");
+            if (dataDesktop !== null) desktopOn = dataDesktop === "true" || dataDesktop === "1";
+            if (dataMobile !== null) mobileOn = dataMobile === "true" || dataMobile === "1";
+
+            return { desktop: desktopOn, mobile: mobileOn };
+        };
+
+        const applySlideFills = () => {
+            const isMobile = window.innerWidth <= 1024;
+            const allSlides = mainEl.querySelectorAll(".swiper-slide");
+
+            allSlides.forEach((slide) => {
+                const desktopOn = slide.getAttribute("data-fill-desktop") === "true";
+                const mobileOn = slide.getAttribute("data-fill-mobile") === "true";
+                const isFill = isMobile ? mobileOn : desktopOn;
+
+                slide.classList.toggle("is-fill-slide", isFill);
+
+                slide.querySelectorAll(".image-parallax-container, .image-wrapper, .video-parallax-container, .video-wrapper, .video-embed")
+                    .forEach((el) => el.classList.toggle("is-fill", isFill));
+
+                slide.querySelectorAll(".main-media-img, .slide-video")
+                    .forEach((media) => media.classList.toggle("is-fill", isFill));
+            });
+        };
+
         mainSlides.forEach((slide, index) => {
             slide.setAttribute("aria-label", `Slide ${padTwoDigits(index + 1)} of ${padTwoDigits(totalSlides)}`);
 
             const focusX = parseCoordinate(slide, "data-focus-x");
             const focusY = parseCoordinate(slide, "data-focus-y");
 
-            const fillFlag = slide.querySelector(".fill-screen-flag");
-            const isFill = fillFlag && !fillFlag.classList.contains("w-condition-invisible");
-
-            if (isFill) {
-                slide.classList.add("is-fill-slide");
-                slide.querySelectorAll(".image-parallax-container, .image-wrapper, .video-parallax-container, .video-wrapper, .video-embed")
-                    .forEach((el) => el.classList.add("is-fill"));
-            }
+            const fillConfig = getSlideFillConfig(slide);
+            slide.setAttribute("data-fill-desktop", fillConfig.desktop ? "true" : "false");
+            slide.setAttribute("data-fill-mobile", fillConfig.mobile ? "true" : "false");
 
             slide.querySelectorAll(".main-media-img, .slide-video").forEach((media) => {
-                if (isFill) media.classList.add("is-fill");
                 media.style.setProperty("object-position", `${focusX} ${focusY}`, "important");
             });
 
@@ -291,6 +349,8 @@
                 if (sourceTag) sourceTag.remove();
             }
         });
+
+        applySlideFills();
 
         thumbSlides.forEach((slide, index) => {
             const formattedMediaIndex = padTwoDigits(index + 1);
@@ -367,6 +427,7 @@
                     768: { speed: DESKTOP_SWIPE_SPEED }
                 }
             });
+            applySlideFills();
         }
 
         const syncActiveSequence = (activeIndex) => {
@@ -1027,12 +1088,34 @@
         }
 
 
-        let resizeMarqueeTimer = null;
+        let resizeTimer = null;
+        let lastIsMobile = window.innerWidth <= 1024;
         window.addEventListener("resize", () => {
-            clearTimeout(resizeMarqueeTimer);
-            resizeMarqueeTimer = setTimeout(() => {
+            const currentIsMobile = window.innerWidth <= 1024;
+            if (currentIsMobile !== lastIsMobile) {
+                lastIsMobile = currentIsMobile;
+                applySlideFills();
+                if (mainSwiperInstance && !mainSwiperInstance.destroyed) {
+                    mainSwiperInstance.update();
+                }
+            }
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
                 setupDetailsMarquee();
+                applySlideFills();
+                if (mainSwiperInstance && !mainSwiperInstance.destroyed) {
+                    mainSwiperInstance.update();
+                }
             }, 150);
+        }, { signal });
+
+        window.addEventListener("orientationchange", () => {
+            setTimeout(() => {
+                applySlideFills();
+                if (mainSwiperInstance && !mainSwiperInstance.destroyed) {
+                    mainSwiperInstance.update();
+                }
+            }, 100);
         }, { signal });
 
         if (document.fonts && document.fonts.ready) {

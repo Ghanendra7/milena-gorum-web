@@ -933,6 +933,15 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     pointer-events: auto !important;
 }
 
+/* Flag divs used for Webflow CMS conditional visibility */
+.fill-screen-flag,
+.fill-screen-desktop,
+.fill-screen-desktop-flag,
+.fill-screen-mobile,
+.fill-screen-mobile-flag {
+    display: none !important;
+}
+
 /* Guarantee Fill Screen = ON media covers 100% so Focus Coordinates work */
 .image-parallax-container.is-fill,
 .image-wrapper.is-fill,
@@ -1026,8 +1035,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     cursor: pointer;
 }
 
-/* Project Details: Mobile (<= 767px) */
-@media screen and (max-width: 767px) {
+/* Project Details: Mobile & Tablet (<= 1024px) */
+@media screen and (max-width: 1024px) {
 
     .swiper-slide:not(.is-fill-slide) .video-container,
     .swiper-slide:not(.is-fill-slide) .image-container {
@@ -1040,7 +1049,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
     .swiper-slide:not(.is-fill-slide) .video-parallax-container,
     .swiper-slide:not(.is-fill-slide) .video-wrapper,
-    .swiper-slide:not(.is-fill-slide) .video-embed {
+    .swiper-slide:not(.is-fill-slide) .video-embed,
+    .swiper-slide:not(.is-fill-slide) .image-parallax-container,
+    .swiper-slide:not(.is-fill-slide) .image-wrapper {
         width: 100% !important;
         min-width: 100% !important;
         height: auto !important;
@@ -1050,7 +1061,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         position: relative !important;
     }
 
-    .swiper-slide:not(.is-fill-slide) .slide-video {
+    .swiper-slide:not(.is-fill-slide) .slide-video,
+    .swiper-slide:not(.is-fill-slide) .main-media-img {
         width: 100% !important;
         min-width: 100% !important;
         height: auto !important;

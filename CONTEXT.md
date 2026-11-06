@@ -147,7 +147,8 @@ gallery-section                         [data-project-number bound to CMS Sequen
 ├── main-stage                          [Holds main full-bleed Swiper]
 │     └── main-swiper                   [Collection List Wrapper — Filter: Parent = Current, Sort: Order Asc]
 │           └── swiper-wrapper > swiper-slide
-│                 ├── fill-screen-flag  [Div Block — Conditional: Fill Screen ON]
+│                 ├── fill-screen-desktop-flag [Div Block — Conditional: Fill Screen - Desktop ON]
+│                 ├── fill-screen-mobile-flag  [Div Block — Conditional: Fill Screen - Mobile ON]
 │                 ├── image-container   [Conditional: Video URL/ID Not Set] > main-media-img
 │                 └── video-wrapper     [Conditional: Video ID Is Set]
 │                       ├── video-embed [HTML Embed: <video class="slide-video" data-video-id="...">]
@@ -157,9 +158,13 @@ gallery-section                         [data-project-number bound to CMS Sequen
       ├── thumb-swiper                  [Same Collection List filter — horizontal thumb carousel]
       │     └── swiper-wrapper > swiper-slide [thumb-seq-label, thumb-img with sizes="160px"]
       └── project-footer                [footer-label, footer-credits bound to CMS Project Details]
-CMS Custom Attributes on swiper-slide:
+CMS Custom Attributes & Flags on swiper-slide:
 
 data-focus-x / data-focus-y: Coordinate offsets applied to object-position.
+
+.fill-screen-desktop-flag (or .fill-screen-flag): Div with conditional visibility "Fill Screen - Desktop ON" (for screen width > 1024px).
+
+.fill-screen-mobile-flag (or .fill-screen-mobile): Div with conditional visibility "Fill Screen - Mobile ON" (for screen width <= 1024px).
 
 Special Logic:
 
