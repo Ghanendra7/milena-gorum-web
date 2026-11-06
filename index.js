@@ -243,10 +243,14 @@
         if (!list) return;
 
         const colNums = Array.from(list.querySelectorAll(".index-col-num"));
-        const colClients = Array.from(list.querySelectorAll(".index-col-client"));
-        const colTitles = Array.from(list.querySelectorAll(".index-col-title"));
+        const clientWraps = Array.from(list.querySelectorAll(".index-client-wrap")).length
+            ? Array.from(list.querySelectorAll(".index-client-wrap"))
+            : Array.from(list.querySelectorAll(".index-col-client"));
+        const titleWraps = Array.from(list.querySelectorAll(".index-title-wrap")).length
+            ? Array.from(list.querySelectorAll(".index-title-wrap"))
+            : Array.from(list.querySelectorAll(".index-col-title"));
 
-        if (!colNums.length && !colClients.length && !colTitles.length) return;
+        if (!colNums.length && !clientWraps.length && !titleWraps.length) return;
 
         const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         if (prefersReducedMotion) return;
@@ -263,7 +267,7 @@
             list.classList.add("is-appearing");
             list.style.pointerEvents = "none";
 
-            const allTargets = [...colNums, ...colClients, ...colTitles];
+            const allTargets = [...colNums, ...clientWraps, ...titleWraps];
             gsap.set(allTargets, { opacity: 0, y: 22, force3D: true });
 
             appearTimeline = gsap.timeline({
@@ -296,8 +300,8 @@
 
             appearTimeline
                 .to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.02)
-                .to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.12)
-                .to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.22);
+                .to(clientWraps, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.12)
+                .to(titleWraps, { opacity: 1, y: 0, duration: 0.85, ease: "power2.inOut", force3D: true }, 0.22);
         };
 
         if (typeof gsap !== "undefined") {
@@ -348,7 +352,7 @@
         if (!scope._deferAppear && !window.__mgEnteringFromHome && !isRestoring) {
             playAppearAnimation(list);
         } else if (isRestoring) {
-            const allTargets = list.querySelectorAll(".index-col-num, .index-col-client, .index-col-title");
+            const allTargets = list.querySelectorAll(".index-col-num, .index-client-wrap, .index-title-wrap, .index-col-client, .index-col-title");
             if (typeof gsap !== "undefined" && allTargets.length) {
                 gsap.set(allTargets, { opacity: 1, y: 0, clearProps: "transform,opacity" });
             }
@@ -1229,7 +1233,7 @@
         if (indexScope) {
             const list = indexScope.querySelector(".index-list");
             if (list && typeof gsap !== "undefined") {
-                const allTargets = list.querySelectorAll(".index-col-num, .index-col-client, .index-col-title");
+                const allTargets = list.querySelectorAll(".index-col-num, .index-client-wrap, .index-title-wrap, .index-col-client, .index-col-title");
                 if (allTargets.length) {
                     gsap.set(allTargets, { clearProps: "transform,opacity" });
                 }

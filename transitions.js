@@ -486,9 +486,17 @@ function initOsmoBoilerplate() {
             const isIndex = nextNs === "index";
             const indexList = isIndex ? next.querySelector(".index-list") : null;
             const colNums = indexList ? Array.from(indexList.querySelectorAll(".index-col-num")) : [];
-            const colClients = indexList ? Array.from(indexList.querySelectorAll(".index-col-client")) : [];
-            const colTitles = indexList ? Array.from(indexList.querySelectorAll(".index-col-title")) : [];
-            const allIndexTargets = [...colNums, ...colClients, ...colTitles];
+            const clientWraps = indexList
+                ? (indexList.querySelectorAll(".index-client-wrap").length
+                    ? Array.from(indexList.querySelectorAll(".index-client-wrap"))
+                    : Array.from(indexList.querySelectorAll(".index-col-client")))
+                : [];
+            const titleWraps = indexList
+                ? (indexList.querySelectorAll(".index-title-wrap").length
+                    ? Array.from(indexList.querySelectorAll(".index-title-wrap"))
+                    : Array.from(indexList.querySelectorAll(".index-col-title")))
+                : [];
+            const allIndexTargets = [...colNums, ...clientWraps, ...titleWraps];
             if (indexList) {
                 indexList.classList.add("is-appearing");
                 indexList.style.pointerEvents = "none";
@@ -651,16 +659,16 @@ function initOsmoBoilerplate() {
             const appearStartTime = hitTopTime - 0.25;
             const indexAppearStart = hitTopTime - 0.25;
 
-            // Index appear animation: numbers -> client name -> subtitle
+            // Index appear animation: numbers -> client wrap -> title wrap
             if (allIndexTargets.length) {
                 if (colNums.length) {
                     tl.to(colNums, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart);
                 }
-                if (colClients.length) {
-                    tl.to(colClients, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.10);
+                if (clientWraps.length) {
+                    tl.to(clientWraps, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.10);
                 }
-                if (colTitles.length) {
-                    tl.to(colTitles, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.20);
+                if (titleWraps.length) {
+                    tl.to(titleWraps, { opacity: 1, y: 0, duration: 0.85, ease: "power2.out", force3D: true }, indexAppearStart + 0.20);
                 }
             }
 
