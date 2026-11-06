@@ -1238,6 +1238,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-details-stack,
 .num-title-container,
 .index-col-num,
+.index-client-wrap,
+.index-title-wrap,
 .index-col-client,
 .index-col-title {
     flex-shrink: 0;
@@ -1248,15 +1250,54 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     white-space: nowrap;
 }
 
+/* Index Client & Title Wrappers for Ping-Pong Marquee */
+.index-client-wrap {
+    width: 219px !important;
+    max-width: 219px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
+}
+
+.index-title-wrap {
+    width: 300px !important;
+    max-width: 300px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
+}
+
 .index-col-client {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    display: inline-block !important;
+    width: max-content !important;
+    max-width: none !important;
+    will-change: transform;
+    line-height: normal !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
 }
 
 .index-col-title {
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    display: inline-block !important;
+    width: max-content !important;
+    max-width: none !important;
+    will-change: transform;
+    line-height: normal !important;
+    padding-bottom: 4px !important;
+    margin-bottom: -4px !important;
 }
 
 /* Desktop Horizontal Media Numbers */
@@ -1377,10 +1418,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         -webkit-tap-highlight-color: transparent;
     }
 
-    .index-col-title {
-        flex: 1;
-        width: auto;
-        min-width: 0;
+    .index-title-wrap {
+        width: auto !important;
+        max-width: none !important;
+        flex: 1 1 0% !important;
+        flex-grow: 1 !important;
+        min-width: 0 !important;
     }
 
     /* Expandable Accordion Drawer */
@@ -1448,6 +1491,13 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         object-fit: cover;
         display: block;
         pointer-events: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .index-client-wrap {
+        width: 154px !important;
+        max-width: 154px !important;
     }
 }
 

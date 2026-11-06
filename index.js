@@ -10,6 +10,90 @@
     let activeDesktopVideo = null;
     let activeMobileVideo = null;
     let appearTimeline = null;
+    const indexMarqueeTimelines = [];
+
+    const killIndexMarquees = () => {
+        indexMarqueeTimelines.forEach((tl) => {
+            try { tl.kill(); } catch (_) { }
+        });
+        indexMarqueeTimelines.length = 0;
+    };
+
+    const createIndexMarquee = (wrap, textEl) => {
+        if (!wrap || !textEl || typeof gsap === "undefined") return;
+
+        gsap.killTweensOf(textEl);
+        gsap.set(textEl, { clearProps: "transform,x" });
+
+        const containerWidth = wrap.clientWidth;
+        const textWidth = Math.ceil(textEl.scrollWidth || textEl.getBoundingClientRect().width);
+        const overflowDistance = textWidth - containerWidth;
+
+        if (overflowDistance > 4) {
+            wrap.classList.add("is-overflowing");
+
+            // Subtle reading speed: ~26px per second, minimum 3.0s duration
+            const duration = Math.max(3.0, overflowDistance / 26);
+
+            const tl = gsap.timeline({
+                repeat: -1
+            });
+
+            tl.to(textEl, {
+                x: -overflowDistance,
+                duration: duration,
+                ease: "sine.inOut",
+                force3D: true
+            }, "+=1.8")
+            .to(textEl, {
+                x: 0,
+                duration: duration,
+                ease: "sine.inOut",
+                force3D: true
+            }, "+=1.8");
+
+            indexMarqueeTimelines.push(tl);
+        } else {
+            wrap.classList.remove("is-overflowing");
+            gsap.set(textEl, { x: 0 });
+        }
+    };
+
+    const setupIndexMarquees = (containerList) => {
+        const root = containerList || (indexScope ? indexScope.querySelector(".index-list") : null) || document.querySelector(".index-list");
+        if (!root || typeof gsap === "undefined") return;
+
+        killIndexMarquees();
+
+        const rows = root.querySelectorAll(".index-row");
+        rows.forEach((row) => {
+            // 1. Client text marquee
+            let clientWrap = row.querySelector(".index-client-wrap");
+            const clientEl = row.querySelector(".index-col-client");
+            if (!clientWrap && clientEl) {
+                clientWrap = document.createElement("div");
+                clientWrap.className = "index-client-wrap";
+                clientEl.parentNode.insertBefore(clientWrap, clientEl);
+                clientWrap.appendChild(clientEl);
+            }
+            if (clientWrap && clientEl) {
+                createIndexMarquee(clientWrap, clientEl);
+            }
+
+            // 2. Sub-title text marquee
+            let titleWrap = row.querySelector(".index-title-wrap");
+            const titleEl = row.querySelector(".index-col-title");
+            if (!titleWrap && titleEl) {
+                titleWrap = document.createElement("div");
+                titleWrap.className = "index-title-wrap";
+                titleEl.parentNode.insertBefore(titleWrap, titleEl);
+                titleWrap.appendChild(titleEl);
+            }
+            if (titleWrap && titleEl) {
+                createIndexMarquee(titleWrap, titleEl);
+            }
+        });
+    };
 
     const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
     const PREVIEW_FILENAME = "play_480p.mp4";
@@ -190,6 +274,8 @@
                     list.classList.remove("is-appearing");
                     list.style.pointerEvents = "";
 
+                    setupIndexMarquees(list);
+
                     const hoveredRow = list.querySelector(".index-row:hover");
                     if (hoveredRow && !isMobileLayout()) {
                         list.classList.add("has-hovered-item");
@@ -268,6 +354,9 @@
             }
             list.classList.remove("is-appearing");
             list.style.pointerEvents = "";
+            setupIndexMarquees(list);
+        } else {
+            setupIndexMarquees(list);
         }
 
         indexAbortController = new AbortController();
@@ -1061,6 +1150,7 @@
         }
 
         // Window resize handler: collapse mobile drawer if transitioning to desktop, or clean desktop hover if transitioning to mobile
+        let resizeMarqueeTimer = null;
         window.addEventListener("resize", () => {
             if (isMobileLayout()) {
                 hideDesktopPreview();
@@ -1069,7 +1159,21 @@
             } else if (activeMobileRow) {
                 collapseRow(activeMobileRow);
             }
+            clearTimeout(resizeMarqueeTimer);
+            resizeMarqueeTimer = setTimeout(() => {
+                if (!isAppearAnimating) {
+                    setupIndexMarquees(list);
+                }
+            }, 150);
         }, { signal, passive: true });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                if (!isAppearAnimating) {
+                    setupIndexMarquees(list);
+                }
+            }).catch(() => { });
+        }
 
         // Transition completion: ensure active mobile media preview is fully rendered
         window.addEventListener("mg-transition-complete", (e) => {
@@ -1090,6 +1194,7 @@
     // CLEANUP & TEARDOWN
     // ----------------------------------------------------
     function destroyIndex() {
+        killIndexMarquees();
         if (appearTimeline) {
             appearTimeline.kill();
             appearTimeline = null;
