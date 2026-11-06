@@ -873,7 +873,32 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 .top-bar {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 25 !important;
     pointer-events: none;
+}
+
+.main-stage {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100svh !important;
+    height: 100dvh !important;
+    z-index: 1 !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+}
+
+.main-stage .main-swiper {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .top-bar a,
@@ -1173,8 +1198,22 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
 /* Bottom Stage Drawer Styles */
 .bottom-stage {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     height: 0;
     overflow: hidden;
+    z-index: 15 !important;
+    background-color: #ffffff !important;
+}
+
+.btn-project-details {
+    position: absolute !important;
+    bottom: var(--padding, 16px) !important;
+    left: var(--padding, 16px) !important;
+    z-index: 25 !important;
 }
 
 @media screen and (max-width: 767px) {
