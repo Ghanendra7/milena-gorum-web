@@ -567,6 +567,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .project-texts-inner {
     display: inline-flex !important;
     align-items: baseline !important;
+    gap: 1em !important;
     white-space: nowrap !important;
     width: max-content !important;
     max-width: none !important;
