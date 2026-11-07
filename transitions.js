@@ -1177,11 +1177,14 @@ function initOsmoBoilerplate() {
 
             if (nextNs === "index") {
                 try {
-                    const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
-                    if (savedScroll !== null) {
-                        const sY = parseFloat(savedScroll);
-                        if (!isNaN(sY) && sY > 0) {
-                            next.scrollTop = sY;
+                    const isRestore = sessionStorage.getItem("mg_index_restore_from_detail") === "true";
+                    if (isRestore) {
+                        const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
+                        if (savedScroll !== null) {
+                            const sY = parseFloat(savedScroll);
+                            if (!isNaN(sY) && sY > 0) {
+                                next.scrollTop = sY;
+                            }
                         }
                     }
                 } catch (_) { }
@@ -1261,6 +1264,7 @@ function initOsmoBoilerplate() {
             if (isComingFromDetail) {
                 // Navigating back from project detail
                 sessionStorage.setItem("mg_restore_from_detail", "true");
+                sessionStorage.setItem("mg_index_restore_from_detail", "true");
                 const slug = currentPath.split("/").filter(Boolean).pop() || "";
                 if (slug && slug !== "projects") {
                     sessionStorage.setItem("mg_restore_project_slug", slug);
@@ -1271,20 +1275,18 @@ function initOsmoBoilerplate() {
                     sessionStorage.setItem("mg_restore_project_num", prjNum);
                 }
             } else {
-                // If navigating to projects from anywhere other than project-detail (e.g. from home or nav),
-                // clear all restoration data so projects always starts from the 1st project.
-                if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home" || nextNs === "home" || nextPath === "/") {
-                    sessionStorage.removeItem("mg_restore_from_detail");
-                    sessionStorage.removeItem("mg_projects_saved_scroll");
-                    sessionStorage.removeItem("mg_restore_project_slug");
-                    sessionStorage.removeItem("mg_restore_project_url");
-                    sessionStorage.removeItem("mg_restore_project_num");
-                    if (nextNs === "home" || nextPath === "/") {
-                        sessionStorage.removeItem("mg_index_restore_slug");
-                        sessionStorage.removeItem("mg_index_restore_slide");
-                        sessionStorage.removeItem("mg_index_restore_scroll");
-                    }
-                }
+                // Navigating from anywhere other than project detail (e.g. from home, projects, info, or nav)
+                // Clear all restoration data so pages always start in default state.
+                sessionStorage.removeItem("mg_restore_from_detail");
+                sessionStorage.removeItem("mg_projects_saved_scroll");
+                sessionStorage.removeItem("mg_restore_project_slug");
+                sessionStorage.removeItem("mg_restore_project_url");
+                sessionStorage.removeItem("mg_restore_project_num");
+
+                sessionStorage.removeItem("mg_index_restore_from_detail");
+                sessionStorage.removeItem("mg_index_restore_slug");
+                sessionStorage.removeItem("mg_index_restore_slide");
+                sessionStorage.removeItem("mg_index_restore_scroll");
             }
 
             if (nextPath.includes("/projects/") || nextPath.includes("/detail_projects/")) {
@@ -1303,6 +1305,27 @@ function initOsmoBoilerplate() {
         }
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
+        const isComingFromDetail = currentNs === "project-detail" ||
+            (data.current.url?.path || "").includes("/projects/") ||
+            (data.current.url?.path || "").includes("/detail_projects/");
+
+        if (nextNs === "index") {
+            if (!isComingFromDetail) {
+                try {
+                    sessionStorage.removeItem("mg_index_restore_from_detail");
+                    sessionStorage.removeItem("mg_index_restore_slug");
+                    sessionStorage.removeItem("mg_index_restore_slide");
+                    sessionStorage.removeItem("mg_index_restore_scroll");
+                } catch (_) { }
+            }
+        } else if (nextNs !== "project-detail") {
+            try {
+                sessionStorage.removeItem("mg_index_restore_from_detail");
+                sessionStorage.removeItem("mg_index_restore_slug");
+                sessionStorage.removeItem("mg_index_restore_slide");
+                sessionStorage.removeItem("mg_index_restore_scroll");
+            } catch (_) { }
+        }
 
         if (nextNs === "project-detail") {
             const nextUrl = data.next.url?.path || window.location.pathname;
@@ -1499,11 +1522,14 @@ function initOsmoBoilerplate() {
         let sY = 0;
         if (ns === "index") {
             try {
-                const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
-                if (savedScroll !== null) {
-                    sY = parseFloat(savedScroll);
-                    if (!isNaN(sY) && sY > 0) {
-                        restoredScroll = true;
+                const isRestore = sessionStorage.getItem("mg_index_restore_from_detail") === "true";
+                if (isRestore) {
+                    const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
+                    if (savedScroll !== null) {
+                        sY = parseFloat(savedScroll);
+                        if (!isNaN(sY) && sY > 0) {
+                            restoredScroll = true;
+                        }
                     }
                 }
             } catch (_) { }

@@ -331,22 +331,26 @@
         if (scope) scope._isIndexMounted = true;
         indexScope = scope;
 
-        // Check for saved mobile state to restore (e.g. returning from project-detail)
+        // Check for saved mobile state to restore (ONLY when returning from project-detail)
         let restoreSlug = null;
         let restoreSlide = 0;
         let restoreScroll = null;
+        let isRestoreFromDetail = false;
 
         try {
-            restoreSlug = sessionStorage.getItem("mg_index_restore_slug");
-            const savedSlide = sessionStorage.getItem("mg_index_restore_slide");
-            restoreSlide = savedSlide !== null ? parseInt(savedSlide, 10) : 0;
-            const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
-            if (savedScroll !== null) {
-                restoreScroll = parseFloat(savedScroll);
+            isRestoreFromDetail = sessionStorage.getItem("mg_index_restore_from_detail") === "true";
+            if (isRestoreFromDetail) {
+                restoreSlug = sessionStorage.getItem("mg_index_restore_slug");
+                const savedSlide = sessionStorage.getItem("mg_index_restore_slide");
+                restoreSlide = savedSlide !== null ? parseInt(savedSlide, 10) : 0;
+                const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
+                if (savedScroll !== null) {
+                    restoreScroll = parseFloat(savedScroll);
+                }
             }
         } catch (_) { }
 
-        const isRestoring = Boolean(restoreSlug || (restoreScroll !== null && restoreScroll > 0));
+        const isRestoring = Boolean(isRestoreFromDetail && (restoreSlug || (restoreScroll !== null && restoreScroll > 0)));
 
         // Subtle GSAP appear animation for columns: numbers -> client name -> subtitle
         if (!scope._deferAppear && !window.__mgEnteringFromHome && !isRestoring) {
@@ -481,17 +485,18 @@
 
             const safeSlide = Math.max(0, parseInt(slideIndex || 0, 10));
 
-            // Save mobile accordion & scroll state if navigating from an open mobile project
-            if (isMobileLayout() && activeMobileRow) {
-                try {
+            // Save mobile accordion & scroll state when navigating to project detail
+            try {
+                if (isMobileLayout() && activeMobileRow) {
                     const openSlug = getProjectSlug(activeMobileRow);
                     const activeBtn = activeMobileRow.querySelector(".index-media-mobile .index-media-item.is-active");
                     const activeIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : safeSlide;
                     sessionStorage.setItem("mg_index_restore_slug", openSlug);
                     sessionStorage.setItem("mg_index_restore_slide", String(activeIdx));
-                    sessionStorage.setItem("mg_index_restore_scroll", String(window.scrollY || window.pageYOffset || 0));
-                } catch (_) { }
-            }
+                }
+                sessionStorage.setItem("mg_index_restore_scroll", String(window.scrollY || window.pageYOffset || 0));
+                sessionStorage.setItem("mg_index_restore_from_detail", "true");
+            } catch (_) { }
 
             // Store target slide in sessionStorage (0-based)
             try {
@@ -725,17 +730,6 @@
                 const bIdx = parseInt(btn.getAttribute("data-media-idx") || "-1", 10);
                 btn.classList.toggle("is-active", bIdx === media.idx);
             });
-
-            if (isMobileLayout() && activeMobileRow === row) {
-                try {
-                    const slug = getProjectSlug(row);
-                    if (slug) {
-                        sessionStorage.setItem("mg_index_restore_slug", slug);
-                        sessionStorage.setItem("mg_index_restore_slide", String(media.idx || 0));
-                        sessionStorage.setItem("mg_index_restore_scroll", String(window.scrollY || window.pageYOffset || 0));
-                    }
-                } catch (_) { }
-            }
         };
 
         const expandRow = (row) => {
@@ -746,17 +740,6 @@
             activeMobileRow = row;
             row.classList.add("is-expanded");
             list.classList.add("has-active-mobile");
-
-            if (isMobileLayout()) {
-                try {
-                    const slug = getProjectSlug(row);
-                    if (slug) {
-                        sessionStorage.setItem("mg_index_restore_slug", slug);
-                        sessionStorage.setItem("mg_index_restore_slide", "0");
-                        sessionStorage.setItem("mg_index_restore_scroll", String(window.scrollY || window.pageYOffset || 0));
-                    }
-                } catch (_) { }
-            }
 
             const drawer = row.querySelector(".index-row-drawer");
             if (!drawer) return;
@@ -789,14 +772,6 @@
         const collapseRow = (row) => {
             if (!row) return;
             row.classList.remove("is-expanded");
-
-            if (isMobileLayout()) {
-                try {
-                    sessionStorage.removeItem("mg_index_restore_slug");
-                    sessionStorage.removeItem("mg_index_restore_slide");
-                    sessionStorage.removeItem("mg_index_restore_scroll");
-                } catch (_) { }
-            }
 
             const drawer = row.querySelector(".index-row-drawer");
             if (drawer) {
@@ -1097,7 +1072,7 @@
         // ----------------------------------------------------
         // RESTORE SAVED STATE (MOBILE ACCORDION & SCROLL)
         // ----------------------------------------------------
-        if (isMobileLayout() && restoreSlug) {
+        if (isRestoring && isMobileLayout() && restoreSlug) {
             const targetRow = rows.find((r) => getProjectSlug(r) === restoreSlug);
             if (targetRow) {
                 activeMobileRow = targetRow;
@@ -1125,7 +1100,7 @@
             }
         }
 
-        if (restoreScroll !== null && !isNaN(restoreScroll) && restoreScroll > 0) {
+        if (isRestoring && restoreScroll !== null && !isNaN(restoreScroll) && restoreScroll > 0) {
             if (scope && scope.style.position === "fixed") {
                 scope.scrollTop = restoreScroll;
             }
@@ -1151,6 +1126,16 @@
                     try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
                 }
             }, 200);
+        }
+
+        // Clean up the one-time restoration flag once restoration is initiated
+        if (isRestoreFromDetail) {
+            try {
+                sessionStorage.removeItem("mg_index_restore_from_detail");
+                sessionStorage.removeItem("mg_index_restore_slug");
+                sessionStorage.removeItem("mg_index_restore_slide");
+                sessionStorage.removeItem("mg_index_restore_scroll");
+            } catch (_) { }
         }
 
         // Window resize handler: collapse mobile drawer if transitioning to desktop, or clean desktop hover if transitioning to mobile
@@ -1244,19 +1229,6 @@
                 list.classList.remove("has-hovered-item", "has-active-mobile");
             }
             indexScope = null;
-        }
-
-        if (isMobileLayout() && activeMobileRow) {
-            try {
-                const openSlug = getProjectSlug(activeMobileRow);
-                const activeBtn = activeMobileRow.querySelector(".index-media-mobile .index-media-item.is-active");
-                const activeIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : 0;
-                if (openSlug) {
-                    sessionStorage.setItem("mg_index_restore_slug", openSlug);
-                    sessionStorage.setItem("mg_index_restore_slide", String(activeIdx));
-                    sessionStorage.setItem("mg_index_restore_scroll", String(window.scrollY || window.pageYOffset || 0));
-                }
-            } catch (_) { }
         }
 
         activeMobileRow = null;
