@@ -66,6 +66,7 @@
                     sessionStorage.setItem("mg_restore_project_slug", s);
                     sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
                     sessionStorage.setItem("mg_restore_from_detail", "true");
+                    sessionStorage.setItem("mg_index_restore_from_detail", "true");
                     if (n) sessionStorage.setItem("mg_restore_project_num", n);
                 }
             } catch (_) { }
@@ -107,6 +108,7 @@
                     sessionStorage.setItem("mg_restore_project_slug", currentSlug);
                     sessionStorage.setItem("mg_restore_project_url", window.location.pathname);
                     sessionStorage.setItem("mg_restore_from_detail", "true");
+                    sessionStorage.setItem("mg_index_restore_from_detail", "true");
                     if (n) sessionStorage.setItem("mg_restore_project_num", n);
                 }
             } catch (_) { }

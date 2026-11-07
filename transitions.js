@@ -1257,17 +1257,25 @@ function initOsmoBoilerplate() {
             const currentPath = data.current.url?.path || window.location.pathname || "";
             const nextPath = data.next.url?.path || "";
 
+            const currentSlug = currentPath.split("/").filter(Boolean).pop() || "";
+            const nextSlug = nextPath.split("/").filter(Boolean).pop() || "";
+
             const isComingFromDetail = currentNs === "project-detail" ||
-                currentPath.includes("/projects/") ||
+                (currentPath.includes("/projects/") && currentSlug !== "projects") ||
                 currentPath.includes("/detail_projects/");
+
+            const isEnteringDetail = (nextPath.includes("/projects/") && nextSlug !== "projects") ||
+                nextPath.includes("/detail_projects/");
+
+            const isLeavingIndex = currentNs === "index" || currentPath.includes("index");
+            const isEnteringIndex = nextPath.includes("index");
 
             if (isComingFromDetail) {
                 // Navigating back from project detail
                 sessionStorage.setItem("mg_restore_from_detail", "true");
                 sessionStorage.setItem("mg_index_restore_from_detail", "true");
-                const slug = currentPath.split("/").filter(Boolean).pop() || "";
-                if (slug && slug !== "projects") {
-                    sessionStorage.setItem("mg_restore_project_slug", slug);
+                if (currentSlug && currentSlug !== "projects") {
+                    sessionStorage.setItem("mg_restore_project_slug", currentSlug);
                     sessionStorage.setItem("mg_restore_project_url", currentPath);
                 }
                 const prjNum = data.current.container?.getAttribute("data-project-number") || "";
@@ -1276,25 +1284,27 @@ function initOsmoBoilerplate() {
                 }
             } else {
                 // Navigating from anywhere other than project detail (e.g. from home, projects, info, or nav)
-                // Clear all restoration data so pages always start in default state.
-                sessionStorage.removeItem("mg_restore_from_detail");
-                sessionStorage.removeItem("mg_projects_saved_scroll");
-                sessionStorage.removeItem("mg_restore_project_slug");
-                sessionStorage.removeItem("mg_restore_project_url");
-                sessionStorage.removeItem("mg_restore_project_num");
+                if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home" || nextPath === "/") {
+                    sessionStorage.removeItem("mg_restore_from_detail");
+                    sessionStorage.removeItem("mg_projects_saved_scroll");
+                    sessionStorage.removeItem("mg_restore_project_slug");
+                    sessionStorage.removeItem("mg_restore_project_url");
+                    sessionStorage.removeItem("mg_restore_project_num");
+                }
 
-                sessionStorage.removeItem("mg_index_restore_from_detail");
-                sessionStorage.removeItem("mg_index_restore_slug");
-                sessionStorage.removeItem("mg_index_restore_slide");
-                sessionStorage.removeItem("mg_index_restore_scroll");
+                // ONLY clear index restoration data if we are NOT navigating from index to project detail!
+                const isNavigatingIndexToDetail = isLeavingIndex && isEnteringDetail;
+                if (!isNavigatingIndexToDetail) {
+                    sessionStorage.removeItem("mg_index_restore_from_detail");
+                    sessionStorage.removeItem("mg_index_restore_slug");
+                    sessionStorage.removeItem("mg_index_restore_slide");
+                    sessionStorage.removeItem("mg_index_restore_scroll");
+                }
             }
 
-            if (nextPath.includes("/projects/") || nextPath.includes("/detail_projects/")) {
-                const slug = nextPath.split("/").filter(Boolean).pop() || "";
-                if (slug && slug !== "projects") {
-                    sessionStorage.setItem("mg_restore_project_slug", slug);
-                    sessionStorage.setItem("mg_restore_project_url", nextPath);
-                }
+            if (isEnteringDetail && nextSlug && nextSlug !== "projects") {
+                sessionStorage.setItem("mg_restore_project_slug", nextSlug);
+                sessionStorage.setItem("mg_restore_project_url", nextPath);
             }
         } catch (_) { }
     });
@@ -1305,20 +1315,34 @@ function initOsmoBoilerplate() {
         }
         const nextNs = data.next.container?.getAttribute("data-barba-namespace") || "";
         const currentNs = data.current.container?.getAttribute("data-barba-namespace") || "";
-        const isComingFromDetail = currentNs === "project-detail" ||
-            (data.current.url?.path || "").includes("/projects/") ||
-            (data.current.url?.path || "").includes("/detail_projects/");
+        const currentPath = data.current.url?.path || window.location.pathname || "";
+        const nextPath = data.next.url?.path || "";
 
-        if (nextNs === "index") {
-            if (!isComingFromDetail) {
-                try {
-                    sessionStorage.removeItem("mg_index_restore_from_detail");
-                    sessionStorage.removeItem("mg_index_restore_slug");
-                    sessionStorage.removeItem("mg_index_restore_slide");
-                    sessionStorage.removeItem("mg_index_restore_scroll");
-                } catch (_) { }
-            }
-        } else if (nextNs !== "project-detail") {
+        const currentSlug = currentPath.split("/").filter(Boolean).pop() || "";
+        const nextSlug = nextPath.split("/").filter(Boolean).pop() || "";
+
+        const isComingFromDetail = currentNs === "project-detail" ||
+            (currentPath.includes("/projects/") && currentSlug !== "projects") ||
+            currentPath.includes("/detail_projects/");
+
+        const isEnteringDetail = nextNs === "project-detail" ||
+            (nextPath.includes("/projects/") && nextSlug !== "projects") ||
+            nextPath.includes("/detail_projects/");
+
+        const isEnteringIndex = nextNs === "index" || nextPath.includes("index");
+        const isLeavingIndex = currentNs === "index" || currentPath.includes("index");
+
+        // Clear index restoration keys if:
+        // 1. Entering index, but NOT coming from project detail (e.g. from home, projects, info)
+        // 2. Entering another page that is NOT index and NOT project-detail (e.g. home, projects, info)
+        if (isEnteringIndex && !isComingFromDetail) {
+            try {
+                sessionStorage.removeItem("mg_index_restore_from_detail");
+                sessionStorage.removeItem("mg_index_restore_slug");
+                sessionStorage.removeItem("mg_index_restore_slide");
+                sessionStorage.removeItem("mg_index_restore_scroll");
+            } catch (_) { }
+        } else if (!isEnteringIndex && !isEnteringDetail) {
             try {
                 sessionStorage.removeItem("mg_index_restore_from_detail");
                 sessionStorage.removeItem("mg_index_restore_slug");
@@ -1401,7 +1425,16 @@ function initOsmoBoilerplate() {
     });
 
     barba.hooks.after((data) => {
-        notifyTransitionComplete(data.next?.container?.getAttribute("data-barba-namespace") || "");
+        const ns = data.next?.container?.getAttribute("data-barba-namespace") || "";
+        notifyTransitionComplete(ns);
+        if (ns === "index") {
+            try {
+                sessionStorage.removeItem("mg_index_restore_from_detail");
+                sessionStorage.removeItem("mg_index_restore_slug");
+                sessionStorage.removeItem("mg_index_restore_slide");
+                sessionStorage.removeItem("mg_index_restore_scroll");
+            } catch (_) { }
+        }
     });
 
     if (typeof window.barbaPrefetch !== "undefined") {

@@ -487,9 +487,10 @@
 
             // Save mobile accordion & scroll state when navigating to project detail
             try {
-                if (isMobileLayout() && activeMobileRow) {
-                    const openSlug = getProjectSlug(activeMobileRow);
-                    const activeBtn = activeMobileRow.querySelector(".index-media-mobile .index-media-item.is-active");
+                if (isMobileLayout()) {
+                    const rowToSave = activeMobileRow || rows.find((r) => getProjectSlug(r) === cleanSlug);
+                    const openSlug = rowToSave ? getProjectSlug(rowToSave) : cleanSlug;
+                    const activeBtn = rowToSave?.querySelector(".index-media-mobile .index-media-item.is-active");
                     const activeIdx = activeBtn ? parseInt(activeBtn.getAttribute("data-media-idx") || "0", 10) : safeSlide;
                     sessionStorage.setItem("mg_index_restore_slug", openSlug);
                     sessionStorage.setItem("mg_index_restore_slide", String(activeIdx));
@@ -873,6 +874,12 @@
 
                     btn.addEventListener("click", (e) => {
                         e.stopPropagation();
+                        if (btn.classList.contains("is-active")) {
+                            if (slug) {
+                                navigateToProject(slug, mIdx);
+                            }
+                            return;
+                        }
                         selectMobileMedia(row, media);
                     }, { signal: signalToUse });
 
@@ -1126,16 +1133,6 @@
                     try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
                 }
             }, 200);
-        }
-
-        // Clean up the one-time restoration flag once restoration is initiated
-        if (isRestoreFromDetail) {
-            try {
-                sessionStorage.removeItem("mg_index_restore_from_detail");
-                sessionStorage.removeItem("mg_index_restore_slug");
-                sessionStorage.removeItem("mg_index_restore_slide");
-                sessionStorage.removeItem("mg_index_restore_scroll");
-            } catch (_) { }
         }
 
         // Window resize handler: collapse mobile drawer if transitioning to desktop, or clean desktop hover if transitioning to mobile
