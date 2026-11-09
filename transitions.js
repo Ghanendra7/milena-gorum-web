@@ -1421,9 +1421,25 @@ function initOsmoBoilerplate() {
             if (data.next && data.next.html) {
                 const parser = new DOMParser();
                 const nextDoc = parser.parseFromString(data.next.html, "text/html");
+                
+                // Sync document title
                 const nextTitle = nextDoc.querySelector("title");
                 if (nextTitle && nextTitle.innerText) {
                     document.title = nextTitle.innerText;
+                }
+
+                // Sync meta description
+                const nextDesc = nextDoc.querySelector('meta[name="description"]');
+                const currentDesc = document.querySelector('meta[name="description"]');
+                if (nextDesc && currentDesc) {
+                    currentDesc.setAttribute("content", nextDesc.getAttribute("content") || "");
+                }
+
+                // Sync canonical URL
+                const nextCanonical = nextDoc.querySelector('link[rel="canonical"]');
+                const currentCanonical = document.querySelector('link[rel="canonical"]');
+                if (nextCanonical && currentCanonical) {
+                    currentCanonical.setAttribute("href", nextCanonical.getAttribute("href") || "");
                 }
             }
         } catch (_) { }
