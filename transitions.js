@@ -1417,6 +1417,16 @@ function initOsmoBoilerplate() {
     });
 
     barba.hooks.enter((data) => {
+        try {
+            if (data.next && data.next.html) {
+                const parser = new DOMParser();
+                const nextDoc = parser.parseFromString(data.next.html, "text/html");
+                const nextTitle = nextDoc.querySelector("title");
+                if (nextTitle && nextTitle.innerText) {
+                    document.title = nextTitle.innerText;
+                }
+            }
+        } catch (_) { }
         initBarbaNavUpdate(data);
     });
 
