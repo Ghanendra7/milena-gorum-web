@@ -43,7 +43,7 @@
         projectsAbortController = new AbortController();
         const { signal } = projectsAbortController;
 
-        const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
+        const BUNNY_STREAM_BASE = "https://vz-ada4eb16-135.b-cdn.net";
         const PREVIEW_FILENAME = "preview_hq.mp4";
         const MAX_WARM_VIDEOS = 3;
         const warmVideoPool = [];

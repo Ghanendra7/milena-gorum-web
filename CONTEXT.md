@@ -8,7 +8,7 @@ Local Workspace: Google Antigravity repository (milena-gorum-web) on branch main
 
 Edge CDN: Cloudflare Pages ([https://milena-gorum-assets.pages.dev/](https://milena-gorum-assets.pages.dev/)), auto-deploying in ~10s on git push.
 
-Video Pull Zone: Bunny Stream CDN ([https://vz-cc78103f-0dc.b-cdn.net/](https://vz-cc78103f-0dc.b-cdn.net/)).
+Video Pull Zone: Bunny Stream CDN ([https://vz-ada4eb16-135.b-cdn.net/](https://vz-ada4eb16-135.b-cdn.net/)).
 
 Webflow Site Settings Integration:
 

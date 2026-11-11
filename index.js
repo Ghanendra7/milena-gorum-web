@@ -95,7 +95,7 @@
         });
     };
 
-    const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
+    const BUNNY_STREAM_BASE = "https://vz-ada4eb16-135.b-cdn.net";
     const PREVIEW_FILENAME = "play_480p.mp4";
     const TABLET_PORTRAIT_BREAKPOINT = 1024;
     const projectMediaCache = new Map();

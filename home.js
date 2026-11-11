@@ -20,7 +20,7 @@
     if (scope) scope._isHomeMounted = true;
     homeScope = scope;
 
-    const BUNNY_CDN_HOST = "vz-cc78103f-0dc.b-cdn.net";
+    const BUNNY_CDN_HOST = "vz-ada4eb16-135.b-cdn.net";
     const MAX_VIDEO_SECONDS = 30;
 
     const MINIMUM_LOADER_TIME = 350;

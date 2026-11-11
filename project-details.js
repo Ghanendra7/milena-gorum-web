@@ -32,7 +32,7 @@
 
         const DESKTOP_SWIPE_SPEED = 750;
         const MOBILE_SWIPE_SPEED = 400;
-        const BUNNY_STREAM_BASE = "https://vz-cc78103f-0dc.b-cdn.net";
+        const BUNNY_STREAM_BASE = "https://vz-ada4eb16-135.b-cdn.net";
 
         const padTwoDigits = (val) => {
             if (val === undefined || val === null) return "";
