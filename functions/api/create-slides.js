@@ -69,11 +69,11 @@ export async function onRequestPost({ request, env }) {
     const mFields = fieldMap.media;
     const pFields = fieldMap.projects;
 
-    if (!mFields.parent) {
+    if (!mFields.parent && !pFields.gallery) {
       return jsonError(
-        "Could not find the Parent Project Reference field in the Media collection. Check the Schema Mapping drawer.",
+        "Neither a Media 'Parent' Reference field nor a Project 'Gallery' Multi-Reference field is mapped. Check Field Mapping.",
         400,
-        { fieldMap, mediaCollection }
+        { fieldMap, mediaCollection, projectsCollection }
       );
     }
 
@@ -108,8 +108,11 @@ export async function onRequestPost({ request, env }) {
       const fieldData = {
         name: baseName,
         slug: uniqueSlug,
-        [mFields.parent]: projectId,
       };
+
+      if (mFields.parent) {
+        fieldData[mFields.parent] = projectId;
+      }
 
       if (mFields.order) {
         const coerced = coerceFieldValue(orderNum, mediaFieldBySlug.get(mFields.order));

@@ -205,9 +205,9 @@
       els.siteBadge.className = "status-pill is-ok";
 
       const effectiveMap = getEffectiveFieldMap();
-      if (!effectiveMap?.media?.parent || !effectiveMap?.media?.image) {
+      if (!effectiveMap?.media?.image || (!effectiveMap?.media?.parent && !effectiveMap?.projects?.gallery)) {
         showBanner(
-          "Warning: Some Media CMS fields could not be auto-detected. Open 'Field Mapping' to verify your field slugs before uploading.",
+          "Warning: Required Media/Project link fields could not be auto-detected. Open 'Field Mapping' to verify your field slugs before uploading.",
           "warn"
         );
       }
@@ -862,8 +862,8 @@
     if (!project || state.isUploading || !state.queue.length) return;
 
     const effectiveMap = getEffectiveFieldMap();
-    if (!effectiveMap?.media?.parent) {
-      showBanner("Parent Project reference field is not mapped. Check Field Mapping.", "err");
+    if (!effectiveMap?.media?.parent && !effectiveMap?.projects?.gallery) {
+      showBanner("Neither Media 'Parent' nor Project 'Gallery Multi-Ref' is mapped. Check Field Mapping.", "err");
       return;
     }
 

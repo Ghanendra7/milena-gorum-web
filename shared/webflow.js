@@ -101,9 +101,13 @@ function findField(fields, { types = null, slugPatterns = [], namePatterns = [] 
   return null;
 }
 
+function getReferencedCollectionId(field) {
+  return field?.metadata?.collectionId || field?.validations?.collectionId || null;
+}
+
 export function detectProjectFields(fields, mediaCollectionId) {
   const byRef = fields.find(
-    (f) => f.type === "MultiReference" && f.validations?.collectionId === mediaCollectionId
+    (f) => f.type === "MultiReference" && getReferencedCollectionId(f) === mediaCollectionId
   );
 
   return {
@@ -136,7 +140,7 @@ export function detectProjectFields(fields, mediaCollectionId) {
 
 export function detectMediaFields(fields, projectsCollectionId) {
   const parentRef = fields.find(
-    (f) => f.type === "Reference" && f.validations?.collectionId === projectsCollectionId
+    (f) => f.type === "Reference" && getReferencedCollectionId(f) === projectsCollectionId
   );
 
   const imageField =
@@ -283,10 +287,10 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
 
   if (!projectsSchema && mediaSchema) {
     const refField = (mediaSchema.fields || []).find(
-      (f) => f.type === "Reference" && f.validations?.collectionId
+      (f) => f.type === "Reference" && getReferencedCollectionId(f)
     );
     if (refField) {
-      projectsSchema = schemas.find((s) => s.id === refField.validations.collectionId);
+      projectsSchema = schemas.find((s) => s.id === getReferencedCollectionId(refField));
     }
   }
 
