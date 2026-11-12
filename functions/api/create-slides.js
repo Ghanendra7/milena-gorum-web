@@ -169,7 +169,7 @@ export async function onRequestPost({ request, env }) {
     for (const chunk of chunks) {
       const bulkRes = await webflowRequest(
         env,
-        `/collections/${mediaCollection.id}/items/bulk`,
+        `/collections/${mediaCollection.id}/items`,
         {
           method: "POST",
           body: JSON.stringify({ items: chunk }),
@@ -177,6 +177,8 @@ export async function onRequestPost({ request, env }) {
       );
       if (Array.isArray(bulkRes?.items)) {
         createdItems.push(...bulkRes.items);
+      } else if (bulkRes?.id) {
+        createdItems.push(bulkRes);
       }
     }
 
