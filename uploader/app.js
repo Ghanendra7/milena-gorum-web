@@ -2215,7 +2215,7 @@
     const draft = state.infoDraft;
     if (!draft) return;
 
-    els.infoItemHeading.textContent = draft.name ? `${draft.name} (Information)` : "Information Page";
+    els.infoItemHeading.textContent = draft.name || "Information";
     els.infoStatusPill.textContent = draft.isDraft ? "Draft" : "Live";
     els.infoStatusPill.className = `status-pill ${draft.isDraft ? "is-draft" : "is-ok"}`;
 
