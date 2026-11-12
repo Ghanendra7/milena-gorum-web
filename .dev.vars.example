@@ -1,0 +1,12 @@
+# Copy to .dev.vars for local Wrangler testing (`npx wrangler pages dev .`)
+# In production, set these in Cloudflare Pages -> Settings -> Environment Variables.
+
+WEBFLOW_API_TOKEN=your_webflow_v2_api_token_here
+UPLOADER_PASSWORD=choose_a_strong_password_for_louis
+
+# Optional overrides (auto-detected from your Webflow site if omitted)
+# WEBFLOW_SITE_ID=
+# WEBFLOW_PROJECTS_COLLECTION_ID=
+# WEBFLOW_MEDIA_COLLECTION_ID=
+# WEBFLOW_FIELD_MAP_JSON={"media":{"parent":"parent","order":"order","image":"image"}}
+

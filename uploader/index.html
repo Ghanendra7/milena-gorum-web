@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Milena Gorum — CMS Batch Uploader</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Auth Gate -->
+  <main id="authGate" class="auth-gate" hidden>
+    <div class="auth-card">
+      <div class="brand-kicker">MILENA GORUM / CMS TOOLS</div>
+      <h1>Batch Media Uploader</h1>
+      <p class="muted">Enter the uploader password to connect to Webflow CMS.</p>
+      <form id="loginForm" class="stack-sm">
+        <label class="field">
+          <span>Password</span>
+          <input id="passwordInput" type="password" autocomplete="current-password" required placeholder="••••••••" />
+        </label>
+        <button id="loginBtn" type="submit" class="btn btn-primary">Sign In</button>
+        <p id="loginError" class="error-text" hidden></p>
+      </form>
+    </div>
+  </main>
+
+  <!-- Main Workspace -->
+  <div id="appShell" class="app-shell" hidden>
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand-kicker">MILENA GORUM</span>
+        <span class="divider">/</span>
+        <span class="topbar-title">CMS Batch Uploader</span>
+        <span id="siteBadge" class="status-pill">Connecting…</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="schemaBtn" type="button" class="btn btn-ghost">Field Mapping</button>
+        <button id="refreshBtn" type="button" class="btn btn-ghost">Refresh Projects</button>
+        <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <!-- Setup / Global Error Banner -->
+      <div id="globalBanner" class="banner" hidden></div>
+
+      <!-- Step 1: Target Project & Options -->
+      <section class="panel config-panel">
+        <div class="config-grid">
+          <div class="field field-project">
+            <label for="projectSearch">1. Select Target Project</label>
+            <div class="project-picker">
+              <input id="projectSearch" type="search" placeholder="Filter projects by client, title, or number…" />
+              <select id="projectSelect"></select>
+            </div>
+            <p id="projectMeta" class="field-hint">Loading projects…</p>
+          </div>
+
+          <div class="field">
+            <label for="compressionPreset">Compression Preset</label>
+            <select id="compressionPreset">
+              <option value="webp-2400">WebP · max 2400px (Recommended)</option>
+              <option value="webp-3000">WebP · max 3000px (High-res)</option>
+              <option value="jpeg-2400">JPEG · max 2400px</option>
+              <option value="jpeg-3000">JPEG · max 3000px</option>
+            </select>
+            <p class="field-hint">Auto-compressed in browser under Webflow's 4 MB cap.</p>
+          </div>
+
+          <div class="field">
+            <label for="publishMode">Publish Behavior</label>
+            <select id="publishMode">
+              <option value="staged">Save as Staged (review in Webflow first)</option>
+              <option value="live">Publish Live Immediately</option>
+            </select>
+            <p class="field-hint">Staged lets you check staging before pushing live.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Drop Zone -->
+      <section id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
+        <input id="fileInput" type="file" accept="image/*" multiple hidden />
+        <div class="dropzone-inner">
+          <p class="dropzone-title">2. Drop raw project images here</p>
+          <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, ordering, and Media CMS creation happen automatically.</p>
+          <div class="dropzone-buttons">
+            <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
+            <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Queue Controls & Cards -->
+      <section id="queueSection" class="queue-section" hidden>
+        <div class="queue-toolbar">
+          <div class="queue-toolbar-left">
+            <h2 id="queueHeading">Queued Slides (0)</h2>
+            <span id="queueStats" class="muted"></span>
+          </div>
+          <div class="queue-toolbar-right">
+            <button id="toggleAllDesktopBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Desktop</button>
+            <button id="toggleAllMobileBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Mobile</button>
+            <button id="clearQueueBtn" type="button" class="btn btn-ghost btn-sm">Clear Queue</button>
+          </div>
+        </div>
+
+        <div id="queueGrid" class="queue-grid"></div>
+      </section>
+    </main>
+
+    <!-- Sticky Action Footer -->
+    <footer id="actionBar" class="action-bar" hidden>
+      <div class="action-bar-info">
+        <div id="progressSummary" class="progress-summary">Ready to upload</div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+      <div class="action-bar-buttons">
+        <button id="retryFailedBtn" type="button" class="btn btn-secondary" hidden>Retry Failed</button>
+        <button id="uploadBtn" type="button" class="btn btn-primary">Upload &amp; Add to Webflow</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Focal Point Modal -->
+  <div id="focusModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="focusModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="focusModalTitle">Set Focal Point</h3>
+          <p class="muted">Click anywhere on the image to set <code>object-position</code> (Focus X / Y).</p>
+        </div>
+        <button id="closeFocusModalBtn" type="button" class="btn btn-ghost btn-sm">Done</button>
+      </div>
+      <div class="focus-stage-wrap">
+        <div id="focusStage" class="focus-stage">
+          <img id="focusPreviewImg" alt="" />
+          <div id="focusCrosshair" class="focus-crosshair"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span id="focusCoordsText" class="mono">Focus: 50% × 50%</span>
+        <div class="modal-footer-actions">
+          <button id="resetFocusBtn" type="button" class="btn btn-ghost btn-sm">Reset 50% / 50%</button>
+          <button id="doneFocusBtn" type="button" class="btn btn-primary btn-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schema Mapping Modal -->
+  <div id="schemaModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="schemaModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="schemaModalTitle">Webflow CMS Field Mapping</h3>
+          <p class="muted">Auto-detected from your Webflow collections. Adjust only if a field name differs.</p>
+        </div>
+        <button id="closeSchemaModalBtn" type="button" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+      <div id="schemaBody" class="schema-body"></div>
+      <div class="modal-footer">
+        <button id="resetSchemaBtn" type="button" class="btn btn-ghost btn-sm">Reset Auto-Detect</button>
+        <button id="saveSchemaBtn" type="button" class="btn btn-primary btn-sm">Save Mapping</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./md5.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
+
