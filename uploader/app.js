@@ -82,8 +82,6 @@
     infoItemHeading: document.getElementById("infoItemHeading"),
     infoStatusPill: document.getElementById("infoStatusPill"),
     infoDirtyBadge: document.getElementById("infoDirtyBadge"),
-    publishInfoBtn: document.getElementById("publishInfoBtn"),
-    unpublishInfoBtn: document.getElementById("unpublishInfoBtn"),
     saveInfoBtn: document.getElementById("saveInfoBtn"),
     infoPicPreview: document.getElementById("infoPicPreview"),
     infoPicEmpty: document.getElementById("infoPicEmpty"),
@@ -435,11 +433,7 @@
     const homeCount = state.projects.filter((p) => p.featured).length;
     els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
     els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount}/12)`;
-    if (state.information) {
-      els.orderModeInfoBtn.textContent = `Information (${state.information.isDraft ? "Draft" : "Live"})`;
-    } else {
-      els.orderModeInfoBtn.textContent = "Information";
-    }
+    els.orderModeInfoBtn.textContent = "Information";
   }
 
   // Project Detail Editor Helpers
@@ -1704,7 +1698,7 @@
       els.resetOrderBtn.hidden = true;
       els.orderDirtyCount.hidden = true;
       els.clearDirFiltersBtn.hidden = true;
-      els.dirOrderHint.textContent = "Manage Information page content. All links open in a new tab.";
+      els.dirOrderHint.textContent = "";
       els.topbarTitle.textContent = "Information";
       syncUrlHash();
       renderInformationEditor();
@@ -2087,8 +2081,8 @@
 
   // Information Page CMS Helpers
   const INFO_SECTIONS = [
-    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Optional link (opens in new tab)" },
-    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Optional link (opens in new tab)" },
+    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Optional link" },
+    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Optional link" },
     { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "mailto:… or link URL" },
     { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "https://exibart.com" },
     { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "https://…" },
@@ -2224,8 +2218,6 @@
     els.infoItemHeading.textContent = draft.name ? `${draft.name} (Information)` : "Information Page";
     els.infoStatusPill.textContent = draft.isDraft ? "Draft" : "Live";
     els.infoStatusPill.className = `status-pill ${draft.isDraft ? "is-draft" : "is-ok"}`;
-    els.publishInfoBtn.disabled = !draft.isDraft;
-    els.unpublishInfoBtn.disabled = draft.isDraft;
 
     if (draft.profilePicture?.url) {
       els.infoPicPreview.src = draft.profilePicture.url;
@@ -2410,44 +2402,6 @@
       els.saveInfoBtn.disabled = false;
     } finally {
       els.saveInfoBtn.textContent = "Save Information";
-    }
-  }
-
-  async function publishInformationItem() {
-    const draft = state.infoDraft;
-    if (!draft?.id) return;
-    els.publishInfoBtn.disabled = true;
-    try {
-      await apiJson("/api/information", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "publish", itemId: draft.id, fieldMapOverride: state.fieldOverride }),
-      });
-      await loadBootstrap();
-      showBanner("Published Information page live.", "ok");
-    } catch (err) {
-      showBanner(err.message, "err");
-    } finally {
-      els.publishInfoBtn.disabled = false;
-    }
-  }
-
-  async function unpublishInformationItem() {
-    const draft = state.infoDraft;
-    if (!draft?.id || !window.confirm("Move Information page to Draft?")) return;
-    els.unpublishInfoBtn.disabled = true;
-    try {
-      await apiJson("/api/information", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "unpublish", itemId: draft.id, fieldMapOverride: state.fieldOverride }),
-      });
-      await loadBootstrap();
-      showBanner("Moved Information page to Draft.", "ok");
-    } catch (err) {
-      showBanner(err.message, "err");
-    } finally {
-      els.unpublishInfoBtn.disabled = false;
     }
   }
 
@@ -2981,8 +2935,6 @@
 
   // Information Page Listeners
   els.saveInfoBtn.addEventListener("click", saveInformationChanges);
-  els.publishInfoBtn.addEventListener("click", publishInformationItem);
-  els.unpublishInfoBtn.addEventListener("click", unpublishInformationItem);
 
   els.replaceInfoPicBtn.addEventListener("click", () => els.infoPicInput.click());
   els.infoPicInput.addEventListener("change", async () => {
@@ -3050,7 +3002,7 @@
     const existingLink =
       anchorNode?.nodeType === 1 ? anchorNode.closest?.("a") : anchorNode?.parentElement?.closest?.("a");
     const currentHref = existingLink ? existingLink.getAttribute("href") : "";
-    const rawUrl = window.prompt("Enter link URL (opens in new tab):", currentHref || "https://");
+    const rawUrl = window.prompt("Enter link URL:", currentHref || "https://");
     if (!rawUrl || !rawUrl.trim()) return;
 
     let cleanUrl = rawUrl.trim();
