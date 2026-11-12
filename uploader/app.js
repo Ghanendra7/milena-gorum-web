@@ -63,9 +63,12 @@
     projectsView: document.getElementById("projectsView"),
     editorView: document.getElementById("editorView"),
 
+    orderToolbarPanel: document.getElementById("orderToolbarPanel"),
     orderModeAllBtn: document.getElementById("orderModeAllBtn"),
     orderModeHomeBtn: document.getElementById("orderModeHomeBtn"),
     orderModeInfoBtn: document.getElementById("orderModeInfoBtn"),
+    orderModeAllCount: document.getElementById("orderModeAllCount"),
+    orderModeHomeCount: document.getElementById("orderModeHomeCount"),
     orderDirtyCount: document.getElementById("orderDirtyCount"),
     resetOrderBtn: document.getElementById("resetOrderBtn"),
     saveOrderBtn: document.getElementById("saveOrderBtn"),
@@ -424,9 +427,19 @@
 
   function updateModeCounts() {
     const homeCount = state.projects.filter((p) => p.featured).length;
-    els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
-    els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount}/12)`;
-    els.orderModeInfoBtn.textContent = "Information";
+    if (els.orderModeAllCount) {
+      els.orderModeAllCount.textContent = String(state.projects.length);
+    } else {
+      els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
+    }
+    if (els.orderModeHomeCount) {
+      els.orderModeHomeCount.textContent = `${homeCount}/12`;
+    } else {
+      els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount}/12)`;
+    }
+    if (els.orderModeInfoBtn && !els.orderModeInfoBtn.querySelector("span")) {
+      els.orderModeInfoBtn.textContent = "Information";
+    }
   }
 
   // Project Detail Editor Helpers
@@ -1680,8 +1693,18 @@
     const isInfoMode = state.orderMode === "info";
 
     els.orderModeAllBtn.classList.toggle("is-active", state.orderMode === "all");
+    els.orderModeAllBtn.setAttribute("aria-selected", state.orderMode === "all" ? "true" : "false");
     els.orderModeHomeBtn.classList.toggle("is-active", isHomeMode);
+    els.orderModeHomeBtn.setAttribute("aria-selected", isHomeMode ? "true" : "false");
     els.orderModeInfoBtn.classList.toggle("is-active", isInfoMode);
+    els.orderModeInfoBtn.setAttribute("aria-selected", isInfoMode ? "true" : "false");
+
+    if (els.orderToolbarPanel) {
+      els.orderToolbarPanel.hidden = isInfoMode;
+    }
+    if (els.newProjectBtn) {
+      els.newProjectBtn.hidden = isInfoMode;
+    }
     els.dirFilterRow.hidden = isHomeMode || isInfoMode;
 
     if (isInfoMode) {

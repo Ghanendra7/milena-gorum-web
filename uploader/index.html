@@ -60,21 +60,31 @@
 
       <!-- FRONT PAGE: All Projects Directory, Quick Inline Edit & Drag Reorder -->
       <section id="projectsView" class="view-stack">
-        <section class="panel order-toolbar-panel">
-          <div class="order-header-row">
-            <div class="segmented" role="group" aria-label="Workspace view">
-              <button id="orderModeAllBtn" type="button" class="seg-btn is-active">All Projects</button>
-              <button id="orderModeHomeBtn" type="button" class="seg-btn">Homepage Featured</button>
-              <button id="orderModeInfoBtn" type="button" class="seg-btn" hidden>Information</button>
-            </div>
-
-            <div class="order-save-actions">
-              <span id="orderDirtyCount" class="badge-dirty" hidden></span>
-              <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Discard Order</button>
-              <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Order</button>
-            </div>
+        <!-- Main Workspace Tabs -->
+        <nav class="workspace-nav" aria-label="Main Navigation">
+          <div class="workspace-tabs" role="tablist">
+            <button id="orderModeAllBtn" type="button" class="workspace-tab is-active" role="tab" aria-selected="true">
+              <span>All Projects</span>
+              <span id="orderModeAllCount" class="tab-count-badge">0</span>
+            </button>
+            <button id="orderModeHomeBtn" type="button" class="workspace-tab" role="tab" aria-selected="false">
+              <span>Homepage Featured</span>
+              <span id="orderModeHomeCount" class="tab-count-badge">0/12</span>
+            </button>
+            <button id="orderModeInfoBtn" type="button" class="workspace-tab" role="tab" aria-selected="false" hidden>
+              <span>Information</span>
+            </button>
           </div>
 
+          <div class="workspace-nav-actions">
+            <span id="orderDirtyCount" class="badge-dirty" hidden></span>
+            <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Discard Order</button>
+            <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Order</button>
+          </div>
+        </nav>
+
+        <!-- Directory Filter & Hint Panel (Projects views only) -->
+        <section id="orderToolbarPanel" class="panel order-toolbar-panel">
           <div id="dirFilterRow" class="dir-filters">
             <input id="dirSearchInput" type="search" placeholder="Search projects by title, subtitle, slug, or #…" />
             <select id="dirTypeFilter">

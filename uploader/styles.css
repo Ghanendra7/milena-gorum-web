@@ -446,6 +446,91 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Projects Directory & Reorderer */
+/* Main Workspace Navigation (Top Tabs) */
+.workspace-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.workspace-tabs {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.workspace-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  bottom: -1px;
+}
+
+.workspace-tab:hover {
+  color: var(--text);
+}
+
+.workspace-tab.is-active {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--text);
+}
+
+.tab-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.workspace-tab.is-active .tab-count-badge {
+  background: var(--text);
+  color: var(--accent-text);
+}
+
+.workspace-tab:hover:not(.is-active) .tab-count-badge {
+  background: var(--border);
+  color: var(--text);
+}
+
+.workspace-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
 .order-toolbar-panel {
   display: flex;
   flex-direction: column;
@@ -1278,6 +1363,17 @@ input:focus, select:focus, textarea:focus {
   }
   .info-row-item .info-row-url {
     grid-column: 1 / -1;
+  }
+  .workspace-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .workspace-tabs {
+    gap: 18px;
+  }
+  .workspace-tab {
+    font-size: 13px;
+    padding: 8px 2px 10px;
   }
   .topbar {
     padding: 12px 16px;
