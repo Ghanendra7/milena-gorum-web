@@ -2074,11 +2074,11 @@
 
   // Information Page CMS Helpers
   const INFO_SECTIONS = [
-    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Optional link" },
-    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Optional link" },
-    { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "mailto:… or link URL" },
-    { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "https://exibart.com" },
-    { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "https://…" },
+    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Link (Optional)" },
+    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Link (Optional)" },
+    { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "Link (Optional)" },
+    { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "Link (Optional)" },
+    { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "Link (Optional)" },
   ];
 
   function escapeHtml(str) {
