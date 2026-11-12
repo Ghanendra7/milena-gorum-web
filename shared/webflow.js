@@ -219,19 +219,29 @@ function applyFieldOverrides(detected, overrideSection, validFieldSlugs) {
 }
 
 export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
-  const sitesRes = await webflowRequest(env, "/sites");
-  const sites = Array.isArray(sitesRes?.sites) ? sitesRes.sites : [];
-  if (!sites.length) {
-    throw new WebflowApiError("No Webflow sites found for this API token.", 404);
-  }
-
   let site = null;
   if (env.WEBFLOW_SITE_ID) {
-    site = sites.find((s) => s.id === env.WEBFLOW_SITE_ID);
-    if (!site) {
-      throw new WebflowApiError(`Configured WEBFLOW_SITE_ID (${env.WEBFLOW_SITE_ID}) was not found.`, 404);
+    try {
+      site = await webflowRequest(env, `/sites/${env.WEBFLOW_SITE_ID}`);
+    } catch (err) {
+      if (err instanceof WebflowApiError && err.status === 403) {
+        // Allow operation with cms:read + cms:write + assets:write even without sites:read when WEBFLOW_SITE_ID is set
+        site = {
+          id: env.WEBFLOW_SITE_ID,
+          displayName: "Configured Site",
+          shortName: env.WEBFLOW_SITE_ID,
+          previewUrl: null,
+        };
+      } else {
+        throw err;
+      }
     }
   } else {
+    const sitesRes = await webflowRequest(env, "/sites");
+    const sites = Array.isArray(sitesRes?.sites) ? sitesRes.sites : [];
+    if (!sites.length) {
+      throw new WebflowApiError("No Webflow sites found for this API token.", 404);
+    }
     site =
       sites.find((s) => /milena/i.test(s.displayName || "") || /milena/i.test(s.shortName || "")) ||
       sites[0];

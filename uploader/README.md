@@ -10,7 +10,8 @@ It leaves `global.css` and all live site JS engines untouched.
 
 ### 1. Create a Webflow API Token
 In Webflow **Site Settings → Apps & Integrations → API Access → Generate API Token**, enable:
-- `assets:write`
+- `sites:read` (for auto-detecting the site; optional only if `WEBFLOW_SITE_ID` is set)
+- `assets:write` (and `assets:read` if listed)
 - `cms:read`
 - `cms:write`
 
