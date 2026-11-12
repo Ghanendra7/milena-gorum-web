@@ -39,15 +39,15 @@
       </div>
 
       <div class="topbar-actions">
-        <label class="publish-pill" title="Publish behavior for edits, reorders, and uploads">
+        <label class="publish-pill" title="Publish behavior for edits, reorders, and uploads" hidden>
           <span>Save Mode:</span>
           <select id="publishMode" aria-label="Publish behavior">
-            <option value="live">Publish Live</option>
+            <option value="live" selected>Publish Live</option>
             <option value="staged">Save Staged</option>
           </select>
         </label>
         <button id="newProjectBtn" type="button" class="btn btn-primary btn-sm">+ New Project</button>
-        <button id="publishSiteBtn" type="button" class="btn btn-secondary btn-sm">Publish Site</button>
+        <button id="publishSiteBtn" type="button" class="btn btn-secondary btn-sm" hidden>Publish Site</button>
         <button id="schemaBtn" type="button" class="btn btn-ghost btn-sm" hidden>Fields</button>
         <button id="refreshBtn" type="button" class="btn btn-ghost btn-sm">Refresh</button>
         <button id="logoutBtn" type="button" class="btn btn-ghost btn-sm">Sign Out</button>

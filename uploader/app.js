@@ -222,14 +222,7 @@
   }
 
   function initPublishMode() {
-    try {
-      const saved = localStorage.getItem(PUBLISH_MODE_KEY);
-      if (saved === "live" || saved === "staged") {
-        els.publishMode.value = saved;
-      }
-    } catch {
-      // ignore
-    }
+    els.publishMode.value = "live";
   }
 
   function getSelectedProject() {
