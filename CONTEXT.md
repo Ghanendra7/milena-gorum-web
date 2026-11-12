@@ -113,7 +113,7 @@ projects-section                        [100%, 100dvh, Relative, Overflow: Hidde
       └── mobile-thumb-stage            [mobile-thumb-swiper iOS-style scrubber strip]
 CMS Custom Attributes on .project-card:
 
-data-type: Bound to CMS Project Type (motion or image).
+data-type: Bound to CMS Project Type (`Motion`, `Image` / `Still`, or `Motion & Still` / `Both`).
 
 data-subcategories: Bound to CMS Subcategories list.
 

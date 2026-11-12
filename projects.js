@@ -141,6 +141,40 @@
 
         const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
+        const TYPE_ALIASES = {
+            image: "still",
+            images: "still",
+            still: "still",
+            stills: "still",
+            motion: "motion",
+            all: "all"
+        };
+
+        const canonicalizeType = (token) => {
+            const norm = normalize(token);
+            return TYPE_ALIASES[norm] || norm;
+        };
+
+        const parseCardTypes = (rawType) => {
+            const normFull = normalize(rawType);
+            if (!normFull) return [];
+            if (normFull === "both" || normFull === "all") {
+                return ["motion", "still"];
+            }
+
+            const types = new Set();
+            String(rawType || "")
+                .split(/[,&+/|]+|\band\b/i)
+                .map(canonicalizeType)
+                .filter(Boolean)
+                .forEach((t) => types.add(t));
+
+            if (normFull.includes("motion")) types.add("motion");
+            if (normFull.includes("still") || normFull.includes("image")) types.add("still");
+
+            return Array.from(types);
+        };
+
         const getValidVideo = (card) => {
             const embed = card.querySelector(".project-video-embed");
             if (!embed || embed.classList.contains("w-condition-invisible")) return null;
@@ -215,6 +249,8 @@
                 .map(normalize)
                 .filter(Boolean)
                 .join("|");
+
+            card.dataset.normalizedTypes = parseCardTypes(card.getAttribute("data-type")).join("|");
 
             const img = card.querySelector(".project-img") || card.querySelector("img");
             const mediaWrap = card.querySelector(".project-media-wrap");
@@ -1760,12 +1796,17 @@
             subFilterList.classList.toggle("is-visible", !isParentAll);
         };
 
+        const cardMatchesParent = (card, parentType) => {
+            if (parentType === "all") return true;
+            const types = (card.dataset.normalizedTypes || "").split("|").filter(Boolean);
+            return types.includes(parentType);
+        };
+
         const updateAvailableSubFilterButtons = () => {
             if (activeParent === "all") return;
             const availableTags = new Set();
             masterCards.forEach((card) => {
-                const type = normalize(card.getAttribute("data-type"));
-                if (type === activeParent) {
+                if (cardMatchesParent(card, activeParent)) {
                     const subs = (card.dataset.normalizedSubs || "").split("|").filter(Boolean);
                     subs.forEach((s) => availableTags.add(s));
                 }
@@ -1799,10 +1840,9 @@
                 const key = card.dataset.uniqueKey || "";
                 if (key && filteredSeen.has(key)) return false;
 
-                const type = normalize(card.getAttribute("data-type"));
                 const subs = (card.dataset.normalizedSubs || "").split("|").filter(Boolean);
 
-                const matchParent = activeParent === "all" || type === activeParent;
+                const matchParent = cardMatchesParent(card, activeParent);
                 const matchSub = activeSub === "all" || subs.includes(activeSub);
 
                 if (matchParent && matchSub) {
@@ -1824,7 +1864,7 @@
                 btn.classList.add("is-active");
 
                 const rawFilter = btn.getAttribute("data-filter") || btn.textContent;
-                activeParent = normalize(rawFilter);
+                activeParent = canonicalizeType(rawFilter);
 
                 resetSubFilterToAll();
                 syncSubFilterVisibility();
