@@ -746,6 +746,8 @@
           edit.fillDesktop = checked;
           edit.dirty = true;
           saveSlideBtn.disabled = false;
+          statusBadge.textContent = "Edited";
+          statusBadge.className = "slide-state-badge";
         })
       );
       toggles.appendChild(
@@ -753,6 +755,8 @@
           edit.fillMobile = checked;
           edit.dirty = true;
           saveSlideBtn.disabled = false;
+          statusBadge.textContent = "Edited";
+          statusBadge.className = "slide-state-badge";
         })
       );
       body.appendChild(toggles);
@@ -1924,7 +1928,7 @@
         const nextHomeSeq = nextFeatured ? state.orderDraftHome.length + 1 : null;
         await inlinePatchProjectRow(
           p,
-          { featured: nextFeatured, ...(nextHomeSeq !== null ? { featuredSequence: nextHomeSeq } : {}) },
+          { featured: nextFeatured, featuredSequence: nextHomeSeq },
           rowSavePill
         );
         renderProjectOrderList();
@@ -2478,6 +2482,9 @@
             projectType: els.newProjType.value,
             categoryIds: getSelectedCategoryIds(els.newProjCategories),
             featured: els.newProjFeatured.checked,
+            ...(els.newProjFeatured.checked
+              ? { featuredSequence: state.projects.filter((p) => p.featured).length + 1 }
+              : {}),
           },
         }),
       });
@@ -2506,6 +2513,36 @@
   });
   els.removeFromGalleryBtn.addEventListener("click", () => executeSlideRemoval("remove-from-gallery"));
   els.deleteMediaPermanentBtn.addEventListener("click", () => executeSlideRemoval("delete"));
+
+  // Modal Escape / Backdrop Close & Upload Leave Guard
+  [
+    [els.focusModal, () => closeFocusModal(true)],
+    [els.schemaModal, () => { els.schemaModal.hidden = true; }],
+    [els.newProjectModal, () => { els.newProjectModal.hidden = true; }],
+    [els.slideDeleteModal, () => { state.pendingDeleteSlideId = null; els.slideDeleteModal.hidden = true; }],
+  ].forEach(([modalEl, closeFn]) => {
+    modalEl.addEventListener("click", (e) => {
+      if (e.target === modalEl) closeFn();
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!els.focusModal.hidden) return closeFocusModal(true);
+    if (!els.schemaModal.hidden) { els.schemaModal.hidden = true; return; }
+    if (!els.newProjectModal.hidden) { els.newProjectModal.hidden = true; return; }
+    if (!els.slideDeleteModal.hidden) {
+      state.pendingDeleteSlideId = null;
+      els.slideDeleteModal.hidden = true;
+    }
+  });
+
+  window.addEventListener("beforeunload", (e) => {
+    if (state.isUploading) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
 
   checkInitialAuth();
 })();
