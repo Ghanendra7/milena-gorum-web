@@ -1,11 +1,13 @@
 (function () {
   const BUNNY_CDN_BASE = "https://vz-ada4eb16-135.b-cdn.net";
   const STORAGE_OVERRIDE_KEY = "mg_webflow_field_override_v1";
+  const SESSION_TOKEN_KEY = "mg_uploader_token_v1";
   const TARGET_MAX_BYTES = 1.4 * 1024 * 1024;
   const HARD_MAX_BYTES = 3.7 * 1024 * 1024;
 
   const state = {
     authenticated: false,
+    sessionToken: loadSessionToken(),
     bootstrap: null,
     projects: [],
     selectedProjectId: "",
@@ -71,6 +73,22 @@
     saveSchemaBtn: document.getElementById("saveSchemaBtn"),
   };
 
+  function loadSessionToken() {
+    try {
+      return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function saveSessionToken(token) {
+    state.sessionToken = token || "";
+    try {
+      if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+      else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    } catch { }
+  }
+
   function loadFieldOverride() {
     try {
       const raw = localStorage.getItem(STORAGE_OVERRIDE_KEY);
@@ -121,10 +139,19 @@
   }
 
   async function apiJson(url, options = {}) {
-    const res = await fetch(url, options);
+    const headers = new Headers(options.headers || {});
+    if (state.sessionToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${state.sessionToken}`);
+    }
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "same-origin",
+    });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      setAuthenticated(false);
+    if (res.status === 401 && data?.code === "AUTH_REQUIRED") {
+      saveSessionToken("");
+      setAuthenticated(false, data?.error || "Session expired. Please sign in again.");
     }
     if (!res.ok) {
       throw new Error(data?.error || `Request failed (${res.status})`);
@@ -132,12 +159,19 @@
     return data;
   }
 
-  function setAuthenticated(isAuthed) {
+  function setAuthenticated(isAuthed, loginMessage = "") {
     state.authenticated = isAuthed;
     els.authGate.hidden = isAuthed;
     els.appShell.hidden = !isAuthed;
     if (!isAuthed) {
+      if (loginMessage) {
+        els.loginError.textContent = loginMessage;
+        els.loginError.hidden = false;
+      }
       els.passwordInput.focus();
+    } else {
+      els.loginError.hidden = true;
+      els.loginError.textContent = "";
     }
   }
 
@@ -957,11 +991,14 @@
     els.loginBtn.disabled = true;
 
     try {
-      await apiJson("/api/auth", {
+      const authData = await apiJson("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: els.passwordInput.value }),
       });
+      if (authData?.token) {
+        saveSessionToken(authData.token);
+      }
       els.passwordInput.value = "";
       setAuthenticated(true);
       await loadBootstrap();
@@ -974,7 +1011,8 @@
   });
 
   els.logoutBtn.addEventListener("click", async () => {
-    await fetch("/api/auth", { method: "DELETE" }).catch(() => { });
+    saveSessionToken("");
+    await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" }).catch(() => { });
     setAuthenticated(false);
   });
 

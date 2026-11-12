@@ -52,19 +52,23 @@ export function parseCookies(request) {
   return out;
 }
 
-export async function createSessionCookieHeader(env, request) {
+export async function createSessionToken(env) {
   const secret = env.SESSION_SECRET || env.UPLOADER_PASSWORD;
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
   const payload = String(expiresAt);
   const sig = await signPayload(payload, secret);
-  const token = `${payload}.${sig}`;
+  return `${payload}.${sig}`;
+}
+
+export async function createSessionCookieHeader(env, request, existingToken = null) {
+  const token = existingToken || (await createSessionToken(env));
   const isHttps = new URL(request.url).protocol === "https:";
 
   return [
     `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
     `Max-Age=${SESSION_TTL_SECONDS}`,
     ...(isHttps ? ["Secure"] : []),
   ].join("; ");
@@ -76,24 +80,14 @@ export function clearSessionCookieHeader(request) {
     `${SESSION_COOKIE_NAME}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
     "Max-Age=0",
     ...(isHttps ? ["Secure"] : []),
   ].join("; ");
 }
 
-export async function isAuthenticated(request, env) {
-  if (!env.UPLOADER_PASSWORD) return false;
-
-  const headerPassword = request.headers.get("X-Uploader-Password");
-  if (headerPassword) {
-    return timingSafeEqualStrings(headerPassword, env.UPLOADER_PASSWORD);
-  }
-
-  const cookies = parseCookies(request);
-  const token = cookies[SESSION_COOKIE_NAME];
-  if (!token) return false;
-
+async function verifySessionToken(token, env) {
+  if (!token || typeof token !== "string") return false;
   const dotIdx = token.indexOf(".");
   if (dotIdx === -1) return false;
 
@@ -109,6 +103,24 @@ export async function isAuthenticated(request, env) {
   return timingSafeEqualStrings(sig, expectedSig);
 }
 
+export async function isAuthenticated(request, env) {
+  if (!env.UPLOADER_PASSWORD) return false;
+
+  const headerPassword = request.headers.get("X-Uploader-Password");
+  if (headerPassword) {
+    return timingSafeEqualStrings(headerPassword, env.UPLOADER_PASSWORD);
+  }
+
+  const authHeader = request.headers.get("Authorization") || "";
+  if (authHeader.startsWith("Bearer ")) {
+    const bearerToken = authHeader.slice(7).trim();
+    if (await verifySessionToken(bearerToken, env)) return true;
+  }
+
+  const cookies = parseCookies(request);
+  return verifySessionToken(cookies[SESSION_COOKIE_NAME], env);
+}
+
 export async function requireAuth(request, env) {
   if (!env.UPLOADER_PASSWORD) {
     return jsonError(
@@ -118,9 +130,26 @@ export async function requireAuth(request, env) {
   }
   const ok = await isAuthenticated(request, env);
   if (!ok) {
-    return jsonError("Authentication required.", 401);
+    return jsonResponse(
+      { error: "Authentication required.", code: "AUTH_REQUIRED" },
+      401
+    );
   }
   return null;
+}
+
+export function webflowErrorResponse(err) {
+  // Never emit HTTP 401 for upstream Webflow token errors so client doesn't treat it as session expiry
+  const upstreamStatus = err?.status || 500;
+  const httpStatus = upstreamStatus === 401 || upstreamStatus === 403 ? 502 : (upstreamStatus >= 400 ? upstreamStatus : 500);
+  return jsonResponse(
+    {
+      error: err?.message || "Webflow API request failed.",
+      code: "WEBFLOW_API_ERROR",
+      ...(err?.payload !== undefined ? { details: err.payload } : {}),
+    },
+    httpStatus
+  );
 }
 
 export function jsonResponse(data, status = 200, extraHeaders = {}) {

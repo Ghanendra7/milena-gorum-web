@@ -1,6 +1,7 @@
 import {
   clearSessionCookieHeader,
   createSessionCookieHeader,
+  createSessionToken,
   isAuthenticated,
   jsonError,
   jsonResponse,
@@ -43,9 +44,10 @@ export async function onRequestPost({ request, env }) {
     return jsonError("Invalid password.", 401);
   }
 
-  const cookie = await createSessionCookieHeader(env, request);
+  const token = await createSessionToken(env);
+  const cookie = await createSessionCookieHeader(env, request, token);
   return jsonResponse(
-    { authenticated: true },
+    { authenticated: true, token },
     200,
     { "Set-Cookie": cookie }
   );

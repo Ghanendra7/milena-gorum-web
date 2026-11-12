@@ -1,4 +1,4 @@
-import { jsonError, jsonResponse, requireAuth } from "../../shared/auth.js";
+import { jsonError, jsonResponse, requireAuth, webflowErrorResponse } from "../../shared/auth.js";
 import { resolveSiteAndSchemas, WebflowApiError, webflowRequest } from "../../shared/webflow.js";
 
 const MAX_WEBFLOW_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB Webflow CMS limit
@@ -102,7 +102,7 @@ export async function onRequestPost({ request, env }) {
     });
   } catch (err) {
     if (err instanceof WebflowApiError) {
-      return jsonError(err.message, err.status >= 400 ? err.status : 500, err.payload);
+      return webflowErrorResponse(err);
     }
     return jsonError(err?.message || "Asset upload failed.", 500);
   }
