@@ -36,12 +36,20 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const resolved = await resolveSiteAndSchemas(env);
-    const { site, projectsCollection, mediaCollection, categoryCollection, fieldMap } = resolved;
+    const {
+      site,
+      projectsCollection,
+      mediaCollection,
+      categoryCollection,
+      informationCollection,
+      fieldMap,
+    } = resolved;
 
-    const [projectItems, mediaItems, categoryItems] = await Promise.all([
+    const [projectItems, mediaItems, categoryItems, informationItems] = await Promise.all([
       listAllCollectionItems(env, projectsCollection.id),
       listAllCollectionItems(env, mediaCollection.id),
       categoryCollection ? listAllCollectionItems(env, categoryCollection.id) : Promise.resolve([]),
+      informationCollection ? listAllCollectionItems(env, informationCollection.id) : Promise.resolve([]),
     ]);
 
     const mFields = fieldMap.media;
@@ -168,17 +176,44 @@ export async function onRequestGet({ request, env }) {
         return a.name.localeCompare(b.name);
       });
 
+    let informationData = null;
+    if (informationCollection && informationItems.length > 0) {
+      const activeInfoItem = informationItems.find((it) => !it.isArchived) || informationItems[0];
+      const iFields = fieldMap.information || {};
+      const ifd = activeInfoItem?.fieldData || {};
+      const pic = iFields.profilePicture
+        ? normalizeImageField(ifd[iFields.profilePicture])
+        : { fileId: null, url: "", alt: "" };
+
+      informationData = {
+        id: activeInfoItem.id,
+        name: ifd.name || "Milena Gorum",
+        slug: ifd.slug || "milena-gorum",
+        isDraft: Boolean(activeInfoItem.isDraft),
+        lastPublished: activeInfoItem.lastPublished || null,
+        profilePicture: pic,
+        infoHtml: (iFields.info && ifd[iFields.info]) || "",
+        servicesHtml: (iFields.services && ifd[iFields.services]) || "",
+        locationHtml: (iFields.location && ifd[iFields.location]) || "",
+        contactHtml: (iFields.contact && ifd[iFields.contact]) || "",
+        pressHtml: (iFields.press && ifd[iFields.press]) || "",
+        interviewsHtml: (iFields.interviews && ifd[iFields.interviews]) || "",
+      };
+    }
+
     return jsonResponse({
       site,
       collections: {
         projects: projectsCollection,
         media: mediaCollection,
         category: categoryCollection,
+        information: informationCollection,
       },
       fieldMap,
       categories,
       mediaById,
       projects,
+      information: informationData,
     });
   } catch (err) {
     if (err instanceof WebflowApiError) {

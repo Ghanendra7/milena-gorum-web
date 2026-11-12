@@ -61,9 +61,10 @@
       <section id="projectsView" class="view-stack">
         <section class="panel order-toolbar-panel">
           <div class="order-header-row">
-            <div class="segmented" role="group" aria-label="Project list view">
+            <div class="segmented" role="group" aria-label="Workspace view">
               <button id="orderModeAllBtn" type="button" class="seg-btn is-active">All Projects</button>
               <button id="orderModeHomeBtn" type="button" class="seg-btn">Homepage Featured</button>
+              <button id="orderModeInfoBtn" type="button" class="seg-btn" hidden>Information</button>
             </div>
 
             <div class="order-save-actions">
@@ -93,6 +94,57 @@
         </section>
 
         <div id="projectOrderList" class="project-order-list"></div>
+
+        <!-- INFORMATION PAGE EDITOR -->
+        <section id="infoEditorSection" class="view-stack" hidden>
+          <section class="panel editor-hero-panel">
+            <div class="editor-hero-left">
+              <div class="editor-hero-title-row">
+                <h1 id="infoItemHeading" class="editor-hero-title">Information Page</h1>
+                <span id="infoStatusPill" class="status-pill">Live</span>
+                <span id="infoDirtyBadge" class="badge-dirty" hidden>Unsaved changes</span>
+              </div>
+              <p class="field-hint">Manage bio, profile picture, services, location, contact, press, and interviews. All links open in a new tab.</p>
+            </div>
+            <div class="editor-hero-actions">
+              <button id="publishInfoBtn" type="button" class="btn btn-secondary btn-sm">Publish Live</button>
+              <button id="unpublishInfoBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
+              <button id="saveInfoBtn" type="button" class="btn btn-primary btn-sm" disabled>Save Information</button>
+            </div>
+          </section>
+
+          <section class="panel info-top-panel">
+            <div class="info-pic-col">
+              <span class="info-field-label">Profile Picture</span>
+              <div class="info-pic-frame">
+                <img id="infoPicPreview" alt="Profile Picture" hidden />
+                <span id="infoPicEmpty" class="muted">No image</span>
+              </div>
+              <p class="field-hint" style="margin:0;">3:4 Aspect Ratio recommended</p>
+              <input id="infoPicInput" type="file" accept="image/*" hidden />
+              <div class="info-pic-actions">
+                <button id="replaceInfoPicBtn" type="button" class="btn btn-secondary btn-sm">Replace Picture</button>
+                <button id="removeInfoPicBtn" type="button" class="btn btn-ghost btn-sm">Remove</button>
+              </div>
+            </div>
+
+            <div class="info-bio-col">
+              <div class="info-bio-header">
+                <label class="info-field-label" for="infoBioEditor">Info (Bio)</label>
+                <div class="rich-toolbar" role="toolbar" aria-label="Bio formatting">
+                  <button id="bioBoldBtn" type="button" class="icon-btn" title="Bold"><strong>B</strong></button>
+                  <button id="bioItalicBtn" type="button" class="icon-btn" title="Italic"><em>I</em></button>
+                  <button id="bioLinkBtn" type="button" class="icon-btn" title="Add or edit link on selected text">Link</button>
+                  <button id="bioUnlinkBtn" type="button" class="icon-btn" title="Remove link from selected text">Unlink</button>
+                </div>
+              </div>
+              <div id="infoBioEditor" class="rich-editor" contenteditable="true" aria-label="Bio rich text editor"></div>
+              <p class="field-hint" style="margin:0;">Highlight any words and click <strong>Link</strong> to add a link (opens in a new tab).</p>
+            </div>
+          </section>
+
+          <div id="infoListsGrid" class="info-lists-grid"></div>
+        </section>
       </section>
 
       <!-- DETAIL VIEW: Inside a Single Project (Details + Gallery + Uploader) -->

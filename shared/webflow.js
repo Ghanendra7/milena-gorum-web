@@ -303,6 +303,51 @@ export function detectMediaFields(fields, projectsCollectionId) {
   };
 }
 
+export function detectInformationFields(fields) {
+  return {
+    name: "name",
+    slug: "slug",
+    profilePicture:
+      findField(fields, {
+        types: ["Image"],
+        slugPatterns: [/profile/, /picture/, /photo/, /avatar/, /image/],
+        namePatterns: [/profile/, /picture/, /photo/, /avatar/, /image/],
+      }) ||
+      fields.find((f) => f.type === "Image")?.slug ||
+      null,
+    info: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/^info$/, /^bio$/, /about/, /description/],
+      namePatterns: [/^info$/, /^bio$/, /about/, /description/],
+    }),
+    services: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/service/],
+      namePatterns: [/service/],
+    }),
+    location: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/location/, /city/, /cities/],
+      namePatterns: [/location/, /city/],
+    }),
+    contact: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/contact/, /email/],
+      namePatterns: [/contact/, /email/],
+    }),
+    press: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/press/],
+      namePatterns: [/press/],
+    }),
+    interviews: findField(fields, {
+      types: ["RichText", "PlainText"],
+      slugPatterns: [/interview/],
+      namePatterns: [/interview/],
+    }),
+  };
+}
+
 function applyFieldOverrides(detected, overrideSection, validFieldSlugs) {
   if (!overrideSection || typeof overrideSection !== "object") return detected;
   const out = { ...detected };
@@ -430,6 +475,24 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
     ? schemas.find((s) => s.id === categoryCollectionId) || null
     : null;
 
+  let informationSchema = env.WEBFLOW_INFORMATION_COLLECTION_ID
+    ? schemas.find((s) => s.id === env.WEBFLOW_INFORMATION_COLLECTION_ID) || null
+    : schemas.find(
+        (s) =>
+          s.id !== projectsSchema.id &&
+          s.id !== mediaSchema.id &&
+          s.id !== categorySchema?.id &&
+          /information|^info$|about/i.test(`${s.slug} ${s.displayName}`)
+      ) || null;
+
+  let informationFields = null;
+  if (informationSchema) {
+    const infoValidSlugs = new Set((informationSchema.fields || []).map((f) => f.slug));
+    informationFields = detectInformationFields(informationSchema.fields || []);
+    informationFields = applyFieldOverrides(informationFields, envOverride?.information, infoValidSlugs);
+    informationFields = applyFieldOverrides(informationFields, runtimeOverride?.information, infoValidSlugs);
+  }
+
   const mapFieldSummary = (f) => ({
     slug: f.slug,
     displayName: f.displayName,
@@ -465,9 +528,18 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
           slug: categorySchema.slug,
         }
       : null,
+    informationCollection: informationSchema
+      ? {
+          id: informationSchema.id,
+          displayName: informationSchema.displayName,
+          slug: informationSchema.slug,
+          fields: (informationSchema.fields || []).map(mapFieldSummary),
+        }
+      : null,
     fieldMap: {
       projects: projectsFields,
       media: mediaFields,
+      information: informationFields,
     },
   };
 }
@@ -767,5 +839,46 @@ export async function deleteMediaItemsAndUnsharedAssets(
   }
 
   return { deletedMediaCount, deletedAssetCount };
+}
+
+export function buildInformationFieldData(input, iFields) {
+  const fieldData = {};
+  if (!iFields) return fieldData;
+
+  if (typeof input.name === "string" && input.name.trim()) {
+    fieldData.name = input.name.trim().slice(0, 200);
+  }
+  if (typeof input.slug === "string" && input.slug.trim()) {
+    fieldData.slug = slugify(input.slug).slice(0, 200);
+  }
+  if (iFields.profilePicture && input.profilePicture !== undefined) {
+    if (input.profilePicture === null) {
+      fieldData[iFields.profilePicture] = null;
+    } else if (input.profilePicture?.fileId || input.profilePicture?.url) {
+      fieldData[iFields.profilePicture] = {
+        ...(input.profilePicture.fileId ? { fileId: input.profilePicture.fileId } : {}),
+        ...(input.profilePicture.url ? { url: input.profilePicture.url } : {}),
+        ...(input.profilePicture.alt !== undefined ? { alt: String(input.profilePicture.alt || "") } : {}),
+      };
+    }
+  }
+
+  const richPairs = [
+    ["info", "infoHtml"],
+    ["services", "servicesHtml"],
+    ["location", "locationHtml"],
+    ["contact", "contactHtml"],
+    ["press", "pressHtml"],
+    ["interviews", "interviewsHtml"],
+  ];
+
+  for (const [fieldKey, inputKey] of richPairs) {
+    const slug = iFields[fieldKey];
+    if (slug && input[inputKey] !== undefined) {
+      fieldData[slug] = input[inputKey] === null ? "" : String(input[inputKey]);
+    }
+  }
+
+  return fieldData;
 }
 

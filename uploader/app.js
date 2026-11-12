@@ -31,11 +31,14 @@
     dragGalleryId: null,
     focusTarget: null, // { kind: "queue" | "existing", id, prevX, prevY, prevDirty }
     pendingDeleteSlideId: null,
-    orderMode: "all", // "all" | "home"
+    orderMode: "all", // "all" | "home" | "info"
     orderDraftAll: [],
     orderDraftHome: [],
     dragOrderProjectId: null,
     newProjSlugManual: false,
+    information: null,
+    infoDraft: null,
+    infoDirty: false,
     fieldOverride: loadFieldOverride(),
   };
 
@@ -62,6 +65,7 @@
 
     orderModeAllBtn: document.getElementById("orderModeAllBtn"),
     orderModeHomeBtn: document.getElementById("orderModeHomeBtn"),
+    orderModeInfoBtn: document.getElementById("orderModeInfoBtn"),
     orderDirtyCount: document.getElementById("orderDirtyCount"),
     resetOrderBtn: document.getElementById("resetOrderBtn"),
     saveOrderBtn: document.getElementById("saveOrderBtn"),
@@ -73,6 +77,25 @@
     clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
     dirOrderHint: document.getElementById("dirOrderHint"),
     projectOrderList: document.getElementById("projectOrderList"),
+
+    infoEditorSection: document.getElementById("infoEditorSection"),
+    infoItemHeading: document.getElementById("infoItemHeading"),
+    infoStatusPill: document.getElementById("infoStatusPill"),
+    infoDirtyBadge: document.getElementById("infoDirtyBadge"),
+    publishInfoBtn: document.getElementById("publishInfoBtn"),
+    unpublishInfoBtn: document.getElementById("unpublishInfoBtn"),
+    saveInfoBtn: document.getElementById("saveInfoBtn"),
+    infoPicPreview: document.getElementById("infoPicPreview"),
+    infoPicEmpty: document.getElementById("infoPicEmpty"),
+    infoPicInput: document.getElementById("infoPicInput"),
+    replaceInfoPicBtn: document.getElementById("replaceInfoPicBtn"),
+    removeInfoPicBtn: document.getElementById("removeInfoPicBtn"),
+    infoBioEditor: document.getElementById("infoBioEditor"),
+    bioBoldBtn: document.getElementById("bioBoldBtn"),
+    bioItalicBtn: document.getElementById("bioItalicBtn"),
+    bioLinkBtn: document.getElementById("bioLinkBtn"),
+    bioUnlinkBtn: document.getElementById("bioUnlinkBtn"),
+    infoListsGrid: document.getElementById("infoListsGrid"),
 
     editorProjNumBadge: document.getElementById("editorProjNumBadge"),
     editorProjHeading: document.getElementById("editorProjHeading"),
@@ -272,6 +295,9 @@
     return {
       projects: { ...base.projects, ...(state.fieldOverride.projects || {}) },
       media: { ...base.media, ...(state.fieldOverride.media || {}) },
+      information: base.information
+        ? { ...base.information, ...(state.fieldOverride.information || {}) }
+        : null,
     };
   }
 
@@ -286,7 +312,9 @@
     const targetHash =
       state.activeView === "editor" && state.selectedProjectId
         ? `#project=${encodeURIComponent(state.selectedProjectId)}`
-        : "#/";
+        : state.orderMode === "info"
+          ? "#information"
+          : "#/";
     if (window.location.hash !== targetHash) {
       history.replaceState(null, "", targetHash);
     }
@@ -298,6 +326,9 @@
         return;
       }
       clearQueue();
+    }
+    if (state.orderMode === "info") {
+      state.orderMode = "all";
     }
     state.activeView = "projects";
     els.projectsView.hidden = false;
@@ -352,9 +383,20 @@
       state.projects = data.projects || [];
       state.mediaById = data.mediaById || {};
       state.categories = data.categories || [];
+      state.information = data.information || null;
+
+      const hasInfoCollection = Boolean(data.collections?.information);
+      els.orderModeInfoBtn.hidden = !hasInfoCollection;
+      if (state.orderMode === "info" && !hasInfoCollection) {
+        state.orderMode = "all";
+      }
 
       const hashMatch = window.location.hash.match(/^#project=([^&]+)/);
       const hashProjectId = hashMatch ? decodeURIComponent(hashMatch[1]) : "";
+      if (!preferredProjectId && window.location.hash === "#information" && hasInfoCollection) {
+        state.activeView = "projects";
+        state.orderMode = "info";
+      }
       const targetId = preferredProjectId || (state.activeView === "editor" ? state.selectedProjectId : hashProjectId);
 
       if (targetId && state.projects.some((p) => p.id === targetId)) {
@@ -370,6 +412,7 @@
 
       populateDirectoryFilters();
       resetOrderDrafts();
+      syncInfoDraftFromBootstrap();
       updateModeCounts();
 
       if (state.activeView === "editor" && getSelectedProject()) {
@@ -378,7 +421,6 @@
         els.projectsView.hidden = false;
         els.editorView.hidden = true;
         els.backToProjectsBtn.hidden = true;
-        els.topbarTitle.textContent = "Projects";
         els.actionBar.hidden = true;
         renderProjectOrderList();
       }
@@ -393,6 +435,11 @@
     const homeCount = state.projects.filter((p) => p.featured).length;
     els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
     els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount}/12)`;
+    if (state.information) {
+      els.orderModeInfoBtn.textContent = `Information (${state.information.isDraft ? "Draft" : "Live"})`;
+    } else {
+      els.orderModeInfoBtn.textContent = "Information";
+    }
   }
 
   // Project Detail Editor Helpers
@@ -1565,6 +1612,7 @@
   }
 
   function getOrderChanges() {
+    if (state.orderMode === "info") return [];
     const byId = new Map(state.projects.map((p) => [p.id, p]));
     if (state.orderMode === "all") {
       return state.orderDraftAll
@@ -1577,7 +1625,7 @@
   }
 
   function hasActiveDirFilters() {
-    if (state.orderMode === "home") return false;
+    if (state.orderMode === "home" || state.orderMode === "info") return false;
     return Boolean(
       els.dirSearchInput.value.trim() ||
         els.dirTypeFilter.value ||
@@ -1642,9 +1690,31 @@
     const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
 
     const isHomeMode = state.orderMode === "home";
-    els.orderModeAllBtn.classList.toggle("is-active", !isHomeMode);
+    const isInfoMode = state.orderMode === "info";
+
+    els.orderModeAllBtn.classList.toggle("is-active", state.orderMode === "all");
     els.orderModeHomeBtn.classList.toggle("is-active", isHomeMode);
-    els.dirFilterRow.hidden = isHomeMode;
+    els.orderModeInfoBtn.classList.toggle("is-active", isInfoMode);
+    els.dirFilterRow.hidden = isHomeMode || isInfoMode;
+
+    if (isInfoMode) {
+      els.projectOrderList.hidden = true;
+      els.infoEditorSection.hidden = false;
+      els.saveOrderBtn.hidden = true;
+      els.resetOrderBtn.hidden = true;
+      els.orderDirtyCount.hidden = true;
+      els.clearDirFiltersBtn.hidden = true;
+      els.dirOrderHint.textContent = "Manage Information page content. All links open in a new tab.";
+      els.topbarTitle.textContent = "Information";
+      syncUrlHash();
+      renderInformationEditor();
+      return;
+    }
+
+    els.projectOrderList.hidden = false;
+    els.infoEditorSection.hidden = true;
+    els.topbarTitle.textContent = "Projects";
+    syncUrlHash();
 
     const changes = getOrderChanges();
     const hasOrderChanges = changes.length > 0;
@@ -2015,6 +2085,372 @@
     }
   }
 
+  // Information Page CMS Helpers
+  const INFO_SECTIONS = [
+    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Optional link (opens in new tab)" },
+    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Optional link (opens in new tab)" },
+    { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "mailto:… or link URL" },
+    { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "https://exibart.com" },
+    { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "https://…" },
+  ];
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function parseRichTextToRows(html) {
+    if (!html || typeof html !== "string") return [];
+    const div = document.createElement("div");
+    div.innerHTML = html.trim();
+    const rows = [];
+
+    const extractNode = (node) => {
+      const a = node.querySelector("a");
+      const text = (a ? a.textContent : node.textContent || "").trim();
+      const url = a ? (a.getAttribute("href") || "").trim() : "";
+      if (text || url) {
+        rows.push({ text: text || url, url });
+      }
+    };
+
+    const blocks = div.querySelectorAll("p, li, div, h1, h2, h3, h4, h5, h6");
+    if (blocks.length > 0) {
+      blocks.forEach((b) => {
+        const raw = b.innerHTML;
+        if (/<br\s*[\/]?>/i.test(raw) && !b.querySelector("a")) {
+          raw.split(/<br\s*[\/]?>/i).forEach((chunk) => {
+            const temp = document.createElement("div");
+            temp.innerHTML = chunk;
+            extractNode(temp);
+          });
+        } else {
+          extractNode(b);
+        }
+      });
+    } else {
+      html.split(/<br\s*[\/]?>|\n+/i).forEach((chunk) => {
+        const temp = document.createElement("div");
+        temp.innerHTML = chunk;
+        extractNode(temp);
+      });
+    }
+
+    return rows;
+  }
+
+  function rowsToRichTextHtml(rows) {
+    if (!Array.isArray(rows) || !rows.length) return "";
+    const out = [];
+    for (const r of rows) {
+      const text = String(r?.text || "").trim();
+      let url = String(r?.url || "").trim();
+      if (!text && !url) continue;
+
+      const label = text || url;
+      if (url) {
+        if (url.includes("@") && !url.startsWith("mailto:") && !url.startsWith("http://") && !url.startsWith("https://")) {
+          url = `mailto:${url}`;
+        } else if (!/^[a-z]+:\/\//i.test(url) && !url.startsWith("mailto:") && !url.startsWith("#") && !url.startsWith("/")) {
+          url = `https://${url}`;
+        }
+        out.push(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></p>`);
+      } else {
+        out.push(`<p>${escapeHtml(label)}</p>`);
+      }
+    }
+    return out.join("");
+  }
+
+  function normalizeBioRichText(html) {
+    if (!html || !html.trim()) return "";
+    const div = document.createElement("div");
+    div.innerHTML = html.trim();
+    div.querySelectorAll("a").forEach((a) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
+      let href = (a.getAttribute("href") || "").trim();
+      if (href && href.includes("@") && !href.startsWith("mailto:") && !href.startsWith("http://") && !href.startsWith("https://")) {
+        a.setAttribute("href", `mailto:${href}`);
+      } else if (href && !/^[a-z]+:\/\//i.test(href) && !href.startsWith("mailto:") && !href.startsWith("#") && !href.startsWith("/")) {
+        a.setAttribute("href", `https://${href}`);
+      }
+    });
+    if (!div.querySelector("p, div, h1, h2, h3, h4, h5, h6, ul, ol")) {
+      const trimmed = div.innerHTML.trim();
+      return trimmed ? `<p>${trimmed}</p>` : "";
+    }
+    return div.innerHTML.trim();
+  }
+
+  function syncInfoDraftFromBootstrap() {
+    const info = state.information;
+    const hasCollection = Boolean(state.bootstrap?.collections?.information);
+    if (!info && !hasCollection) {
+      state.infoDraft = null;
+      setInfoDirty(false);
+      return;
+    }
+    state.infoDraft = {
+      id: info?.id || null,
+      name: info?.name || "Milena Gorum",
+      slug: info?.slug || "milena-gorum",
+      isDraft: Boolean(info?.isDraft),
+      profilePicture: info?.profilePicture ? { ...info.profilePicture } : null,
+      infoHtml: info?.infoHtml || "",
+      servicesRows: parseRichTextToRows(info?.servicesHtml),
+      locationRows: parseRichTextToRows(info?.locationHtml),
+      contactRows: parseRichTextToRows(info?.contactHtml),
+      pressRows: parseRichTextToRows(info?.pressHtml),
+      interviewsRows: parseRichTextToRows(info?.interviewsHtml),
+    };
+    setInfoDirty(false);
+  }
+
+  function setInfoDirty(dirty) {
+    state.infoDirty = dirty;
+    els.infoDirtyBadge.hidden = !dirty;
+    els.saveInfoBtn.disabled = !dirty;
+  }
+
+  function renderInformationEditor() {
+    const draft = state.infoDraft;
+    if (!draft) return;
+
+    els.infoItemHeading.textContent = draft.name ? `${draft.name} (Information)` : "Information Page";
+    els.infoStatusPill.textContent = draft.isDraft ? "Draft" : "Live";
+    els.infoStatusPill.className = `status-pill ${draft.isDraft ? "is-draft" : "is-ok"}`;
+    els.publishInfoBtn.disabled = !draft.isDraft;
+    els.unpublishInfoBtn.disabled = draft.isDraft;
+
+    if (draft.profilePicture?.url) {
+      els.infoPicPreview.src = draft.profilePicture.url;
+      els.infoPicPreview.hidden = false;
+      els.infoPicEmpty.hidden = true;
+      els.removeInfoPicBtn.hidden = false;
+    } else {
+      els.infoPicPreview.removeAttribute("src");
+      els.infoPicPreview.hidden = true;
+      els.infoPicEmpty.hidden = false;
+      els.removeInfoPicBtn.hidden = true;
+    }
+
+    if (document.activeElement !== els.infoBioEditor) {
+      els.infoBioEditor.innerHTML = draft.infoHtml || "";
+    }
+
+    renderInfoListsGrid();
+  }
+
+  function renderInfoListsGrid() {
+    const draft = state.infoDraft;
+    if (!draft) return;
+    els.infoListsGrid.innerHTML = "";
+
+    INFO_SECTIONS.forEach(({ key, title, textPlaceholder, urlPlaceholder }) => {
+      const rows = draft[key] || [];
+      const panel = document.createElement("section");
+      panel.className = "panel info-list-panel";
+
+      const header = document.createElement("div");
+      header.className = "info-list-header";
+      const h3 = document.createElement("h3");
+      h3.textContent = `${title} (${rows.length})`;
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "btn btn-ghost btn-sm";
+      addBtn.textContent = `+ Add ${title.replace(/s$/, "")}`;
+      addBtn.addEventListener("click", () => {
+        rows.push({ text: "", url: "" });
+        setInfoDirty(true);
+        renderInfoListsGrid();
+        const inputs = panel.querySelectorAll(".info-row-text");
+        const lastInput = inputs[inputs.length - 1];
+        if (lastInput) lastInput.focus();
+      });
+
+      header.appendChild(h3);
+      header.appendChild(addBtn);
+      panel.appendChild(header);
+
+      const stack = document.createElement("div");
+      stack.className = "info-rows-stack";
+
+      if (!rows.length) {
+        const empty = document.createElement("p");
+        empty.className = "field-hint";
+        empty.style.margin = "4px 0 0";
+        empty.textContent = `No items yet. Click "+ Add ${title.replace(/s$/, "")}" to add the first row.`;
+        stack.appendChild(empty);
+      } else {
+        rows.forEach((row, idx) => {
+          const itemEl = document.createElement("div");
+          itemEl.className = "info-row-item";
+
+          const textInput = document.createElement("input");
+          textInput.type = "text";
+          textInput.className = "inline-input info-row-text";
+          textInput.value = row.text || "";
+          textInput.placeholder = textPlaceholder;
+          textInput.addEventListener("input", () => {
+            row.text = textInput.value;
+            setInfoDirty(true);
+          });
+
+          const urlInput = document.createElement("input");
+          urlInput.type = "text";
+          urlInput.className = "inline-input info-row-url";
+          urlInput.value = row.url || "";
+          urlInput.placeholder = urlPlaceholder;
+          urlInput.addEventListener("input", () => {
+            row.url = urlInput.value;
+            setInfoDirty(true);
+          });
+
+          const controls = document.createElement("div");
+          controls.className = "info-row-controls";
+
+          const upBtn = document.createElement("button");
+          upBtn.type = "button";
+          upBtn.className = "icon-btn";
+          upBtn.textContent = "↑";
+          upBtn.disabled = idx === 0;
+          upBtn.addEventListener("click", () => {
+            const [m] = rows.splice(idx, 1);
+            rows.splice(idx - 1, 0, m);
+            setInfoDirty(true);
+            renderInfoListsGrid();
+          });
+
+          const downBtn = document.createElement("button");
+          downBtn.type = "button";
+          downBtn.className = "icon-btn";
+          downBtn.textContent = "↓";
+          downBtn.disabled = idx === rows.length - 1;
+          downBtn.addEventListener("click", () => {
+            const [m] = rows.splice(idx, 1);
+            rows.splice(idx + 1, 0, m);
+            setInfoDirty(true);
+            renderInfoListsGrid();
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "icon-btn is-danger";
+          delBtn.textContent = "✕";
+          delBtn.title = "Delete row";
+          delBtn.addEventListener("click", () => {
+            rows.splice(idx, 1);
+            setInfoDirty(true);
+            renderInfoListsGrid();
+          });
+
+          controls.appendChild(upBtn);
+          controls.appendChild(downBtn);
+          controls.appendChild(delBtn);
+
+          itemEl.appendChild(textInput);
+          itemEl.appendChild(urlInput);
+          itemEl.appendChild(controls);
+          stack.appendChild(itemEl);
+        });
+      }
+
+      panel.appendChild(stack);
+      els.infoListsGrid.appendChild(panel);
+    });
+  }
+
+  async function saveInformationChanges() {
+    const draft = state.infoDraft;
+    if (!draft) return;
+    els.saveInfoBtn.disabled = true;
+    els.saveInfoBtn.textContent = "Saving…";
+
+    try {
+      const bioHtml = normalizeBioRichText(els.infoBioEditor.innerHTML);
+      draft.infoHtml = bioHtml;
+
+      const payload = {
+        name: draft.name,
+        slug: draft.slug,
+        profilePicture: draft.profilePicture,
+        infoHtml: bioHtml,
+        servicesHtml: rowsToRichTextHtml(draft.servicesRows),
+        locationHtml: rowsToRichTextHtml(draft.locationRows),
+        contactHtml: rowsToRichTextHtml(draft.contactRows),
+        pressHtml: rowsToRichTextHtml(draft.pressRows),
+        interviewsHtml: rowsToRichTextHtml(draft.interviewsRows),
+      };
+
+      const res = await apiJson("/api/information", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          itemId: draft.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          information: payload,
+        }),
+      });
+
+      await loadBootstrap();
+      setInfoDirty(false);
+      showBanner(
+        res.published ? "Saved Information and published live." : "Saved Information as staged.",
+        "ok"
+      );
+    } catch (err) {
+      showBanner(err.message, "err");
+      els.saveInfoBtn.disabled = false;
+    } finally {
+      els.saveInfoBtn.textContent = "Save Information";
+    }
+  }
+
+  async function publishInformationItem() {
+    const draft = state.infoDraft;
+    if (!draft?.id) return;
+    els.publishInfoBtn.disabled = true;
+    try {
+      await apiJson("/api/information", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "publish", itemId: draft.id, fieldMapOverride: state.fieldOverride }),
+      });
+      await loadBootstrap();
+      showBanner("Published Information page live.", "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.publishInfoBtn.disabled = false;
+    }
+  }
+
+  async function unpublishInformationItem() {
+    const draft = state.infoDraft;
+    if (!draft?.id || !window.confirm("Move Information page to Draft?")) return;
+    els.unpublishInfoBtn.disabled = true;
+    try {
+      await apiJson("/api/information", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unpublish", itemId: draft.id, fieldMapOverride: state.fieldOverride }),
+      });
+      await loadBootstrap();
+      showBanner("Moved Information page to Draft.", "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.unpublishInfoBtn.disabled = false;
+    }
+  }
+
   // Focal Point Modal (shared between queue & existing slides)
   function getFocusTargetItem() {
     if (!state.focusTarget) return null;
@@ -2155,6 +2591,29 @@
     }
     els.schemaBody.appendChild(mediaGrid);
 
+    if (collections.information) {
+      const infoTitle = document.createElement("h4");
+      infoTitle.style.margin = "10px 0 0";
+      infoTitle.textContent = `Information Collection: ${collections.information.displayName}`;
+      els.schemaBody.appendChild(infoTitle);
+
+      const infoGrid = document.createElement("div");
+      infoGrid.className = "schema-grid";
+      const iDefs = [
+        ["profilePicture", "Profile Picture (Image)"],
+        ["info", "Info / Bio (RichText)"],
+        ["services", "Services (RichText)"],
+        ["location", "Location (RichText)"],
+        ["contact", "Contact (RichText)"],
+        ["press", "Press (RichText)"],
+        ["interviews", "Interviews (RichText)"],
+      ];
+      for (const [key, label] of iDefs) {
+        infoGrid.appendChild(makeSelect("information", key, label, collections.information.fields, effective.information?.[key]));
+      }
+      els.schemaBody.appendChild(infoGrid);
+    }
+
     els.schemaModal.hidden = false;
   }
 
@@ -2208,10 +2667,19 @@
 
   els.backToProjectsBtn.addEventListener("click", showProjectsView);
   window.addEventListener("hashchange", () => {
+    if (window.location.hash === "#information" && state.bootstrap?.collections?.information) {
+      state.activeView = "projects";
+      state.orderMode = "info";
+      els.projectsView.hidden = false;
+      els.editorView.hidden = true;
+      els.backToProjectsBtn.hidden = true;
+      renderProjectOrderList();
+      return;
+    }
     const match = window.location.hash.match(/^#project=([^&]+)/);
     if (match && state.projects.length) {
       openProjectEditor(decodeURIComponent(match[1]));
-    } else if (state.projects.length && state.activeView !== "projects") {
+    } else if (state.projects.length && (state.activeView !== "projects" || state.orderMode === "info")) {
       showProjectsView();
     }
   });
@@ -2413,6 +2881,10 @@
     state.orderMode = "home";
     renderProjectOrderList();
   });
+  els.orderModeInfoBtn.addEventListener("click", () => {
+    state.orderMode = "info";
+    renderProjectOrderList();
+  });
   [els.dirSearchInput, els.dirTypeFilter, els.dirCatFilter, els.dirStatusFilter].forEach((el) => {
     el.addEventListener("input", renderProjectOrderList);
     el.addEventListener("change", renderProjectOrderList);
@@ -2439,8 +2911,9 @@
     loadBootstrap(state.activeView === "editor" ? state.selectedProjectId : null);
   });
   els.saveSchemaBtn.addEventListener("click", () => {
-    const override = { projects: {}, media: {} };
+    const override = { projects: {}, media: {}, information: {} };
     els.schemaBody.querySelectorAll("select[data-group]").forEach((sel) => {
+      if (!override[sel.dataset.group]) override[sel.dataset.group] = {};
       override[sel.dataset.group][sel.dataset.key] = sel.value || null;
     });
     saveFieldOverride(override);
@@ -2504,6 +2977,126 @@
       els.submitNewProjectBtn.disabled = false;
       els.submitNewProjectBtn.textContent = "Create & Open Project";
     }
+  });
+
+  // Information Page Listeners
+  els.saveInfoBtn.addEventListener("click", saveInformationChanges);
+  els.publishInfoBtn.addEventListener("click", publishInformationItem);
+  els.unpublishInfoBtn.addEventListener("click", unpublishInformationItem);
+
+  els.replaceInfoPicBtn.addEventListener("click", () => els.infoPicInput.click());
+  els.infoPicInput.addEventListener("change", async () => {
+    const file = els.infoPicInput.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    els.replaceInfoPicBtn.disabled = true;
+    els.replaceInfoPicBtn.textContent = "Compressing…";
+    try {
+      const preset = getPresetConfig(els.compressionPreset.value);
+      const compressed = await compressImageFile(file, preset);
+      els.replaceInfoPicBtn.textContent = "Uploading…";
+
+      const formData = new FormData();
+      formData.append("file", compressed.blob, compressed.fileName);
+      formData.append("fileName", compressed.fileName);
+      formData.append("fileHash", compressed.fileHash);
+      formData.append("size", String(compressed.compressedSize));
+      formData.append("width", String(compressed.width));
+      formData.append("height", String(compressed.height));
+
+      const asset = await apiJson("/api/upload-asset", { method: "POST", body: formData });
+      if (!state.infoDraft) syncInfoDraftFromBootstrap();
+      state.infoDraft.profilePicture = {
+        fileId: asset.fileId,
+        url: asset.url,
+      };
+      setInfoDirty(true);
+      renderInformationEditor();
+      showBanner(`Uploaded profile picture (${formatBytes(compressed.compressedSize)}). Click Save Information to commit.`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.infoPicInput.value = "";
+      els.replaceInfoPicBtn.disabled = false;
+      els.replaceInfoPicBtn.textContent = "Replace Picture";
+    }
+  });
+
+  els.removeInfoPicBtn.addEventListener("click", () => {
+    if (!state.infoDraft?.profilePicture?.url) return;
+    if (!window.confirm("Remove profile picture? Click Save Information to commit.")) return;
+    state.infoDraft.profilePicture = null;
+    setInfoDirty(true);
+    renderInformationEditor();
+  });
+
+  [els.bioBoldBtn, els.bioItalicBtn, els.bioLinkBtn, els.bioUnlinkBtn].forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+  });
+
+  els.bioBoldBtn.addEventListener("click", () => {
+    els.infoBioEditor.focus();
+    document.execCommand("bold");
+    setInfoDirty(true);
+  });
+  els.bioItalicBtn.addEventListener("click", () => {
+    els.infoBioEditor.focus();
+    document.execCommand("italic");
+    setInfoDirty(true);
+  });
+  els.bioLinkBtn.addEventListener("click", () => {
+    const sel = window.getSelection();
+    const savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+    const anchorNode = sel?.anchorNode;
+    const existingLink =
+      anchorNode?.nodeType === 1 ? anchorNode.closest?.("a") : anchorNode?.parentElement?.closest?.("a");
+    const currentHref = existingLink ? existingLink.getAttribute("href") : "";
+    const rawUrl = window.prompt("Enter link URL (opens in new tab):", currentHref || "https://");
+    if (!rawUrl || !rawUrl.trim()) return;
+
+    let cleanUrl = rawUrl.trim();
+    if (cleanUrl.includes("@") && !cleanUrl.startsWith("mailto:") && !cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = `mailto:${cleanUrl}`;
+    } else if (!/^[a-z]+:\/\//i.test(cleanUrl) && !cleanUrl.startsWith("mailto:") && !cleanUrl.startsWith("#") && !cleanUrl.startsWith("/")) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+
+    els.infoBioEditor.focus();
+    if (savedRange) {
+      const nextSel = window.getSelection();
+      nextSel.removeAllRanges();
+      nextSel.addRange(savedRange);
+    }
+
+    if (savedRange && !savedRange.collapsed) {
+      document.execCommand("createLink", false, cleanUrl);
+    } else if (existingLink) {
+      existingLink.setAttribute("href", cleanUrl);
+    } else {
+      const a = document.createElement("a");
+      a.href = cleanUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = cleanUrl.replace(/^mailto:/i, "");
+      if (savedRange) {
+        savedRange.insertNode(a);
+      } else {
+        els.infoBioEditor.appendChild(a);
+      }
+    }
+
+    els.infoBioEditor.querySelectorAll("a").forEach((a) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
+    });
+    setInfoDirty(true);
+  });
+  els.bioUnlinkBtn.addEventListener("click", () => {
+    els.infoBioEditor.focus();
+    document.execCommand("unlink");
+    setInfoDirty(true);
+  });
+  els.infoBioEditor.addEventListener("input", () => {
+    setInfoDirty(true);
   });
 
   // Slide Delete Modal Listeners
