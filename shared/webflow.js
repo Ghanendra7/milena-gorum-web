@@ -364,3 +364,62 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
   };
 }
 
+export async function uploadAssetToWebflow(
+  env,
+  siteId,
+  { blob, fileName, fileHash, size, width, height }
+) {
+  const assetPayload = {
+    fileName,
+    fileHash,
+    size,
+    ...(Number.isFinite(width) && width > 0 ? { width } : {}),
+    ...(Number.isFinite(height) && height > 0 ? { height } : {}),
+  };
+
+  const asset = await webflowRequest(env, `/sites/${siteId}/assets`, {
+    method: "POST",
+    body: JSON.stringify(assetPayload),
+  });
+
+  if (asset?.uploadUrl && asset?.uploadDetails) {
+    const s3Form = new FormData();
+    for (const [key, val] of Object.entries(asset.uploadDetails)) {
+      if (val !== undefined && val !== null) {
+        s3Form.append(key, String(val));
+      }
+    }
+    // S3 requires the file field to be appended last
+    s3Form.append("file", blob, fileName);
+
+    const s3Res = await fetch(asset.uploadUrl, {
+      method: "POST",
+      body: s3Form,
+    });
+
+    if (!s3Res.ok) {
+      const s3ErrText = await s3Res.text().catch(() => "");
+      throw new WebflowApiError(
+        `S3 upload failed (${s3Res.status}): ${s3ErrText.slice(0, 200) || s3Res.statusText}`,
+        502
+      );
+    }
+  }
+
+  const hostedUrl = asset?.hostedUrl || asset?.assetUrl || "";
+  if (!asset?.id || !hostedUrl) {
+    throw new WebflowApiError(
+      "Webflow asset response did not include an id and hostedUrl.",
+      502,
+      asset
+    );
+  }
+
+  return {
+    fileId: asset.id,
+    url: hostedUrl,
+    hostedUrl,
+    fileName: asset.originalFileName || fileName,
+  };
+}
+

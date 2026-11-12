@@ -699,7 +699,45 @@
       moveBtns.appendChild(rightBtn);
       actions.appendChild(moveBtns);
 
-      if (item.kind === "image") {
+      if (item.kind === "video") {
+        const posterBtn = document.createElement("button");
+        posterBtn.type = "button";
+        posterBtn.className = "icon-btn";
+        posterBtn.textContent = item.file ? "Poster Set" : "Custom Poster";
+        posterBtn.disabled = state.isUploading;
+        posterBtn.addEventListener("click", () => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/*";
+          input.addEventListener("change", async () => {
+            const file = input.files?.[0];
+            if (!file || !file.type.startsWith("image/")) return;
+            if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
+              URL.revokeObjectURL(item.previewUrl);
+            }
+            item.file = file;
+            item.previewUrl = URL.createObjectURL(file);
+            item.origSize = file.size;
+            item.compressed = null;
+            item.uploadedAsset = null;
+            item.error = "";
+            item.status = "compressing";
+            renderQueue();
+            try {
+              item.compressed = await compressImageFile(file, getPresetConfig());
+              item.status = "ready";
+            } catch (err) {
+              item.status = "error";
+              item.error = err?.message || "Poster compression failed";
+            }
+            renderQueue();
+          });
+          input.click();
+        });
+        actions.appendChild(posterBtn);
+      }
+
+      if (item.kind === "image" || item.file) {
         const focusBtn = document.createElement("button");
         focusBtn.type = "button";
         focusBtn.className = "icon-btn";
@@ -873,7 +911,7 @@
 
     const preset = getPresetConfig();
     const imageItemsToProcess = state.queue.filter((item) => {
-      if (item.kind !== "image") return false;
+      if (item.kind !== "image" && !item.file) return false;
       if (onlyFailed) return item.status === "error" || !item.uploadedAsset;
       return !item.uploadedAsset;
     });
@@ -945,9 +983,8 @@
         fillMobile: item.fillMobile,
         focusX: item.focusX,
         focusY: item.focusY,
-        ...(item.kind === "video"
-          ? { videoId: item.videoId }
-          : { fileId: item.uploadedAsset.fileId, url: item.uploadedAsset.url }),
+        ...(item.kind === "video" ? { videoId: item.videoId } : {}),
+        ...(item.uploadedAsset ? { fileId: item.uploadedAsset.fileId, url: item.uploadedAsset.url } : {}),
       }));
 
       const result = await apiJson("/api/create-slides", {

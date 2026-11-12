@@ -1,5 +1,20 @@
 import { jsonError, jsonResponse, requireAuth, webflowErrorResponse } from "../../shared/auth.js";
-import { resolveSiteAndSchemas, WebflowApiError, webflowRequest } from "../../shared/webflow.js";
+import { md5Hex } from "../../shared/md5.js";
+import {
+  resolveSiteAndSchemas,
+  uploadAssetToWebflow,
+  WebflowApiError,
+  webflowRequest,
+} from "../../shared/webflow.js";
+
+const BUNNY_CDN_BASE = "https://vz-ada4eb16-135.b-cdn.net";
+const MAX_WEBFLOW_IMAGE_BYTES = 4 * 1024 * 1024;
+
+function extractVideoUuid(input) {
+  const trimmed = String(input || "").trim();
+  const match = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match ? match[0] : trimmed;
+}
 
 function slugify(value) {
   return String(value || "")
@@ -65,7 +80,7 @@ export async function onRequestPost({ request, env }) {
 
   try {
     const resolved = await resolveSiteAndSchemas(env, fieldMapOverride);
-    const { projectsCollection, mediaCollection, fieldMap } = resolved;
+    const { site, projectsCollection, mediaCollection, fieldMap } = resolved;
     const mFields = fieldMap.media;
     const pFields = fieldMap.projects;
 
@@ -77,13 +92,66 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
+    const mediaFieldBySlug = new Map(
+      (mediaCollection.fields || []).map((f) => [f.slug, f])
+    );
+    const imageFieldRequired = Boolean(mFields.image && mediaFieldBySlug.get(mFields.image)?.isRequired);
+
     const hasImageSlide = slides.some((s) => Boolean(s?.fileId && s?.url));
-    if (hasImageSlide && !mFields.image) {
+    if ((hasImageSlide || imageFieldRequired) && !mFields.image) {
       return jsonError(
         "Could not find the Image field in the Media collection. Check the Schema Mapping drawer.",
         400,
         { fieldMap, mediaCollection }
       );
+    }
+
+    // Auto-fetch & upload Bunny Stream poster thumbnails for video slides missing an explicit image
+    const hydratedSlides = [];
+    for (const slide of slides) {
+      if (mFields.image && slide?.videoId && (!slide.fileId || !slide.url)) {
+        const videoUuid = extractVideoUuid(slide.videoId);
+        const thumbUrl = `${BUNNY_CDN_BASE}/${videoUuid}/thumbnail.jpg`;
+        let uploadedThumb = null;
+        let thumbError = null;
+
+        try {
+          const thumbRes = await fetch(thumbUrl);
+          if (!thumbRes.ok) {
+            throw new Error(`HTTP ${thumbRes.status}`);
+          }
+          const arrBuf = await thumbRes.arrayBuffer();
+          const bytes = new Uint8Array(arrBuf);
+          if (bytes.byteLength === 0 || bytes.byteLength > MAX_WEBFLOW_IMAGE_BYTES) {
+            throw new Error(`Invalid thumbnail size (${bytes.byteLength} bytes)`);
+          }
+          const contentType = thumbRes.headers.get("content-type") || "image/jpeg";
+          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const blob = new Blob([bytes], { type: contentType });
+          uploadedThumb = await uploadAssetToWebflow(env, site.id, {
+            blob,
+            fileName: `bunny-${videoUuid.slice(0, 8)}.${ext}`,
+            fileHash: md5Hex(bytes),
+            size: bytes.byteLength,
+          });
+        } catch (err) {
+          thumbError = err?.message || "Failed to fetch Bunny thumbnail";
+        }
+
+        if (!uploadedThumb && imageFieldRequired) {
+          return jsonError(
+            `Video slide "${slide.name || videoUuid}" needs a thumbnail image (Media 'image' is required), and Bunny's thumbnail.jpg could not be fetched (${thumbError}). Use "Custom Poster" on the video card.`,
+            400
+          );
+        }
+
+        hydratedSlides.push({
+          ...slide,
+          ...(uploadedThumb ? { fileId: uploadedThumb.fileId, url: uploadedThumb.url } : {}),
+        });
+      } else {
+        hydratedSlides.push(slide);
+      }
     }
 
     // Fetch current project item first so we validate it exists and read existing Gallery Multi-Ref
@@ -94,12 +162,8 @@ export async function onRequestPost({ request, env }) {
     const projectName = projectItem?.fieldData?.name || "Project";
     const projectSlug = slugify(projectItem?.fieldData?.slug || projectName) || "project";
 
-    const mediaFieldBySlug = new Map(
-      (mediaCollection.fields || []).map((f) => [f.slug, f])
-    );
-
     const batchStamp = randomShortId(4);
-    const itemsToCreate = slides.map((slide, idx) => {
+    const itemsToCreate = hydratedSlides.map((slide, idx) => {
       const orderNum = Number.isFinite(Number(slide.order)) ? Number(slide.order) : idx + 1;
       const paddedOrder = String(Math.round(orderNum)).padStart(2, "0");
       const baseName = String(slide.name || `${projectName} ${paddedOrder}`).trim().slice(0, 200);

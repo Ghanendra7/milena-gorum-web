@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse, requireAuth, webflowErrorResponse } from "../../shared/auth.js";
-import { resolveSiteAndSchemas, WebflowApiError, webflowRequest } from "../../shared/webflow.js";
+import { resolveSiteAndSchemas, uploadAssetToWebflow, WebflowApiError } from "../../shared/webflow.js";
 
 const MAX_WEBFLOW_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB Webflow CMS limit
 
@@ -52,54 +52,16 @@ export async function onRequestPost({ request, env }) {
       siteId = resolved.site.id;
     }
 
-    const assetPayload = {
+    const uploaded = await uploadAssetToWebflow(env, siteId, {
+      blob: file,
       fileName,
       fileHash,
       size: file.size,
-      ...(Number.isFinite(width) && width > 0 ? { width } : {}),
-      ...(Number.isFinite(height) && height > 0 ? { height } : {}),
-    };
-
-    const asset = await webflowRequest(env, `/sites/${siteId}/assets`, {
-      method: "POST",
-      body: JSON.stringify(assetPayload),
+      width,
+      height,
     });
 
-    if (asset?.uploadUrl && asset?.uploadDetails) {
-      const s3Form = new FormData();
-      for (const [key, val] of Object.entries(asset.uploadDetails)) {
-        if (val !== undefined && val !== null) {
-          s3Form.append(key, String(val));
-        }
-      }
-      // S3 requires the file field to be appended last
-      s3Form.append("file", file, fileName);
-
-      const s3Res = await fetch(asset.uploadUrl, {
-        method: "POST",
-        body: s3Form,
-      });
-
-      if (!s3Res.ok) {
-        const s3ErrText = await s3Res.text().catch(() => "");
-        return jsonError(
-          `S3 upload failed (${s3Res.status}): ${s3ErrText.slice(0, 200) || s3Res.statusText}`,
-          502
-        );
-      }
-    }
-
-    const hostedUrl = asset?.hostedUrl || asset?.assetUrl || "";
-    if (!asset?.id || !hostedUrl) {
-      return jsonError("Webflow asset response did not include an id and hostedUrl.", 502, asset);
-    }
-
-    return jsonResponse({
-      fileId: asset.id,
-      url: hostedUrl,
-      hostedUrl,
-      fileName: asset.originalFileName || fileName,
-    });
+    return jsonResponse(uploaded);
   } catch (err) {
     if (err instanceof WebflowApiError) {
       return webflowErrorResponse(err);
@@ -107,4 +69,3 @@ export async function onRequestPost({ request, env }) {
     return jsonError(err?.message || "Asset upload failed.", 500);
   }
 }
-
