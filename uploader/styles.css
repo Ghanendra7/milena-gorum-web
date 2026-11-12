@@ -503,9 +503,9 @@ input:focus, select:focus, textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 7px;
+  padding: 2px 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
   border-radius: 10px;
   background: var(--surface-2);
@@ -515,12 +515,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .workspace-tab.is-active .tab-count-badge {
-  background: var(--text);
-  color: var(--accent-text);
+  background: #eaeaea;
+  color: var(--text);
+  font-weight: 500;
 }
 
 .workspace-tab:hover:not(.is-active) .tab-count-badge {
-  background: var(--border);
+  background: #ebebeb;
   color: var(--text);
 }
 
