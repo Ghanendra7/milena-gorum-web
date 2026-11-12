@@ -1,6 +1,7 @@
 import { jsonError, jsonResponse, requireAuth, webflowErrorResponse } from "../../shared/auth.js";
 import {
   buildMediaFieldData,
+  deleteMediaItemsAndUnsharedAssets,
   fetchBunnyThumbnailAsAsset,
   listAllCollectionItems,
   publishCollectionItems,
@@ -191,17 +192,20 @@ export async function onRequestPost({ request, env }) {
         await publishCollectionItems(env, projectsCollection.id, touchedProjectIdsToPublish);
       }
 
-      await unpublishCollectionItem(env, mediaCollection.id, mediaId);
-      await webflowRequest(
+      const allMedia = await listAllCollectionItems(env, mediaCollection.id);
+      const { deletedAssetCount } = await deleteMediaItemsAndUnsharedAssets(
         env,
-        `/collections/${mediaCollection.id}/items/${mediaId}`,
-        { method: "DELETE" }
+        mediaCollection.id,
+        [mediaId],
+        allMedia,
+        mFields
       );
 
       return jsonResponse({
         action: "delete",
         mediaId,
         detachedProjectCount: touchedProjectIdsToPublish.length,
+        deletedAssetCount,
       });
     }
 
@@ -213,3 +217,4 @@ export async function onRequestPost({ request, env }) {
     return jsonError(err?.message || "Media CMS operation failed.", 500);
   }
 }
+

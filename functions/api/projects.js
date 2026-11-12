@@ -2,6 +2,8 @@ import { jsonError, jsonResponse, requireAuth, webflowErrorResponse } from "../.
 import {
   buildProjectFieldData,
   chunkArray,
+  deleteMediaItemsAndUnsharedAssets,
+  listAllCollectionItems,
   publishCollectionItems,
   resolveSiteAndSchemas,
   slugify,
@@ -253,6 +255,53 @@ export async function onRequestPost({ request, env }) {
       const projectId = String(body?.projectId || "").trim();
       if (!projectId) return jsonError("projectId is required.", 400);
 
+      const mFields = fieldMap.media;
+      const toRefId = (v) => (typeof v === "string" ? v : v?.id || "");
+      const collectProjectMediaIds = (proj) => {
+        const fd = proj?.fieldData || {};
+        const ids = new Set();
+        if (pFields.gallery && Array.isArray(fd[pFields.gallery])) {
+          for (const ref of fd[pFields.gallery]) {
+            const id = toRefId(ref);
+            if (id) ids.add(id);
+          }
+        }
+        if (pFields.cover && fd[pFields.cover]) {
+          const id = toRefId(fd[pFields.cover]);
+          if (id) ids.add(id);
+        }
+        return ids;
+      };
+
+      const allProjects = await listAllCollectionItems(env, projectsCollection.id);
+      const allMedia = mediaCollection?.id ? await listAllCollectionItems(env, mediaCollection.id) : [];
+
+      const targetProject = allProjects.find((p) => p.id === projectId);
+      const candidateMediaIds = targetProject ? collectProjectMediaIds(targetProject) : new Set();
+
+      const sharedMediaIds = new Set();
+      for (const proj of allProjects) {
+        if (proj.id === projectId) continue;
+        for (const id of collectProjectMediaIds(proj)) {
+          sharedMediaIds.add(id);
+        }
+      }
+
+      if (mFields?.parent) {
+        for (const item of allMedia) {
+          const parentId = toRefId(item?.fieldData?.[mFields.parent]);
+          if (parentId === projectId) {
+            candidateMediaIds.add(item.id);
+          } else if (parentId && allProjects.some((p) => p.id === parentId)) {
+            sharedMediaIds.add(item.id);
+          }
+        }
+      }
+
+      const mediaIdsToDelete = Array.from(candidateMediaIds).filter((id) => !sharedMediaIds.has(id));
+      const preservedMediaCount = candidateMediaIds.size - mediaIdsToDelete.length;
+
+      // Delete the project first so Webflow clears its Media references before deleting those Media items.
       await unpublishCollectionItem(env, projectsCollection.id, projectId);
       await webflowRequest(
         env,
@@ -260,7 +309,25 @@ export async function onRequestPost({ request, env }) {
         { method: "DELETE" }
       );
 
-      return jsonResponse({ action: "delete", projectId });
+      let deletedMediaCount = 0;
+      let deletedAssetCount = 0;
+      if (mediaCollection?.id && mediaIdsToDelete.length > 0) {
+        ({ deletedMediaCount, deletedAssetCount } = await deleteMediaItemsAndUnsharedAssets(
+          env,
+          mediaCollection.id,
+          mediaIdsToDelete,
+          allMedia,
+          mFields
+        ));
+      }
+
+      return jsonResponse({
+        action: "delete",
+        projectId,
+        deletedMediaCount,
+        deletedAssetCount,
+        preservedMediaCount,
+      });
     }
 
     return jsonError(`Unsupported action: ${action}`, 400);
@@ -271,3 +338,4 @@ export async function onRequestPost({ request, env }) {
     return jsonError(err?.message || "Project CMS operation failed.", 500);
   }
 }
+

@@ -392,7 +392,7 @@
   function updateModeCounts() {
     const homeCount = state.projects.filter((p) => p.featured).length;
     els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
-    els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount})`;
+    els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount}/12)`;
   }
 
   // Project Detail Editor Helpers
@@ -1050,28 +1050,39 @@
     await Promise.all(runners);
   }
 
+  function formatDefaultMediaName(baseName) {
+    const project = getSelectedProject();
+    const projectTitle = project?.name?.trim();
+    const cleanBase = String(baseName || "").trim();
+    if (projectTitle && cleanBase) return `${projectTitle} - ${cleanBase}`;
+    return cleanBase || projectTitle || "Slide";
+  }
+
   async function addFilesToQueue(fileList) {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
     if (!files.length) return;
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
 
-    const newItems = files.map((file) => ({
-      id: makeQueueId(),
-      kind: "image",
-      file,
-      previewUrl: URL.createObjectURL(file),
-      name: file.name.replace(/\.[^.]+$/, ""),
-      alt: "",
-      origSize: file.size,
-      compressed: null,
-      uploadedAsset: null,
-      fillDesktop: false,
-      fillMobile: false,
-      focusX: 50,
-      focusY: 50,
-      status: "compressing",
-      error: "",
-    }));
+    const newItems = files.map((file) => {
+      const baseName = file.name.replace(/\.[^.]+$/, "");
+      return {
+        id: makeQueueId(),
+        kind: "image",
+        file,
+        previewUrl: URL.createObjectURL(file),
+        name: formatDefaultMediaName(baseName),
+        alt: "",
+        origSize: file.size,
+        compressed: null,
+        uploadedAsset: null,
+        fillDesktop: false,
+        fillMobile: false,
+        focusX: 50,
+        focusY: 50,
+        status: "compressing",
+        error: "",
+      };
+    });
 
     state.queue.push(...newItems);
     renderQueue();
@@ -1100,7 +1111,7 @@
       kind: "video",
       videoId,
       previewUrl: `${BUNNY_CDN_BASE}/${videoId}/thumbnail.jpg`,
-      name: `Video ${videoId.slice(0, 8)}`,
+      name: formatDefaultMediaName(`Video ${videoId.slice(0, 8)}`),
       alt: "",
       fillDesktop: false,
       fillMobile: false,
@@ -1634,7 +1645,9 @@
     const changes = getOrderChanges();
     const hasOrderChanges = changes.length > 0;
     els.saveOrderBtn.hidden = !hasOrderChanges;
+    els.saveOrderBtn.disabled = !hasOrderChanges;
     els.resetOrderBtn.hidden = !hasOrderChanges;
+    els.resetOrderBtn.disabled = !hasOrderChanges;
     els.orderDirtyCount.hidden = !hasOrderChanges;
     els.orderDirtyCount.textContent = `${changes.length} moved`;
 
@@ -1643,7 +1656,7 @@
     els.dirOrderHint.textContent = filtersActive
       ? "Clear filters to drag-and-drop reorder Project Numbers."
       : isHomeMode
-        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured slides. Edit titles inline or click any thumbnail / Open → to edit slides."
+        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence."
         : "Drag rows to reorder Project Numbers, edit Title / Sub-title / Type inline, or click any project to manage its gallery & upload media.";
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
@@ -1834,6 +1847,13 @@
         metaLine.appendChild(movedPill);
       }
 
+      if (isHomeMode && targetNum > 12) {
+        const limitPill = document.createElement("span");
+        limitPill.className = "meta-pill is-draft";
+        limitPill.textContent = "Over 12-item Home limit";
+        metaLine.appendChild(limitPill);
+      }
+
       const rowSavePill = document.createElement("span");
       rowSavePill.className = "meta-pill";
       rowSavePill.hidden = true;
@@ -1985,9 +2005,9 @@
       );
     } catch (err) {
       showBanner(err.message, "err");
-      els.saveOrderBtn.disabled = false;
     } finally {
       els.saveOrderBtn.textContent = "Save Order";
+      els.saveOrderBtn.disabled = getOrderChanges().length === 0;
     }
   }
 
@@ -2274,9 +2294,16 @@
 
   els.deleteProjectBtn.addEventListener("click", async () => {
     const p = getSelectedProject();
-    if (!p || !window.confirm(`Permanently delete project "${p.name}" from Webflow CMS? (Linked Media items are kept unless deleted separately.)`)) return;
+    if (
+      !p ||
+      !window.confirm(
+        `Permanently delete project "${p.name}" along with its unshared Media items and image files from Webflow CMS?`
+      )
+    ) {
+      return;
+    }
     try {
-      await apiJson("/api/projects", {
+      const res = await apiJson("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", projectId: p.id, fieldMapOverride: state.fieldOverride }),
@@ -2285,7 +2312,10 @@
       state.activeView = "projects";
       await loadBootstrap();
       syncUrlHash();
-      showBanner(`Deleted project "${p.name}".`, "ok");
+      const mediaNote = res.deletedMediaCount
+        ? ` along with ${res.deletedMediaCount} media item(s) and ${res.deletedAssetCount || 0} asset file(s)`
+        : "";
+      showBanner(`Deleted project "${p.name}"${mediaNote}.`, "ok");
     } catch (err) {
       showBanner(err.message, "err");
     }

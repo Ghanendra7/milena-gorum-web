@@ -699,3 +699,73 @@ export function buildProjectFieldData(input, pFields, projectFieldBySlug) {
   return fieldData;
 }
 
+export function extractMediaFileId(fieldData, mFields) {
+  const imageSlug = mFields?.image;
+  const img = imageSlug ? fieldData?.[imageSlug] : null;
+  if (img && typeof img === "object" && img.fileId) {
+    return String(img.fileId);
+  }
+  return "";
+}
+
+export async function deleteMediaItemsAndUnsharedAssets(
+  env,
+  mediaCollectionId,
+  mediaIdsToDelete,
+  allMediaItems,
+  mFields
+) {
+  const deleteIdSet = new Set((mediaIdsToDelete || []).filter(Boolean));
+  if (deleteIdSet.size === 0) {
+    return { deletedMediaCount: 0, deletedAssetCount: 0 };
+  }
+
+  const mediaById = new Map((allMediaItems || []).map((item) => [item.id, item]));
+  const retainedAssetIds = new Set();
+  for (const item of allMediaItems || []) {
+    if (deleteIdSet.has(item.id)) continue;
+    const fileId = extractMediaFileId(item?.fieldData, mFields);
+    if (fileId) retainedAssetIds.add(fileId);
+  }
+
+  const assetIdsToDelete = new Set();
+  for (const mediaId of deleteIdSet) {
+    const item = mediaById.get(mediaId);
+    const fileId = extractMediaFileId(item?.fieldData, mFields);
+    if (fileId && !retainedAssetIds.has(fileId)) {
+      assetIdsToDelete.add(fileId);
+    }
+  }
+
+  let deletedMediaCount = 0;
+  for (const mediaId of deleteIdSet) {
+    await unpublishCollectionItem(env, mediaCollectionId, mediaId);
+    try {
+      await webflowRequest(
+        env,
+        `/collections/${mediaCollectionId}/items/${mediaId}`,
+        { method: "DELETE" }
+      );
+      deletedMediaCount += 1;
+    } catch (err) {
+      if (!(err instanceof WebflowApiError) || err.status !== 404) {
+        throw err;
+      }
+    }
+  }
+
+  let deletedAssetCount = 0;
+  for (const assetId of assetIdsToDelete) {
+    try {
+      await webflowRequest(env, `/assets/${assetId}`, { method: "DELETE" });
+      deletedAssetCount += 1;
+    } catch (err) {
+      if (!(err instanceof WebflowApiError) || (err.status !== 404 && err.status !== 403)) {
+        throw err;
+      }
+    }
+  }
+
+  return { deletedMediaCount, deletedAssetCount };
+}
+
