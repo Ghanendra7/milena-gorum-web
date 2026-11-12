@@ -13,9 +13,8 @@
   <!-- Auth Gate -->
   <main id="authGate" class="auth-gate" hidden>
     <div class="auth-card">
-      <div class="brand-kicker">MILENA GORUM / CMS</div>
-      <h1>Portfolio CMS</h1>
-      <p class="muted">Sign in to manage projects, ordering, media galleries, and batch uploads.</p>
+      <div class="brand-kicker">MILENA GORUM</div>
+      <h1>CMS</h1>
       <form id="loginForm" class="stack-sm">
         <label class="field">
           <span>Password</span>
@@ -131,22 +130,22 @@
           <div class="details-grid">
             <div class="field">
               <label for="editProjName">Title *</label>
-              <input id="editProjName" type="text" placeholder="e.g. Role Model" />
+              <input id="editProjName" type="text" placeholder="Project title" />
             </div>
 
             <div class="field">
               <label for="editProjSlug">Slug *</label>
-              <input id="editProjSlug" type="text" placeholder="role-model" />
+              <input id="editProjSlug" type="text" placeholder="project-slug" />
             </div>
 
             <div class="field">
               <label for="editProjSeq">Project Number</label>
-              <input id="editProjSeq" type="number" step="1" placeholder="e.g. 37" />
+              <input id="editProjSeq" type="number" step="1" placeholder="e.g. 1" />
             </div>
 
             <div class="field">
               <label for="editProjSubtitle">Sub-title</label>
-              <input id="editProjSubtitle" type="text" placeholder="e.g. 'Chuck Timely' Album Cover" />
+              <input id="editProjSubtitle" type="text" placeholder="Optional sub-title" />
             </div>
 
             <div class="field">
@@ -161,7 +160,7 @@
 
             <div class="field field-span-2">
               <label for="editProjDetails">Project Details (Credits / Description)</label>
-              <textarea id="editProjDetails" rows="2" placeholder="Photography by…"></textarea>
+              <textarea id="editProjDetails" rows="2" placeholder="Credits or description (optional)"></textarea>
             </div>
 
             <div class="field">
@@ -206,7 +205,7 @@
           <div class="queue-toolbar" style="margin-bottom: 12px;">
             <div class="queue-toolbar-left">
               <h2>Add New Slides</h2>
-              <span class="muted">Auto-compressed under Webflow's 4 MB cap; first slide auto-sets Cover if empty.</span>
+              <span class="muted">Images are resized &amp; compressed automatically.</span>
             </div>
             <div class="queue-toolbar-right">
               <label class="publish-pill">
@@ -224,9 +223,8 @@
           <div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
             <input id="fileInput" type="file" accept="image/*" multiple hidden />
             <div class="dropzone-inner">
-              <p class="dropzone-title">Drop raw project images here</p>
-              <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media
-                CMS creation happen automatically.</p>
+              <p class="dropzone-title">Drop images here</p>
+              <p class="dropzone-sub">Select multiple images or add a Bunny video slide.</p>
               <div class="dropzone-buttons">
                 <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
                 <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
@@ -328,19 +326,19 @@
         <div class="details-grid">
           <div class="field">
             <label for="newProjName">Title *</label>
-            <input id="newProjName" type="text" required placeholder="e.g. Nike Running" />
+            <input id="newProjName" type="text" required placeholder="Project title" />
           </div>
           <div class="field">
             <label for="newProjSlug">Slug *</label>
-            <input id="newProjSlug" type="text" required placeholder="nike-running" />
+            <input id="newProjSlug" type="text" required placeholder="project-slug" />
           </div>
           <div class="field">
             <label for="newProjSeq">Project Number</label>
-            <input id="newProjSeq" type="number" step="1" />
+            <input id="newProjSeq" type="number" step="1" placeholder="e.g. 1" />
           </div>
           <div class="field">
             <label for="newProjSubtitle">Sub-title</label>
-            <input id="newProjSubtitle" type="text" placeholder="Campaign Title" />
+            <input id="newProjSubtitle" type="text" placeholder="Optional sub-title" />
           </div>
           <div class="field">
             <label for="newProjType">Project Type</label>
@@ -355,7 +353,7 @@
           </div>
           <div class="field field-span-2">
             <label for="newProjDetails">Project Details (Credits)</label>
-            <textarea id="newProjDetails" rows="2" placeholder="Photography by…"></textarea>
+            <textarea id="newProjDetails" rows="2" placeholder="Credits or description (optional)"></textarea>
           </div>
           <div class="field field-span-2">
             <label>Category</label>
