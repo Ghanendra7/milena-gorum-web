@@ -1,20 +1,41 @@
 (function () {
-  const BUNNY_CDN_BASE = "https://vz-ada4eb16-135.b-cdn.net";
-  const STORAGE_OVERRIDE_KEY = "mg_webflow_field_override_v1";
-  const SESSION_TOKEN_KEY = "mg_uploader_token_v1";
-  const TARGET_MAX_BYTES = 1.4 * 1024 * 1024;
-  const HARD_MAX_BYTES = 3.7 * 1024 * 1024;
+  const {
+    BUNNY_CDN_BASE,
+    padTwo,
+    slugify,
+    formatBytes,
+    extractVideoId,
+    getPresetConfig,
+    compressImageFile,
+  } = window.mgMediaUtils;
+
+  const FIELD_OVERRIDE_KEY = "mg_uploader_field_override_v1";
+  const SESSION_STORAGE_KEY = "mg_uploader_session_token_v1";
+  const PUBLISH_MODE_KEY = "mg_uploader_publish_mode_v1";
 
   const state = {
     authenticated: false,
     sessionToken: loadSessionToken(),
+    activeTab: "editor",
     bootstrap: null,
     projects: [],
+    mediaById: {},
+    categories: [],
     selectedProjectId: "",
+    projectDirty: false,
+    galleryIds: [],
+    existingEdits: {},
     queue: [],
     isUploading: false,
-    focusEditingId: null,
-    draggedId: null,
+    dragQueueId: null,
+    dragGalleryId: null,
+    focusTarget: null, // { kind: "queue" | "existing", id: string, prevX: number, prevY: number, prevDirty: boolean }
+    pendingDeleteSlideId: null,
+    orderMode: "all", // "all" | "home"
+    orderDraftAll: [],
+    orderDraftHome: [],
+    dragOrderProjectId: null,
+    newProjSlugManual: false,
     fieldOverride: loadFieldOverride(),
   };
 
@@ -24,25 +45,54 @@
     passwordInput: document.getElementById("passwordInput"),
     loginBtn: document.getElementById("loginBtn"),
     loginError: document.getElementById("loginError"),
-
     appShell: document.getElementById("appShell"),
     siteBadge: document.getElementById("siteBadge"),
+    tabEditorBtn: document.getElementById("tabEditorBtn"),
+    tabProjectsBtn: document.getElementById("tabProjectsBtn"),
+    newProjectBtn: document.getElementById("newProjectBtn"),
+    publishSiteBtn: document.getElementById("publishSiteBtn"),
     schemaBtn: document.getElementById("schemaBtn"),
     refreshBtn: document.getElementById("refreshBtn"),
     logoutBtn: document.getElementById("logoutBtn"),
     globalBanner: document.getElementById("globalBanner"),
 
+    editorView: document.getElementById("editorView"),
+    projectsView: document.getElementById("projectsView"),
+
     projectSearch: document.getElementById("projectSearch"),
     projectSelect: document.getElementById("projectSelect"),
     projectMeta: document.getElementById("projectMeta"),
+    projectStatusPill: document.getElementById("projectStatusPill"),
+    publishProjectBtn: document.getElementById("publishProjectBtn"),
+    unpublishProjectBtn: document.getElementById("unpublishProjectBtn"),
+    deleteProjectBtn: document.getElementById("deleteProjectBtn"),
     compressionPreset: document.getElementById("compressionPreset"),
     publishMode: document.getElementById("publishMode"),
+
+    projectDetailsPanel: document.getElementById("projectDetailsPanel"),
+    projectDirtyBadge: document.getElementById("projectDirtyBadge"),
+    saveProjectDetailsBtn: document.getElementById("saveProjectDetailsBtn"),
+    editProjName: document.getElementById("editProjName"),
+    editProjSlug: document.getElementById("editProjSlug"),
+    editProjSeq: document.getElementById("editProjSeq"),
+    editProjSubtitle: document.getElementById("editProjSubtitle"),
+    editProjType: document.getElementById("editProjType"),
+    editProjCover: document.getElementById("editProjCover"),
+    editProjDetails: document.getElementById("editProjDetails"),
+    editProjCategories: document.getElementById("editProjCategories"),
+    editProjFeatured: document.getElementById("editProjFeatured"),
+    editProjFeaturedSeq: document.getElementById("editProjFeaturedSeq"),
+
+    existingGalleryHeading: document.getElementById("existingGalleryHeading"),
+    existingGalleryGrid: document.getElementById("existingGalleryGrid"),
+    existingGalleryEmpty: document.getElementById("existingGalleryEmpty"),
+    resetGalleryOrderBtn: document.getElementById("resetGalleryOrderBtn"),
+    saveGalleryOrderBtn: document.getElementById("saveGalleryOrderBtn"),
 
     dropZone: document.getElementById("dropZone"),
     fileInput: document.getElementById("fileInput"),
     browseBtn: document.getElementById("browseBtn"),
     addVideoBtn: document.getElementById("addVideoBtn"),
-
     queueSection: document.getElementById("queueSection"),
     queueHeading: document.getElementById("queueHeading"),
     queueStats: document.getElementById("queueStats"),
@@ -57,13 +107,27 @@
     retryFailedBtn: document.getElementById("retryFailedBtn"),
     uploadBtn: document.getElementById("uploadBtn"),
 
+    orderModeAllBtn: document.getElementById("orderModeAllBtn"),
+    orderModeHomeBtn: document.getElementById("orderModeHomeBtn"),
+    orderDirtyCount: document.getElementById("orderDirtyCount"),
+    resetOrderBtn: document.getElementById("resetOrderBtn"),
+    saveOrderBtn: document.getElementById("saveOrderBtn"),
+    dirFilterRow: document.getElementById("dirFilterRow"),
+    dirSearchInput: document.getElementById("dirSearchInput"),
+    dirTypeFilter: document.getElementById("dirTypeFilter"),
+    dirCatFilter: document.getElementById("dirCatFilter"),
+    dirStatusFilter: document.getElementById("dirStatusFilter"),
+    clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
+    dirOrderHint: document.getElementById("dirOrderHint"),
+    projectOrderList: document.getElementById("projectOrderList"),
+
     focusModal: document.getElementById("focusModal"),
     focusStage: document.getElementById("focusStage"),
     focusPreviewImg: document.getElementById("focusPreviewImg"),
     focusCrosshair: document.getElementById("focusCrosshair"),
     focusCoordsText: document.getElementById("focusCoordsText"),
-    closeFocusModalBtn: document.getElementById("closeFocusModalBtn"),
     resetFocusBtn: document.getElementById("resetFocusBtn"),
+    closeFocusModalBtn: document.getElementById("closeFocusModalBtn"),
     doneFocusBtn: document.getElementById("doneFocusBtn"),
 
     schemaModal: document.getElementById("schemaModal"),
@@ -71,11 +135,32 @@
     closeSchemaModalBtn: document.getElementById("closeSchemaModalBtn"),
     resetSchemaBtn: document.getElementById("resetSchemaBtn"),
     saveSchemaBtn: document.getElementById("saveSchemaBtn"),
+
+    newProjectModal: document.getElementById("newProjectModal"),
+    newProjectForm: document.getElementById("newProjectForm"),
+    closeNewProjectBtn: document.getElementById("closeNewProjectBtn"),
+    newProjName: document.getElementById("newProjName"),
+    newProjSlug: document.getElementById("newProjSlug"),
+    newProjSeq: document.getElementById("newProjSeq"),
+    newProjSubtitle: document.getElementById("newProjSubtitle"),
+    newProjType: document.getElementById("newProjType"),
+    newProjFeatured: document.getElementById("newProjFeatured"),
+    newProjDetails: document.getElementById("newProjDetails"),
+    newProjCategories: document.getElementById("newProjCategories"),
+    newProjError: document.getElementById("newProjError"),
+    submitNewProjectBtn: document.getElementById("submitNewProjectBtn"),
+
+    slideDeleteModal: document.getElementById("slideDeleteModal"),
+    slideDeleteDesc: document.getElementById("slideDeleteDesc"),
+    slideDeleteCoverWarn: document.getElementById("slideDeleteCoverWarn"),
+    closeSlideDeleteBtn: document.getElementById("closeSlideDeleteBtn"),
+    removeFromGalleryBtn: document.getElementById("removeFromGalleryBtn"),
+    deleteMediaPermanentBtn: document.getElementById("deleteMediaPermanentBtn"),
   };
 
   function loadSessionToken() {
     try {
-      return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+      return window.sessionStorage.getItem(SESSION_STORAGE_KEY) || window.localStorage.getItem(SESSION_STORAGE_KEY) || "";
     } catch {
       return "";
     }
@@ -84,74 +169,95 @@
   function saveSessionToken(token) {
     state.sessionToken = token || "";
     try {
-      if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-      else sessionStorage.removeItem(SESSION_TOKEN_KEY);
-    } catch { }
+      if (!token) {
+        window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      } else {
+        window.sessionStorage.setItem(SESSION_STORAGE_KEY, token);
+        window.localStorage.setItem(SESSION_STORAGE_KEY, token);
+      }
+    } catch {
+      // ignore storage errors
+    }
   }
 
   function loadFieldOverride() {
     try {
-      const raw = localStorage.getItem(STORAGE_OVERRIDE_KEY);
+      const raw = localStorage.getItem(FIELD_OVERRIDE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
   }
 
-  function saveFieldOverride(val) {
-    state.fieldOverride = val;
+  function saveFieldOverride(override) {
+    state.fieldOverride = override;
     try {
-      if (val) localStorage.setItem(STORAGE_OVERRIDE_KEY, JSON.stringify(val));
-      else localStorage.removeItem(STORAGE_OVERRIDE_KEY);
-    } catch { }
+      if (!override) localStorage.removeItem(FIELD_OVERRIDE_KEY);
+      else localStorage.setItem(FIELD_OVERRIDE_KEY, JSON.stringify(override));
+    } catch {
+      // ignore
+    }
   }
 
-  function formatBytes(bytes) {
-    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
-  function padTwo(n) {
-    return String(Math.max(0, Math.round(n))).padStart(2, "0");
-  }
-
-  function extractVideoId(input) {
-    const trimmed = String(input || "").trim();
-    const match = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    return match ? match[0] : trimmed;
+  function initPublishMode() {
+    try {
+      const saved = localStorage.getItem(PUBLISH_MODE_KEY);
+      if (saved === "live" || saved === "staged") {
+        els.publishMode.value = saved;
+      }
+    } catch {
+      // ignore
+    }
   }
 
   function getSelectedProject() {
     return state.projects.find((p) => p.id === state.selectedProjectId) || null;
   }
 
-  function showBanner(message, type = "ok") {
+  function showBanner(message, type = "warn") {
+    if (!message) {
+      els.globalBanner.hidden = true;
+      els.globalBanner.textContent = "";
+      els.globalBanner.className = "banner";
+      return;
+    }
+    els.globalBanner.hidden = false;
     els.globalBanner.textContent = message;
     els.globalBanner.className = `banner is-${type}`;
-    els.globalBanner.hidden = false;
   }
 
-  function hideBanner() {
-    els.globalBanner.hidden = true;
-    els.globalBanner.textContent = "";
+  function setAuthenticated(isAuthed) {
+    state.authenticated = isAuthed;
+    els.authGate.hidden = isAuthed;
+    els.appShell.hidden = !isAuthed;
   }
 
   async function apiJson(url, options = {}) {
     const headers = new Headers(options.headers || {});
-    if (state.sessionToken && !headers.has("Authorization")) {
+    if (state.sessionToken && !headers.has("X-Session-Token") && !headers.has("Authorization")) {
+      headers.set("X-Session-Token", state.sessionToken);
       headers.set("Authorization", `Bearer ${state.sessionToken}`);
     }
+
     const res = await fetch(url, {
+      credentials: "same-origin",
       ...options,
       headers,
-      credentials: "same-origin",
     });
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 401 && data?.code === "AUTH_REQUIRED") {
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { raw: text };
+      }
+    }
+    if (res.status === 401) {
       saveSessionToken("");
-      setAuthenticated(false, data?.error || "Session expired. Please sign in again.");
+      setAuthenticated(false);
+      throw new Error(data?.error || "Session expired. Please sign in again.");
     }
     if (!res.ok) {
       throw new Error(data?.error || `Request failed (${res.status})`);
@@ -159,76 +265,86 @@
     return data;
   }
 
-  function setAuthenticated(isAuthed, loginMessage = "") {
-    state.authenticated = isAuthed;
-    els.authGate.hidden = isAuthed;
-    els.appShell.hidden = !isAuthed;
-    if (!isAuthed) {
-      if (loginMessage) {
-        els.loginError.textContent = loginMessage;
-        els.loginError.hidden = false;
-      }
-      els.passwordInput.focus();
-    } else {
-      els.loginError.hidden = true;
-      els.loginError.textContent = "";
-    }
+  function getProjectTypeOptions() {
+    const typeSlug = getEffectiveFieldMap()?.projects?.projectType;
+    const fields = state.bootstrap?.collections?.projects?.fields || [];
+    const def = fields.find((f) => f.slug === typeSlug);
+    return Array.isArray(def?.validations?.options) ? def.validations.options : [];
   }
 
-  async function checkInitialAuth() {
-    try {
-      const data = await apiJson("/api/auth");
-      if (data.authenticated) {
-        setAuthenticated(true);
-        await loadBootstrap();
-      } else {
-        setAuthenticated(false);
-      }
-    } catch (err) {
-      setAuthenticated(false);
-      els.loginError.textContent = err.message;
-      els.loginError.hidden = false;
-    }
-  }
-
-  async function loadBootstrap() {
-    els.siteBadge.textContent = "Loading Webflow CMS…";
-    els.siteBadge.className = "status-pill";
-    hideBanner();
-
-    try {
-      const data = await apiJson("/api/bootstrap");
-      state.bootstrap = data;
-      state.projects = data.projects || [];
-
-      els.siteBadge.textContent = `${data.site.displayName} · Ready`;
-      els.siteBadge.className = "status-pill is-ok";
-
-      const effectiveMap = getEffectiveFieldMap();
-      if (!effectiveMap?.media?.image || (!effectiveMap?.media?.parent && !effectiveMap?.projects?.gallery)) {
-        showBanner(
-          "Warning: Required Media/Project link fields could not be auto-detected. Open 'Field Mapping' to verify your field slugs before uploading.",
-          "warn"
-        );
-      }
-
-      renderProjectOptions();
-      renderQueue();
-    } catch (err) {
-      els.siteBadge.textContent = "Connection Error";
-      els.siteBadge.className = "status-pill is-err";
-      showBanner(err.message, "err");
-    }
+  function getProjectTypeLabel(val) {
+    if (!val) return "";
+    const opts = getProjectTypeOptions();
+    const match = opts.find((o) => o.id === val || o.name === val);
+    return match ? match.name : val;
   }
 
   function getEffectiveFieldMap() {
-    const base = state.bootstrap?.fieldMap;
-    if (!base) return null;
+    if (!state.bootstrap) return null;
+    const base = state.bootstrap.fieldMap;
     if (!state.fieldOverride) return base;
     return {
       projects: { ...base.projects, ...(state.fieldOverride.projects || {}) },
       media: { ...base.media, ...(state.fieldOverride.media || {}) },
     };
+  }
+
+  function switchTab(tab) {
+    state.activeTab = tab;
+    const isEditor = tab === "editor";
+    els.editorView.hidden = !isEditor;
+    els.projectsView.hidden = isEditor;
+    els.tabEditorBtn.classList.toggle("is-active", isEditor);
+    els.tabProjectsBtn.classList.toggle("is-active", !isEditor);
+    els.actionBar.hidden = !isEditor || state.queue.length === 0;
+    if (!isEditor) {
+      renderProjectOrderList();
+    }
+  }
+
+  async function checkInitialAuth() {
+    try {
+      const auth = await apiJson("/api/auth");
+      if (auth?.authenticated) {
+        setAuthenticated(true);
+        await loadBootstrap();
+      } else {
+        setAuthenticated(false);
+      }
+    } catch {
+      setAuthenticated(false);
+    }
+  }
+
+  async function loadBootstrap(preferredProjectId = null) {
+    els.siteBadge.textContent = "Loading CMS…";
+    els.siteBadge.className = "status-pill";
+    showBanner("");
+
+    try {
+      const data = await apiJson("/api/bootstrap");
+      state.bootstrap = data;
+      state.projects = data.projects || [];
+      state.mediaById = data.mediaById || {};
+      state.categories = data.categories || [];
+
+      if (preferredProjectId && state.projects.some((p) => p.id === preferredProjectId)) {
+        state.selectedProjectId = preferredProjectId;
+      }
+
+      els.siteBadge.textContent = `${data.site.displayName} · ${state.projects.length} Projects`;
+      els.siteBadge.className = "status-pill is-ok";
+
+      populateDirectoryFilters();
+      renderProjectOptions();
+      syncEditorFromSelectedProject();
+      resetOrderDrafts();
+      renderProjectOrderList();
+    } catch (err) {
+      els.siteBadge.textContent = "Connection Error";
+      els.siteBadge.className = "status-pill is-err";
+      showBanner(err.message, "err");
+    }
   }
 
   function renderProjectOptions() {
@@ -273,151 +389,693 @@
     const p = getSelectedProject();
     if (!p) {
       els.projectMeta.textContent = "No project selected.";
+      els.projectStatusPill.hidden = true;
       return;
     }
-    const statusText = p.isDraft ? "Draft project" : "Staged/Live project";
-    els.projectMeta.textContent = `${statusText} · Currently ${p.existingSlideCount} slide(s) · New slides start at Order #${p.nextOrder}`;
+    els.projectStatusPill.hidden = false;
+    els.projectStatusPill.textContent = p.isDraft ? "Draft" : "Published / Ready";
+    els.projectStatusPill.className = `status-pill ${p.isDraft ? "" : "is-ok"}`;
+    els.publishProjectBtn.textContent = p.isDraft ? "Publish Project & Media" : "Re-publish Project & Media";
+    els.unpublishProjectBtn.disabled = p.isDraft;
+    els.projectMeta.textContent = `Slug: /projects/${p.slug} · ${p.existingSlideCount} slide(s) · Next new slide starts at #${p.nextOrder}`;
   }
 
-  function getPresetConfig() {
-    const val = els.compressionPreset.value;
-    if (val === "webp-3000") return { mime: "image/webp", ext: "webp", maxEdge: 3000 };
-    if (val === "jpeg-2400") return { mime: "image/jpeg", ext: "jpg", maxEdge: 2400 };
-    if (val === "jpeg-3000") return { mime: "image/jpeg", ext: "jpg", maxEdge: 3000 };
-    return { mime: "image/webp", ext: "webp", maxEdge: 2400 };
-  }
-
-  async function loadBitmap(file) {
-    if (typeof createImageBitmap === "function") {
-      return createImageBitmap(file);
+  function renderCategoryPills(container, selectedIds, onToggle = null) {
+    container.innerHTML = "";
+    if (!state.categories.length) {
+      const msg = document.createElement("span");
+      msg.className = "field-hint";
+      msg.textContent = "No Category / Subcategories items found.";
+      container.appendChild(msg);
+      return;
     }
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(img);
-      };
-      img.onerror = (e) => {
-        URL.revokeObjectURL(url);
-        reject(e);
-      };
-      img.src = url;
-    });
+    const selectedSet = new Set(selectedIds || []);
+    for (const cat of state.categories) {
+      const label = document.createElement("label");
+      label.className = "pill-check";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = cat.id;
+      input.checked = selectedSet.has(cat.id);
+      if (onToggle) input.addEventListener("change", onToggle);
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(cat.name));
+      container.appendChild(label);
+    }
   }
 
-  function canvasToBlob(canvas, mime, quality) {
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), mime, quality);
-    });
+  function fillProjectTypeSelect(selectEl, currentValue, includeEmpty = false) {
+    const options = getProjectTypeOptions();
+    selectEl.innerHTML = "";
+    if (includeEmpty || !options.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = options.length ? "(Select Type)" : "(Not mapped)";
+      selectEl.appendChild(opt);
+    }
+    for (const o of options) {
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = o.name;
+      selectEl.appendChild(opt);
+    }
+    if (currentValue) {
+      const match = options.find((o) => o.id === currentValue || o.name === currentValue);
+      selectEl.value = match ? match.id : currentValue;
+    }
   }
 
-  async function compressImageFile(file, preset) {
-    const bitmap = await loadBitmap(file);
-    const origW = bitmap.width;
-    const origH = bitmap.height;
+  function setProjectDirty(dirty) {
+    state.projectDirty = dirty;
+    els.projectDirtyBadge.hidden = !dirty;
+    els.saveProjectDetailsBtn.disabled = !dirty || !getSelectedProject();
+  }
 
-    let scale = 1;
-    const longest = Math.max(origW, origH);
-    if (longest > preset.maxEdge) {
-      scale = preset.maxEdge / longest;
+  function syncEditorFromSelectedProject() {
+    const p = getSelectedProject();
+    updateProjectMeta();
+
+    if (!p) {
+      els.editProjName.value = "";
+      els.editProjSlug.value = "";
+      els.editProjSeq.value = "";
+      els.editProjSubtitle.value = "";
+      els.editProjDetails.value = "";
+      els.editProjFeatured.checked = false;
+      els.editProjFeaturedSeq.value = "";
+      els.editProjCover.innerHTML = "";
+      els.editProjCategories.innerHTML = "";
+      state.galleryIds = [];
+      state.existingEdits = {};
+      setProjectDirty(false);
+      renderExistingGallery();
+      return;
     }
 
-    let targetW = Math.max(1, Math.round(origW * scale));
-    let targetH = Math.max(1, Math.round(origH * scale));
+    els.editProjName.value = p.name || "";
+    els.editProjSlug.value = p.slug || "";
+    els.editProjSeq.value = p.sequence === "" ? "" : String(p.sequence);
+    els.editProjSubtitle.value = p.subtitle || "";
+    els.editProjDetails.value = p.details || "";
+    fillProjectTypeSelect(els.editProjType, p.projectType, true);
+    renderCategoryPills(els.editProjCategories, p.categoryIds, () => setProjectDirty(true));
+    els.editProjFeatured.checked = Boolean(p.featured);
+    els.editProjFeaturedSeq.value = p.featuredSequence === "" ? "" : String(p.featuredSequence);
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    populateCoverSelect(p);
+    setProjectDirty(false);
 
-    let mime = preset.mime;
-    let ext = preset.ext;
-    let bestBlob = null;
+    state.galleryIds = [...(p.galleryIds || [])];
+    state.existingEdits = {};
+    renderExistingGallery();
+  }
 
-    const qualities = [0.86, 0.78, 0.7, 0.6];
+  function populateCoverSelect(project) {
+    els.editProjCover.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "(No Cover Selected)";
+    els.editProjCover.appendChild(noneOpt);
 
-    for (let shrinkPass = 0; shrinkPass < 3; shrinkPass += 1) {
-      canvas.width = targetW;
-      canvas.height = targetH;
-      ctx.clearRect(0, 0, targetW, targetH);
-      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    const seen = new Set();
+    const galleryIds = project.galleryIds || [];
+    galleryIds.forEach((id, idx) => {
+      const m = state.mediaById[id];
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `#${padTwo(idx + 1)} · ${m ? m.name : id}`;
+      els.editProjCover.appendChild(opt);
+      seen.add(id);
+    });
 
-      for (const q of qualities) {
-        let blob = await canvasToBlob(canvas, mime, q);
-        if ((!blob || blob.type !== mime) && mime === "image/webp") {
-          mime = "image/jpeg";
-          ext = "jpg";
-          blob = await canvasToBlob(canvas, mime, q);
+    if (project.coverId && !seen.has(project.coverId)) {
+      const m = state.mediaById[project.coverId];
+      const opt = document.createElement("option");
+      opt.value = project.coverId;
+      opt.textContent = `External · ${m ? m.name : project.coverId}`;
+      els.editProjCover.appendChild(opt);
+    }
+
+    els.editProjCover.value = project.coverId || "";
+  }
+
+  function getSelectedCategoryIds(container) {
+    return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((el) => el.value);
+  }
+
+  async function saveProjectDetails() {
+    const p = getSelectedProject();
+    if (!p) return;
+
+    const name = els.editProjName.value.trim();
+    if (!name) {
+      showBanner("Project Title is required.", "err");
+      return;
+    }
+
+    els.saveProjectDetailsBtn.disabled = true;
+    els.saveProjectDetailsBtn.textContent = "Saving…";
+
+    try {
+      const res = await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          projectId: p.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: {
+            name,
+            slug: slugify(els.editProjSlug.value || name) || p.slug,
+            sequence: els.editProjSeq.value.trim() === "" ? null : Number(els.editProjSeq.value),
+            subtitle: els.editProjSubtitle.value.trim(),
+            details: els.editProjDetails.value,
+            projectType: els.editProjType.value,
+            categoryIds: getSelectedCategoryIds(els.editProjCategories),
+            coverId: els.editProjCover.value || null,
+            featured: els.editProjFeatured.checked,
+            featuredSequence:
+              els.editProjFeaturedSeq.value.trim() === "" ? null : Number(els.editProjFeaturedSeq.value),
+          },
+        }),
+      });
+
+      await loadBootstrap(p.id);
+      const pubNote = res.published
+        ? "Published live."
+        : res.skippedPublishBecauseDraft
+          ? "Saved (project is Draft — click Publish Project when ready)."
+          : "Saved as staged.";
+      showBanner(`Updated "${name}". ${pubNote}`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+      els.saveProjectDetailsBtn.disabled = false;
+    } finally {
+      els.saveProjectDetailsBtn.textContent = "Save Details";
+    }
+  }
+
+  // Existing Gallery Rendering & Actions
+  function getExistingEditState(mediaId) {
+    if (!state.existingEdits[mediaId]) {
+      const m = state.mediaById[mediaId];
+      if (!m) return null;
+      state.existingEdits[mediaId] = {
+        name: m.name || "",
+        videoId: m.videoId || "",
+        fillDesktop: Boolean(m.fillDesktop),
+        fillMobile: Boolean(m.fillMobile),
+        focusX: m.focusX ?? 50,
+        focusY: m.focusY ?? 50,
+        dirty: false,
+        busy: false,
+      };
+    }
+    return state.existingEdits[mediaId];
+  }
+
+  function isGalleryOrderDirty() {
+    const p = getSelectedProject();
+    if (!p) return false;
+    const orig = p.galleryIds || [];
+    if (orig.length !== state.galleryIds.length) return true;
+    return orig.some((id, idx) => id !== state.galleryIds[idx]);
+  }
+
+  function renderExistingGallery() {
+    const p = getSelectedProject();
+    els.existingGalleryGrid.innerHTML = "";
+
+    const dirtyOrder = isGalleryOrderDirty();
+    els.saveGalleryOrderBtn.hidden = !dirtyOrder;
+    els.resetGalleryOrderBtn.hidden = !dirtyOrder;
+    els.existingGalleryHeading.textContent = `Existing Gallery (${state.galleryIds.length})`;
+
+    if (!p || !state.galleryIds.length) {
+      els.existingGalleryEmpty.hidden = false;
+      return;
+    }
+    els.existingGalleryEmpty.hidden = true;
+
+    state.galleryIds.forEach((mediaId, idx) => {
+      const m = state.mediaById[mediaId];
+      if (!m) return;
+      const edit = getExistingEditState(mediaId);
+      const isCover = p.coverId === mediaId;
+
+      const card = document.createElement("article");
+      card.className = "slide-card";
+      card.draggable = !edit.busy;
+      card.dataset.mediaId = mediaId;
+
+      card.addEventListener("dragstart", (e) => {
+        state.dragGalleryId = mediaId;
+        card.classList.add("is-dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      card.addEventListener("dragend", () => {
+        state.dragGalleryId = null;
+        card.classList.remove("is-dragging");
+        els.existingGalleryGrid.querySelectorAll(".is-drag-target").forEach((el) => el.classList.remove("is-drag-target"));
+      });
+      card.addEventListener("dragover", (e) => {
+        if (!state.dragGalleryId || state.dragGalleryId === mediaId) return;
+        e.preventDefault();
+        card.classList.add("is-drag-target");
+      });
+      card.addEventListener("dragleave", () => card.classList.remove("is-drag-target"));
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.classList.remove("is-drag-target");
+        if (!state.dragGalleryId || state.dragGalleryId === mediaId) return;
+        const fromIdx = state.galleryIds.indexOf(state.dragGalleryId);
+        const toIdx = state.galleryIds.indexOf(mediaId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = state.galleryIds.splice(fromIdx, 1);
+          state.galleryIds.splice(toIdx, 0, moved);
+          renderExistingGallery();
         }
-        if (!blob) continue;
-        bestBlob = blob;
-        if (blob.size <= TARGET_MAX_BYTES) break;
+      });
+
+      const thumbWrap = document.createElement("div");
+      thumbWrap.className = "slide-thumb-wrap";
+      const thumbSrc = m.imageUrl || (edit.videoId ? `${BUNNY_CDN_BASE}/${extractVideoId(edit.videoId)}/thumbnail.jpg` : "");
+      if (thumbSrc) {
+        const img = document.createElement("img");
+        img.src = thumbSrc;
+        img.alt = edit.name;
+        img.style.objectPosition = `${edit.focusX}% ${edit.focusY}%`;
+        img.loading = "lazy";
+        thumbWrap.appendChild(img);
+
+        const dot = document.createElement("div");
+        dot.className = "slide-focus-dot";
+        dot.style.left = `${edit.focusX}%`;
+        dot.style.top = `${edit.focusY}%`;
+        thumbWrap.appendChild(dot);
+      } else {
+        const ph = document.createElement("div");
+        ph.className = "video-placeholder";
+        ph.textContent = edit.videoId ? "BUNNY VIDEO" : "NO IMAGE";
+        thumbWrap.appendChild(ph);
       }
 
-      if (bestBlob && bestBlob.size <= HARD_MAX_BYTES) break;
-      targetW = Math.max(1, Math.round(targetW * 0.8));
-      targetH = Math.max(1, Math.round(targetH * 0.8));
-    }
+      const orderBadge = document.createElement("span");
+      orderBadge.className = "slide-order-badge";
+      orderBadge.textContent = `#${padTwo(idx + 1)}`;
+      thumbWrap.appendChild(orderBadge);
 
-    if (typeof bitmap.close === "function") {
-      bitmap.close();
-    }
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `slide-state-badge ${edit.dirty ? "" : m.isDraft ? "" : "is-done"}`;
+      statusBadge.textContent = edit.busy
+        ? "Saving…"
+        : edit.dirty
+          ? "Edited"
+          : edit.videoId
+            ? "Video"
+            : m.isDraft
+              ? "Draft"
+              : "Live";
+      thumbWrap.appendChild(statusBadge);
 
-    if (!bestBlob || bestBlob.size > HARD_MAX_BYTES) {
-      throw new Error("Could not compress image under Webflow's 4 MB limit.");
-    }
+      if (isCover) {
+        const coverBadge = document.createElement("span");
+        coverBadge.className = "slide-cover-badge";
+        coverBadge.textContent = "Cover";
+        thumbWrap.appendChild(coverBadge);
+      }
 
-    const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]+/g, "-") || "slide";
-    const compressedName = `${baseName}.${ext}`;
-    const bytes = new Uint8Array(await bestBlob.arrayBuffer());
-    const fileHash = window.mgMd5Hex(bytes);
+      const body = document.createElement("div");
+      body.className = "slide-body";
 
-    return {
-      blob: bestBlob,
-      fileName: compressedName,
-      fileHash,
-      width: targetW,
-      height: targetH,
-      compressedSize: bestBlob.size,
-    };
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = edit.name;
+      nameInput.disabled = edit.busy;
+      nameInput.placeholder = "Slide name";
+      nameInput.addEventListener("input", () => {
+        edit.name = nameInput.value;
+        edit.dirty = true;
+        saveSlideBtn.disabled = false;
+        statusBadge.textContent = "Edited";
+        statusBadge.className = "slide-state-badge";
+      });
+      body.appendChild(nameInput);
+
+      const videoInput = document.createElement("input");
+      videoInput.type = "text";
+      videoInput.className = "slide-video-input";
+      videoInput.value = edit.videoId;
+      videoInput.disabled = edit.busy;
+      videoInput.placeholder = "Bunny Video ID (optional)";
+      videoInput.addEventListener("input", () => {
+        edit.videoId = videoInput.value.trim();
+        edit.dirty = true;
+        saveSlideBtn.disabled = false;
+        statusBadge.textContent = "Edited";
+        statusBadge.className = "slide-state-badge";
+      });
+      body.appendChild(videoInput);
+
+      const toggles = document.createElement("div");
+      toggles.className = "slide-toggles";
+      toggles.appendChild(
+        createCheckbox("Fill Desktop", edit.fillDesktop, edit.busy, (checked) => {
+          edit.fillDesktop = checked;
+          edit.dirty = true;
+          saveSlideBtn.disabled = false;
+        })
+      );
+      toggles.appendChild(
+        createCheckbox("Fill Mobile", edit.fillMobile, edit.busy, (checked) => {
+          edit.fillMobile = checked;
+          edit.dirty = true;
+          saveSlideBtn.disabled = false;
+        })
+      );
+      body.appendChild(toggles);
+
+      const actions = document.createElement("div");
+      actions.className = "slide-actions slide-actions-wrap";
+
+      const moveBtns = document.createElement("div");
+      moveBtns.className = "slide-move-btns";
+      const leftBtn = document.createElement("button");
+      leftBtn.type = "button";
+      leftBtn.className = "icon-btn";
+      leftBtn.textContent = "←";
+      leftBtn.disabled = edit.busy || idx === 0;
+      leftBtn.addEventListener("click", () => {
+        const [moved] = state.galleryIds.splice(idx, 1);
+        state.galleryIds.splice(idx - 1, 0, moved);
+        renderExistingGallery();
+      });
+
+      const rightBtn = document.createElement("button");
+      rightBtn.type = "button";
+      rightBtn.className = "icon-btn";
+      rightBtn.textContent = "→";
+      rightBtn.disabled = edit.busy || idx === state.galleryIds.length - 1;
+      rightBtn.addEventListener("click", () => {
+        const [moved] = state.galleryIds.splice(idx, 1);
+        state.galleryIds.splice(idx + 1, 0, moved);
+        renderExistingGallery();
+      });
+      moveBtns.appendChild(leftBtn);
+      moveBtns.appendChild(rightBtn);
+      actions.appendChild(moveBtns);
+
+      const focusBtn = document.createElement("button");
+      focusBtn.type = "button";
+      focusBtn.className = "icon-btn";
+      focusBtn.textContent = `Focus ${edit.focusX}%/${edit.focusY}%`;
+      focusBtn.disabled = edit.busy || !thumbSrc;
+      focusBtn.addEventListener("click", () => openFocusModal({ kind: "existing", id: mediaId }));
+      actions.appendChild(focusBtn);
+
+      const replaceBtn = document.createElement("button");
+      replaceBtn.type = "button";
+      replaceBtn.className = "icon-btn";
+      replaceBtn.textContent = "Replace Img";
+      replaceBtn.disabled = edit.busy;
+      replaceBtn.addEventListener("click", () => replaceExistingSlideImage(mediaId));
+      actions.appendChild(replaceBtn);
+
+      if (edit.videoId) {
+        const syncThumbBtn = document.createElement("button");
+        syncThumbBtn.type = "button";
+        syncThumbBtn.className = "icon-btn";
+        syncThumbBtn.textContent = "Sync Thumb";
+        syncThumbBtn.title = "Fetch thumbnail.jpg from Bunny Stream";
+        syncThumbBtn.disabled = edit.busy;
+        syncThumbBtn.addEventListener("click", () => saveExistingSlide(mediaId, { syncBunnyThumb: true }));
+        actions.appendChild(syncThumbBtn);
+      }
+
+      if (!isCover) {
+        const coverBtn = document.createElement("button");
+        coverBtn.type = "button";
+        coverBtn.className = "icon-btn";
+        coverBtn.textContent = "Set Cover";
+        coverBtn.disabled = edit.busy;
+        coverBtn.addEventListener("click", () => setProjectCover(mediaId));
+        actions.appendChild(coverBtn);
+      }
+
+      const saveSlideBtn = document.createElement("button");
+      saveSlideBtn.type = "button";
+      saveSlideBtn.className = "icon-btn";
+      saveSlideBtn.textContent = "Save";
+      saveSlideBtn.disabled = edit.busy || !edit.dirty;
+      saveSlideBtn.addEventListener("click", () => saveExistingSlide(mediaId));
+      actions.appendChild(saveSlideBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "icon-btn is-danger";
+      delBtn.textContent = "✕";
+      delBtn.title = "Remove or Delete Slide";
+      delBtn.disabled = edit.busy;
+      delBtn.addEventListener("click", () => openSlideDeleteModal(mediaId));
+      actions.appendChild(delBtn);
+
+      body.appendChild(actions);
+      card.appendChild(thumbWrap);
+      card.appendChild(body);
+      els.existingGalleryGrid.appendChild(card);
+    });
   }
 
+  async function saveExistingSlide(mediaId, extra = {}) {
+    const edit = getExistingEditState(mediaId);
+    const p = getSelectedProject();
+    if (!edit || !p) return;
+
+    edit.busy = true;
+    renderExistingGallery();
+    try {
+      await apiJson("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          mediaId,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          slide: {
+            name: edit.name.trim() || state.mediaById[mediaId]?.name,
+            videoId: edit.videoId ? extractVideoId(edit.videoId) : "",
+            fillDesktop: edit.fillDesktop,
+            fillMobile: edit.fillMobile,
+            focusX: edit.focusX,
+            focusY: edit.focusY,
+            ...extra,
+          },
+        }),
+      });
+      delete state.existingEdits[mediaId];
+      await loadBootstrap(p.id);
+      showBanner(`Saved slide "${edit.name}".`, "ok");
+    } catch (err) {
+      edit.busy = false;
+      renderExistingGallery();
+      showBanner(err.message, "err");
+    }
+  }
+
+  function replaceExistingSlideImage(mediaId) {
+    const p = getSelectedProject();
+    const edit = getExistingEditState(mediaId);
+    if (!p || !edit) return;
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      edit.busy = true;
+      renderExistingGallery();
+      try {
+        const compressed = await compressImageFile(file, getPresetConfig(els.compressionPreset.value));
+        const formData = new FormData();
+        formData.append("file", compressed.blob, compressed.fileName);
+        formData.append("fileName", compressed.fileName);
+        formData.append("fileHash", compressed.fileHash);
+        formData.append("size", String(compressed.compressedSize));
+        formData.append("width", String(compressed.width));
+        formData.append("height", String(compressed.height));
+        const asset = await apiJson("/api/upload-asset", { method: "POST", body: formData });
+
+        await apiJson("/api/media", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update",
+            mediaId,
+            publishMode: els.publishMode.value,
+            fieldMapOverride: state.fieldOverride,
+            slide: {
+              fileId: asset.fileId,
+              url: asset.url,
+              name: edit.name.trim(),
+            },
+          }),
+        });
+        delete state.existingEdits[mediaId];
+        await loadBootstrap(p.id);
+        showBanner(`Replaced image on "${edit.name}" (${formatBytes(compressed.compressedSize)}).`, "ok");
+      } catch (err) {
+        edit.busy = false;
+        renderExistingGallery();
+        showBanner(err.message, "err");
+      }
+    });
+    input.click();
+  }
+
+  async function setProjectCover(mediaId) {
+    const p = getSelectedProject();
+    if (!p) return;
+    try {
+      await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          projectId: p.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: { coverId: mediaId },
+        }),
+      });
+      await loadBootstrap(p.id);
+      showBanner(`Updated cover slide for "${p.name}".`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    }
+  }
+
+  async function saveGalleryOrder() {
+    const p = getSelectedProject();
+    if (!p) return;
+    els.saveGalleryOrderBtn.disabled = true;
+    els.saveGalleryOrderBtn.textContent = "Saving…";
+    try {
+      await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          projectId: p.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: { galleryIds: state.galleryIds },
+        }),
+      });
+      await loadBootstrap(p.id);
+      showBanner(`Saved new slide order for "${p.name}".`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.saveGalleryOrderBtn.disabled = false;
+      els.saveGalleryOrderBtn.textContent = "Save Gallery Order";
+    }
+  }
+
+  function openSlideDeleteModal(mediaId) {
+    const p = getSelectedProject();
+    const m = state.mediaById[mediaId];
+    if (!p || !m) return;
+    state.pendingDeleteSlideId = mediaId;
+    els.slideDeleteDesc.textContent = `Slide "${m.name}" (${mediaId})`;
+    if (p.coverId === mediaId) {
+      els.slideDeleteCoverWarn.hidden = false;
+      els.slideDeleteCoverWarn.textContent =
+        "This slide is currently the project's Cover. Removing it will automatically switch Cover to the next remaining slide.";
+    } else {
+      els.slideDeleteCoverWarn.hidden = true;
+    }
+    els.slideDeleteModal.hidden = false;
+  }
+
+  async function executeSlideRemoval(mode) {
+    const p = getSelectedProject();
+    const mediaId = state.pendingDeleteSlideId;
+    if (!p || !mediaId) return;
+
+    els.removeFromGalleryBtn.disabled = true;
+    els.deleteMediaPermanentBtn.disabled = true;
+
+    try {
+      await apiJson("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: mode === "delete" ? "delete" : "remove-from-gallery",
+          projectId: p.id,
+          mediaId,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+        }),
+      });
+      els.slideDeleteModal.hidden = true;
+      state.pendingDeleteSlideId = null;
+      await loadBootstrap(p.id);
+      showBanner(mode === "delete" ? "Slide permanently deleted from Webflow CMS." : "Slide removed from project's Gallery.", "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.removeFromGalleryBtn.disabled = false;
+      els.deleteMediaPermanentBtn.disabled = false;
+    }
+  }
+
+  // Upload Queue Management
   function makeQueueId() {
-    if (crypto.randomUUID) return crypto.randomUUID();
-    return `id_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  async function runWithConcurrency(items, limit, worker) {
+    let cursor = 0;
+    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (cursor < items.length) {
+        const current = items[cursor];
+        cursor += 1;
+        await worker(current);
+      }
+    });
+    await Promise.all(runners);
   }
 
   async function addFilesToQueue(fileList) {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
     if (!files.length) return;
-
-    // Sort dropped batch naturally by filename so IMG_01, IMG_02 stay in sequence
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
 
-    const newItems = files.map((file) => {
-      const previewUrl = URL.createObjectURL(file);
-      return {
-        id: makeQueueId(),
-        kind: "image",
-        file,
-        previewUrl,
-        name: file.name.replace(/\.[^.]+$/, ""),
-        alt: "",
-        origSize: file.size,
-        compressed: null,
-        uploadedAsset: null,
-        fillDesktop: false,
-        fillMobile: false,
-        focusX: 50,
-        focusY: 50,
-        status: "compressing", // compressing | ready | uploading | uploaded | error
-        error: "",
-      };
-    });
+    const newItems = files.map((file) => ({
+      id: makeQueueId(),
+      kind: "image",
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: file.name.replace(/\.[^.]+$/, ""),
+      alt: "",
+      origSize: file.size,
+      compressed: null,
+      uploadedAsset: null,
+      fillDesktop: false,
+      fillMobile: false,
+      focusX: 50,
+      focusY: 50,
+      status: "compressing",
+      error: "",
+    }));
 
     state.queue.push(...newItems);
     renderQueue();
 
-    const preset = getPresetConfig();
+    const preset = getPresetConfig(els.compressionPreset.value);
     await runWithConcurrency(newItems, 2, async (item) => {
       try {
         item.compressed = await compressImageFile(item.file, preset);
@@ -457,17 +1115,13 @@
     const idx = state.queue.findIndex((i) => i.id === id);
     if (idx === -1) return;
     const [removed] = state.queue.splice(idx, 1);
-    if (removed?.previewUrl && removed.previewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(removed.previewUrl);
-    }
+    if (removed?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(removed.previewUrl);
     renderQueue();
   }
 
   function clearQueue() {
     for (const item of state.queue) {
-      if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
+      if (item.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(item.previewUrl);
     }
     state.queue = [];
     renderQueue();
@@ -480,22 +1134,10 @@
     renderQueue();
   }
 
-  async function runWithConcurrency(items, limit, worker) {
-    let cursor = 0;
-    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (cursor < items.length) {
-        const current = items[cursor];
-        cursor += 1;
-        await worker(current);
-      }
-    });
-    await Promise.all(runners);
-  }
-
   function renderQueue() {
     const hasItems = state.queue.length > 0;
     els.queueSection.hidden = !hasItems;
-    els.actionBar.hidden = !hasItems;
+    els.actionBar.hidden = !hasItems || state.activeTab !== "editor";
 
     if (!hasItems) {
       els.queueGrid.innerHTML = "";
@@ -512,74 +1154,66 @@
     let doneCount = 0;
 
     for (const item of state.queue) {
-      if (item.kind === "image") {
+      if (item.file) {
         totalOrig += item.origSize || 0;
-        totalCompressed += item.compressed?.compressedSize || 0;
+        if (item.compressed) totalCompressed += item.compressed.compressedSize;
       }
       if (item.status === "compressing") compressingCount += 1;
       if (item.status === "error") errorCount += 1;
       if (item.status === "uploaded") doneCount += 1;
     }
 
-    els.queueHeading.textContent = `Queued Slides (${state.queue.length})`;
-    els.queueStats.textContent = totalCompressed > 0
-      ? `${formatBytes(totalOrig)} raw → ${formatBytes(totalCompressed)} compressed`
-      : "Preparing…";
+    els.queueHeading.textContent = `Queued New Slides (${state.queue.length})`;
+    els.queueStats.textContent =
+      totalOrig > 0
+        ? `${formatBytes(totalOrig)} raw → ${formatBytes(totalCompressed)} compressed`
+        : `${state.queue.length} slide(s) ready`;
 
     els.retryFailedBtn.hidden = errorCount === 0 || state.isUploading;
     els.uploadBtn.disabled = state.isUploading || compressingCount > 0 || !project;
-    els.uploadBtn.textContent = compressingCount > 0
-      ? `Compressing (${compressingCount})…`
-      : state.isUploading
-        ? "Uploading…"
+    els.uploadBtn.textContent = state.isUploading
+      ? "Uploading…"
+      : compressingCount > 0
+        ? `Compressing (${compressingCount})…`
         : `Upload & Add ${state.queue.length} Slide${state.queue.length === 1 ? "" : "s"}`;
 
-    if (!state.isUploading && compressingCount === 0) {
-      if (errorCount > 0) {
-        els.progressSummary.textContent = `${errorCount} item(s) need attention before creating slides.`;
-      } else {
-        els.progressSummary.textContent = `Ready · Will add slides #${padTwo(startOrder)}–#${padTwo(startOrder + state.queue.length - 1)} to ${project?.name || "project"}`;
-      }
-      els.progressFill.style.width = `${Math.round((doneCount / state.queue.length) * 100)}%`;
+    if (!state.isUploading) {
+      els.progressSummary.textContent = project
+        ? `Ready · Will add slides #${padTwo(startOrder)}–#${padTwo(startOrder + state.queue.length - 1)} to ${project.name}`
+        : "Select a project first";
+      els.progressFill.style.width = doneCount ? `${Math.round((doneCount / state.queue.length) * 100)}%` : "0%";
     }
 
     els.queueGrid.innerHTML = "";
+
     state.queue.forEach((item, idx) => {
-      const targetOrder = startOrder + idx;
       const card = document.createElement("article");
       card.className = `slide-card${item.status === "uploaded" ? " is-done" : ""}${item.status === "error" ? " is-error" : ""}`;
       card.draggable = !state.isUploading;
-      card.dataset.id = item.id;
 
-      // Drag reorder handlers
       card.addEventListener("dragstart", (e) => {
-        if (state.isUploading) {
-          e.preventDefault();
-          return;
-        }
-        state.draggedId = item.id;
+        state.dragQueueId = item.id;
         card.classList.add("is-dragging");
         e.dataTransfer.effectAllowed = "move";
       });
       card.addEventListener("dragend", () => {
-        state.draggedId = null;
+        state.dragQueueId = null;
         card.classList.remove("is-dragging");
-        document.querySelectorAll(".slide-card.is-drag-target").forEach((el) => el.classList.remove("is-drag-target"));
+        els.queueGrid.querySelectorAll(".is-drag-target").forEach((el) => el.classList.remove("is-drag-target"));
       });
       card.addEventListener("dragover", (e) => {
-        if (!state.draggedId || state.draggedId === item.id) return;
+        if (!state.dragQueueId || state.dragQueueId === item.id) return;
         e.preventDefault();
         card.classList.add("is-drag-target");
       });
-      card.addEventListener("dragleave", () => {
-        card.classList.remove("is-drag-target");
-      });
+      card.addEventListener("dragleave", () => card.classList.remove("is-drag-target"));
       card.addEventListener("drop", (e) => {
         e.preventDefault();
         card.classList.remove("is-drag-target");
-        if (!state.draggedId || state.draggedId === item.id) return;
-        const fromIdx = state.queue.findIndex((x) => x.id === state.draggedId);
-        if (fromIdx !== -1) moveQueueItem(fromIdx, idx);
+        if (!state.dragQueueId || state.dragQueueId === item.id) return;
+        const fromIdx = state.queue.findIndex((i) => i.id === state.dragQueueId);
+        const toIdx = state.queue.findIndex((i) => i.id === item.id);
+        if (fromIdx !== -1 && toIdx !== -1) moveQueueItem(fromIdx, toIdx);
       });
 
       const thumbWrap = document.createElement("div");
@@ -588,19 +1222,22 @@
       if (item.kind === "video") {
         const img = document.createElement("img");
         img.src = item.previewUrl;
-        img.alt = "";
+        img.alt = item.name;
         img.style.objectPosition = `${item.focusX}% ${item.focusY}%`;
         img.onerror = () => {
-          img.replaceWith(createVideoPlaceholder(item.videoId));
+          img.remove();
+          thumbWrap.appendChild(createVideoPlaceholder(item.videoId));
         };
         thumbWrap.appendChild(img);
       } else {
         const img = document.createElement("img");
         img.src = item.previewUrl;
-        img.alt = "";
+        img.alt = item.name;
         img.style.objectPosition = `${item.focusX}% ${item.focusY}%`;
         thumbWrap.appendChild(img);
+      }
 
+      if (item.kind === "image" || item.file) {
         const dot = document.createElement("div");
         dot.className = "slide-focus-dot";
         dot.style.left = `${item.focusX}%`;
@@ -610,61 +1247,43 @@
 
       const orderBadge = document.createElement("span");
       orderBadge.className = "slide-order-badge";
-      orderBadge.textContent = `#${padTwo(targetOrder)}`;
+      orderBadge.textContent = `#${padTwo(startOrder + idx)}`;
       thumbWrap.appendChild(orderBadge);
 
-      const stateBadge = document.createElement("span");
-      stateBadge.className = `slide-state-badge${item.status === "uploaded" ? " is-done" : ""}${item.status === "error" ? " is-error" : ""}`;
-      stateBadge.textContent = formatStatusLabel(item);
-      thumbWrap.appendChild(stateBadge);
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `slide-state-badge${item.status === "uploaded" ? " is-done" : ""}${item.status === "error" ? " is-error" : ""}`;
+      statusBadge.textContent = formatStatusLabel(item);
+      thumbWrap.appendChild(statusBadge);
 
       const body = document.createElement("div");
       body.className = "slide-body";
 
-      const titleInput = document.createElement("input");
-      titleInput.type = "text";
-      titleInput.value = item.name;
-      titleInput.placeholder = "Slide name";
-      titleInput.disabled = state.isUploading;
-      titleInput.addEventListener("input", () => {
-        item.name = titleInput.value;
-      });
-      body.appendChild(titleInput);
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = item.name;
+      nameInput.disabled = state.isUploading;
+      nameInput.placeholder = "Slide name";
+      nameInput.addEventListener("input", () => { item.name = nameInput.value; });
+      body.appendChild(nameInput);
 
       const metrics = document.createElement("div");
       metrics.className = "slide-metrics";
       if (item.kind === "video") {
-        metrics.textContent = `Bunny ID: ${item.videoId}`;
+        metrics.textContent = item.compressed
+          ? `Bunny ID: ${item.videoId} · Poster ${formatBytes(item.compressed.compressedSize)}`
+          : `Bunny ID: ${item.videoId}`;
       } else if (item.compressed) {
         metrics.textContent = `${formatBytes(item.origSize)} → ${formatBytes(item.compressed.compressedSize)} · ${item.compressed.width}×${item.compressed.height}`;
       } else {
-        metrics.textContent = `${formatBytes(item.origSize)} · Compressing…`;
+        metrics.textContent = `${formatBytes(item.origSize)} · processing…`;
       }
       body.appendChild(metrics);
 
       const toggles = document.createElement("div");
       toggles.className = "slide-toggles";
-      toggles.appendChild(
-        createCheckbox("Fill Desktop", item.fillDesktop, (checked) => {
-          item.fillDesktop = checked;
-        })
-      );
-      toggles.appendChild(
-        createCheckbox("Fill Mobile", item.fillMobile, (checked) => {
-          item.fillMobile = checked;
-        })
-      );
+      toggles.appendChild(createCheckbox("Fill Desktop", item.fillDesktop, state.isUploading, (v) => { item.fillDesktop = v; }));
+      toggles.appendChild(createCheckbox("Fill Mobile", item.fillMobile, state.isUploading, (v) => { item.fillMobile = v; }));
       body.appendChild(toggles);
-
-      const altInput = document.createElement("input");
-      altInput.type = "text";
-      altInput.value = item.alt;
-      altInput.placeholder = "Alt text (optional)";
-      altInput.disabled = state.isUploading;
-      altInput.addEventListener("input", () => {
-        item.alt = altInput.value;
-      });
-      body.appendChild(altInput);
 
       if (item.error) {
         const errEl = document.createElement("div");
@@ -674,16 +1293,14 @@
       }
 
       const actions = document.createElement("div");
-      actions.className = "slide-actions";
+      actions.className = "slide-actions slide-actions-wrap";
 
       const moveBtns = document.createElement("div");
       moveBtns.className = "slide-move-btns";
-
       const leftBtn = document.createElement("button");
       leftBtn.type = "button";
       leftBtn.className = "icon-btn";
       leftBtn.textContent = "←";
-      leftBtn.title = "Move earlier";
       leftBtn.disabled = state.isUploading || idx === 0;
       leftBtn.addEventListener("click", () => moveQueueItem(idx, idx - 1));
 
@@ -691,10 +1308,8 @@
       rightBtn.type = "button";
       rightBtn.className = "icon-btn";
       rightBtn.textContent = "→";
-      rightBtn.title = "Move later";
       rightBtn.disabled = state.isUploading || idx === state.queue.length - 1;
       rightBtn.addEventListener("click", () => moveQueueItem(idx, idx + 1));
-
       moveBtns.appendChild(leftBtn);
       moveBtns.appendChild(rightBtn);
       actions.appendChild(moveBtns);
@@ -712,9 +1327,7 @@
           input.addEventListener("change", async () => {
             const file = input.files?.[0];
             if (!file || !file.type.startsWith("image/")) return;
-            if (item.previewUrl && item.previewUrl.startsWith("blob:")) {
-              URL.revokeObjectURL(item.previewUrl);
-            }
+            if (item.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(item.previewUrl);
             item.file = file;
             item.previewUrl = URL.createObjectURL(file);
             item.origSize = file.size;
@@ -724,7 +1337,7 @@
             item.status = "compressing";
             renderQueue();
             try {
-              item.compressed = await compressImageFile(file, getPresetConfig());
+              item.compressed = await compressImageFile(file, getPresetConfig(els.compressionPreset.value));
               item.status = "ready";
             } catch (err) {
               item.status = "error";
@@ -743,7 +1356,7 @@
         focusBtn.className = "icon-btn";
         focusBtn.textContent = `Focus ${item.focusX}%/${item.focusY}%`;
         focusBtn.disabled = state.isUploading;
-        focusBtn.addEventListener("click", () => openFocusModal(item.id));
+        focusBtn.addEventListener("click", () => openFocusModal({ kind: "queue", id: item.id }));
         actions.appendChild(focusBtn);
       }
 
@@ -751,7 +1364,6 @@
       removeBtn.type = "button";
       removeBtn.className = "icon-btn is-danger";
       removeBtn.textContent = "✕";
-      removeBtn.title = "Remove from queue";
       removeBtn.disabled = state.isUploading;
       removeBtn.addEventListener("click", () => removeQueueItem(item.id));
       actions.appendChild(removeBtn);
@@ -770,12 +1382,12 @@
     return div;
   }
 
-  function createCheckbox(labelText, initial, onChange) {
+  function createCheckbox(labelText, initial, disabled, onChange) {
     const label = document.createElement("label");
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = Boolean(initial);
-    input.disabled = state.isUploading;
+    input.disabled = Boolean(disabled);
     input.addEventListener("change", () => onChange(input.checked));
     label.appendChild(input);
     label.appendChild(document.createTextNode(labelText));
@@ -790,13 +1402,466 @@
     return item.kind === "video" ? "Video Ready" : "Ready";
   }
 
-  // Focal Point Modal
-  function openFocusModal(itemId) {
-    const item = state.queue.find((i) => i.id === itemId);
-    if (!item) return;
-    state.focusEditingId = itemId;
-    els.focusPreviewImg.src = item.previewUrl;
-    updateFocusModalUI(item.focusX, item.focusY);
+  async function startUpload(onlyFailed = false) {
+    const project = getSelectedProject();
+    if (!project || state.isUploading || !state.queue.length) return;
+
+    showBanner("");
+    state.isUploading = true;
+    renderQueue();
+
+    const preset = getPresetConfig(els.compressionPreset.value);
+    const itemsToUpload = state.queue.filter((item) => {
+      if (item.kind !== "image" && !item.file) return false;
+      if (onlyFailed) return item.status === "error" || !item.uploadedAsset;
+      return !item.uploadedAsset;
+    });
+
+    const totalSteps = itemsToUpload.length + 1;
+    let completedSteps = 0;
+
+    const updateProgress = (msg) => {
+      const pct = Math.min(99, Math.round((completedSteps / totalSteps) * 100));
+      els.progressFill.style.width = `${pct}%`;
+      els.progressSummary.textContent = msg;
+    };
+
+    try {
+      await runWithConcurrency(itemsToUpload, 3, async (item) => {
+        try {
+          item.error = "";
+          if (!item.compressed) {
+            item.status = "compressing";
+            renderQueue();
+            item.compressed = await compressImageFile(item.file, preset);
+          }
+
+          item.status = "uploading";
+          renderQueue();
+          updateProgress(`Uploading ${item.compressed.fileName}… (${completedSteps}/${totalSteps - 1})`);
+
+          const formData = new FormData();
+          formData.append("file", item.compressed.blob, item.compressed.fileName);
+          formData.append("fileName", item.compressed.fileName);
+          formData.append("fileHash", item.compressed.fileHash);
+          formData.append("size", String(item.compressed.compressedSize));
+          formData.append("width", String(item.compressed.width));
+          formData.append("height", String(item.compressed.height));
+
+          item.uploadedAsset = await apiJson("/api/upload-asset", { method: "POST", body: formData });
+          item.status = "uploaded";
+          completedSteps += 1;
+          updateProgress(`Uploaded ${completedSteps}/${itemsToUpload.length} assets…`);
+        } catch (err) {
+          item.status = "error";
+          item.error = err?.message || "Upload failed";
+        }
+        renderQueue();
+      });
+
+      const failedCount = state.queue.filter((i) => i.status === "error").length;
+      if (failedCount > 0) {
+        showBanner(`${failedCount} image(s) failed to upload. Click "Retry Failed".`, "err");
+        return;
+      }
+
+      updateProgress(`Creating ${state.queue.length} Media CMS item(s) in Webflow…`);
+
+      const startOrder = project.nextOrder;
+      const slidesPayload = state.queue.map((item, idx) => ({
+        name: item.name.trim() || `${project.name} ${padTwo(startOrder + idx)}`,
+        order: startOrder + idx,
+        alt: item.alt.trim(),
+        fillDesktop: item.fillDesktop,
+        fillMobile: item.fillMobile,
+        focusX: item.focusX,
+        focusY: item.focusY,
+        ...(item.kind === "video" ? { videoId: item.videoId } : {}),
+        ...(item.uploadedAsset ? { fileId: item.uploadedAsset.fileId, url: item.uploadedAsset.url } : {}),
+      }));
+
+      const result = await apiJson("/api/create-slides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          slides: slidesPayload,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+        }),
+      });
+
+      els.progressFill.style.width = "100%";
+      clearQueue();
+      await loadBootstrap(project.id);
+      const coverMsg = result.assignedCoverId ? " Auto-assigned first slide as Cover." : "";
+      const modeMsg = result.publishMode === "live"
+        ? result.skippedProjectPublishBecauseDraft
+          ? "Slides published (parent project is still a Draft)."
+          : "Published live in Webflow."
+        : "Saved as Staged in Webflow.";
+      showBanner(`Added ${result.createdCount} slide(s) to "${result.projectName}".${coverMsg} ${modeMsg}`, "ok");
+    } catch (err) {
+      showBanner(err?.message || "Failed while creating Media CMS items.", "err");
+    } finally {
+      state.isUploading = false;
+      renderQueue();
+    }
+  }
+
+  // Projects Directory & Reordering
+  function populateDirectoryFilters() {
+    const typeVal = els.dirTypeFilter.value;
+    fillProjectTypeSelect(els.dirTypeFilter, typeVal, true);
+    els.dirTypeFilter.firstElementChild.textContent = "All Project Types";
+
+    const catVal = els.dirCatFilter.value;
+    els.dirCatFilter.innerHTML = '<option value="">All Categories</option>';
+    for (const c of state.categories) {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      els.dirCatFilter.appendChild(opt);
+    }
+    els.dirCatFilter.value = catVal;
+  }
+
+  function resetOrderDrafts() {
+    state.orderDraftAll = state.projects.map((p) => p.id);
+    state.orderDraftHome = state.projects
+      .filter((p) => p.featured)
+      .sort((a, b) => {
+        if (a.featuredSequenceSort !== b.featuredSequenceSort) {
+          return a.featuredSequenceSort - b.featuredSequenceSort;
+        }
+        return a.sequenceSort - b.sequenceSort;
+      })
+      .map((p) => p.id);
+  }
+
+  function getOrderChanges() {
+    const byId = new Map(state.projects.map((p) => [p.id, p]));
+    if (state.orderMode === "all") {
+      return state.orderDraftAll
+        .map((id, idx) => ({ p: byId.get(id), newNum: idx + 1 }))
+        .filter(({ p, newNum }) => p && Number(p.sequence) !== newNum);
+    }
+    return state.orderDraftHome
+      .map((id, idx) => ({ p: byId.get(id), newNum: idx + 1 }))
+      .filter(({ p, newNum }) => p && Number(p.featuredSequence) !== newNum);
+  }
+
+  function hasActiveDirFilters() {
+    if (state.orderMode === "home") return false;
+    return Boolean(
+      els.dirSearchInput.value.trim() ||
+        els.dirTypeFilter.value ||
+        els.dirCatFilter.value ||
+        els.dirStatusFilter.value
+    );
+  }
+
+  function renderProjectOrderList() {
+    const byId = new Map(state.projects.map((p) => [p.id, p]));
+    const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
+
+    const isHomeMode = state.orderMode === "home";
+    els.orderModeAllBtn.classList.toggle("is-active", !isHomeMode);
+    els.orderModeHomeBtn.classList.toggle("is-active", isHomeMode);
+    els.dirFilterRow.hidden = isHomeMode;
+
+    const changes = getOrderChanges();
+    els.saveOrderBtn.disabled = changes.length === 0;
+    els.resetOrderBtn.disabled = changes.length === 0;
+    els.orderDirtyCount.textContent = changes.length ? `${changes.length} project number(s) changed` : "";
+
+    const filtersActive = hasActiveDirFilters();
+    els.clearDirFiltersBtn.hidden = !filtersActive;
+    els.dirOrderHint.textContent = filtersActive
+      ? "Clear filters to drag-and-drop reorder Project Numbers."
+      : isHomeMode
+        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured slides (auto-numbers Featured sequence 1..N)."
+        : "Drag rows or use ↑ / ↓ to reorder all projects (auto-numbers Project Number 1..N).";
+
+    const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
+    const search = els.dirSearchInput.value.trim().toLowerCase();
+    const typeFilter = els.dirTypeFilter.value;
+    const catFilter = els.dirCatFilter.value;
+    const statusFilter = els.dirStatusFilter.value;
+
+    const visibleIds = sourceIds.filter((id) => {
+      const p = byId.get(id);
+      if (!p) return false;
+      if (isHomeMode) return true;
+      if (search && !`${p.sequence} ${p.name} ${p.subtitle} ${p.slug}`.toLowerCase().includes(search)) {
+        return false;
+      }
+      if (typeFilter && p.projectType !== typeFilter) return false;
+      if (catFilter && !p.categoryIds.includes(catFilter)) return false;
+      if (statusFilter === "published" && p.isDraft) return false;
+      if (statusFilter === "draft" && !p.isDraft) return false;
+      if (statusFilter === "featured" && !p.featured) return false;
+      return true;
+    });
+
+    els.projectOrderList.innerHTML = "";
+
+    if (!visibleIds.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = isHomeMode
+        ? 'No projects have "Feature in Home" enabled yet.'
+        : "No projects match the current filters.";
+      els.projectOrderList.appendChild(empty);
+      return;
+    }
+
+    const canReorder = !filtersActive;
+
+    visibleIds.forEach((id, visibleIdx) => {
+      const p = byId.get(id);
+      const listIdx = sourceIds.indexOf(id);
+      const targetNum = listIdx + 1;
+      const oldNum = isHomeMode ? p.featuredSequence : p.sequence;
+      const numChanged = Number(oldNum) !== targetNum;
+
+      const row = document.createElement("div");
+      row.className = `project-row${canReorder ? " is-draggable" : ""}`;
+      row.draggable = canReorder;
+
+      if (canReorder) {
+        row.addEventListener("dragstart", (e) => {
+          state.dragOrderProjectId = id;
+          row.classList.add("is-dragging");
+          e.dataTransfer.effectAllowed = "move";
+        });
+        row.addEventListener("dragend", () => {
+          state.dragOrderProjectId = null;
+          row.classList.remove("is-dragging");
+          els.projectOrderList.querySelectorAll(".is-drag-target").forEach((el) => el.classList.remove("is-drag-target"));
+        });
+        row.addEventListener("dragover", (e) => {
+          if (!state.dragOrderProjectId || state.dragOrderProjectId === id) return;
+          e.preventDefault();
+          row.classList.add("is-drag-target");
+        });
+        row.addEventListener("dragleave", () => row.classList.remove("is-drag-target"));
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          row.classList.remove("is-drag-target");
+          if (!state.dragOrderProjectId || state.dragOrderProjectId === id) return;
+          const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
+          const fromIdx = arr.indexOf(state.dragOrderProjectId);
+          const toIdx = arr.indexOf(id);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = arr.splice(fromIdx, 1);
+            arr.splice(toIdx, 0, moved);
+            renderProjectOrderList();
+          }
+        });
+      }
+
+      const handle = document.createElement("div");
+      handle.className = "project-row-handle";
+      handle.textContent = canReorder ? "⋮⋮" : "·";
+      row.appendChild(handle);
+
+      const numCell = document.createElement("div");
+      numCell.className = "project-row-num";
+      numCell.textContent = `#${padTwo(targetNum)}`;
+      row.appendChild(numCell);
+
+      const thumb = document.createElement("img");
+      thumb.className = "project-row-thumb";
+      if (p.coverUrl) {
+        thumb.src = p.coverUrl;
+        thumb.alt = p.name;
+      }
+      row.appendChild(thumb);
+
+      const info = document.createElement("div");
+      info.className = "project-row-info";
+
+      const titleLine = document.createElement("div");
+      titleLine.className = "project-row-title";
+      const titleSpan = document.createElement("span");
+      titleSpan.textContent = p.subtitle && p.subtitle !== p.name ? `${p.name} — ${p.subtitle}` : p.name;
+      titleLine.appendChild(titleSpan);
+
+      const statusPill = document.createElement("span");
+      statusPill.className = `meta-pill ${p.isDraft ? "is-draft" : "is-live"}`;
+      statusPill.textContent = p.isDraft ? "Draft" : "Live";
+      titleLine.appendChild(statusPill);
+
+      if (numChanged) {
+        const movedPill = document.createElement("span");
+        movedPill.className = "meta-pill is-moved";
+        movedPill.textContent = `was #${oldNum === "" ? "--" : padTwo(oldNum)}`;
+        titleLine.appendChild(movedPill);
+      }
+      info.appendChild(titleLine);
+
+      const metaLine = document.createElement("div");
+      metaLine.className = "project-row-meta";
+      const metaParts = [`${p.existingSlideCount} slides`];
+      const typeLabel = getProjectTypeLabel(p.projectType);
+      if (typeLabel) metaParts.push(typeLabel);
+      const cats = p.categoryIds.map((cid) => catNameById.get(cid)).filter(Boolean);
+      if (cats.length) metaParts.push(cats.join(", "));
+      metaLine.textContent = metaParts.join(" · ");
+      info.appendChild(metaLine);
+
+      row.appendChild(info);
+
+      const homeBtn = document.createElement("button");
+      homeBtn.type = "button";
+      homeBtn.className = `icon-btn`;
+      homeBtn.textContent = p.featured ? "★ On Home" : "☆ Add to Home";
+      homeBtn.addEventListener("click", () => toggleFeaturedProject(p));
+      row.appendChild(homeBtn);
+
+      const moveBox = document.createElement("div");
+      moveBox.className = "slide-move-btns";
+      const upBtn = document.createElement("button");
+      upBtn.type = "button";
+      upBtn.className = "icon-btn";
+      upBtn.textContent = "↑";
+      upBtn.disabled = !canReorder || visibleIdx === 0;
+      upBtn.addEventListener("click", () => {
+        const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
+        const [m] = arr.splice(listIdx, 1);
+        arr.splice(listIdx - 1, 0, m);
+        renderProjectOrderList();
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.type = "button";
+      downBtn.className = "icon-btn";
+      downBtn.textContent = "↓";
+      downBtn.disabled = !canReorder || listIdx >= sourceIds.length - 1;
+      downBtn.addEventListener("click", () => {
+        const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
+        const [m] = arr.splice(listIdx, 1);
+        arr.splice(listIdx + 1, 0, m);
+        renderProjectOrderList();
+      });
+      moveBox.appendChild(upBtn);
+      moveBox.appendChild(downBtn);
+      row.appendChild(moveBox);
+
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "btn btn-secondary btn-sm";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        state.selectedProjectId = p.id;
+        els.projectSelect.value = p.id;
+        syncEditorFromSelectedProject();
+        switchTab("editor");
+      });
+      row.appendChild(editBtn);
+
+      els.projectOrderList.appendChild(row);
+    });
+  }
+
+  async function toggleFeaturedProject(p) {
+    const nextFeatured = !p.featured;
+    try {
+      const nextHomeSeq = nextFeatured ? state.orderDraftHome.length + 1 : null;
+      await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          projectId: p.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: {
+            featured: nextFeatured,
+            ...(nextHomeSeq !== null ? { featuredSequence: nextHomeSeq } : {}),
+          },
+        }),
+      });
+      await loadBootstrap(state.selectedProjectId);
+      showBanner(nextFeatured ? `Added "${p.name}" to Homepage Featured.` : `Removed "${p.name}" from Homepage Featured.`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    }
+  }
+
+  async function saveOrderChanges() {
+    const changes = getOrderChanges();
+    if (!changes.length) return;
+    els.saveOrderBtn.disabled = true;
+    els.saveOrderBtn.textContent = "Saving…";
+
+    try {
+      const isHomeMode = state.orderMode === "home";
+      const updates = changes.map(({ p, newNum }) => ({
+        id: p.id,
+        isDraft: p.isDraft,
+        ...(isHomeMode ? { featured: true, featuredSequence: newNum } : { sequence: newNum }),
+      }));
+
+      const res = await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorder",
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          updates,
+        }),
+      });
+
+      await loadBootstrap(state.selectedProjectId);
+      showBanner(
+        `Updated ${res.updatedCount} project number(s)${res.publishedCount ? ` and published ${res.publishedCount} live` : " (staged)"}.`,
+        "ok"
+      );
+    } catch (err) {
+      showBanner(err.message, "err");
+      els.saveOrderBtn.disabled = false;
+    } finally {
+      els.saveOrderBtn.textContent = "Save Order";
+    }
+  }
+
+  // Focal Point Modal (shared between queue & existing slides)
+  function getFocusTargetItem() {
+    if (!state.focusTarget) return null;
+    if (state.focusTarget.kind === "queue") {
+      return state.queue.find((i) => i.id === state.focusTarget.id) || null;
+    }
+    return getExistingEditState(state.focusTarget.id);
+  }
+
+  function openFocusModal(target) {
+    let src = "";
+    let fx = 50;
+    let fy = 50;
+    let prevDirty = false;
+
+    if (target.kind === "queue") {
+      const item = state.queue.find((i) => i.id === target.id);
+      if (!item) return;
+      src = item.previewUrl;
+      fx = item.focusX;
+      fy = item.focusY;
+    } else {
+      const m = state.mediaById[target.id];
+      const edit = getExistingEditState(target.id);
+      if (!m || !edit) return;
+      src = m.imageUrl || (edit.videoId ? `${BUNNY_CDN_BASE}/${extractVideoId(edit.videoId)}/thumbnail.jpg` : "");
+      fx = edit.focusX;
+      fy = edit.focusY;
+      prevDirty = Boolean(edit.dirty);
+    }
+
+    state.focusTarget = { ...target, prevX: fx, prevY: fy, prevDirty };
+    els.focusPreviewImg.src = src;
+    updateFocusModalUI(fx, fy);
     els.focusModal.hidden = false;
   }
 
@@ -806,16 +1871,27 @@
     els.focusCoordsText.textContent = `Focus: ${fx}% × ${fy}%`;
   }
 
-  function closeFocusModal() {
-    state.focusEditingId = null;
+  function closeFocusModal(revert = false) {
+    const target = state.focusTarget;
+    if (revert && target) {
+      const item = getFocusTargetItem();
+      if (item) {
+        item.focusX = target.prevX;
+        item.focusY = target.prevY;
+        if (target.kind === "existing") item.dirty = target.prevDirty;
+      }
+    }
+    const kind = target?.kind;
+    state.focusTarget = null;
     els.focusModal.hidden = true;
-    renderQueue();
+    if (kind === "queue") renderQueue();
+    else if (kind === "existing") renderExistingGallery();
   }
 
-  // Schema Mapping Modal
+  // Schema Modal
   function openSchemaModal() {
     if (!state.bootstrap) return;
-    const { collections, fieldMap } = state.bootstrap;
+    const { collections } = state.bootstrap;
     const effective = getEffectiveFieldMap();
 
     const makeSelect = (group, key, label, fields, currentVal) => {
@@ -846,196 +1922,86 @@
 
     els.schemaBody.innerHTML = "";
 
-    const mediaTitle = document.createElement("h4");
-    mediaTitle.style.margin = "0";
-    mediaTitle.textContent = `Media Collection: ${collections.media.displayName} (${collections.media.id})`;
-    els.schemaBody.appendChild(mediaTitle);
-
-    const mediaGrid = document.createElement("div");
-    mediaGrid.className = "schema-grid";
-    const mDefs = [
-      ["parent", "Parent Project (Reference)"],
-      ["order", "Order (Number)"],
-      ["image", "Slide Image (Image)"],
-      ["videoId", "Bunny Video ID (PlainText)"],
-      ["fillDesktop", "Fill Screen Desktop (Switch)"],
-      ["fillMobile", "Fill Screen Mobile (Switch)"],
-      ["focusX", "Focus X (Number/Text)"],
-      ["focusY", "Focus Y (Number/Text)"],
-      ["alt", "Dedicated Alt Text (Optional)"],
-    ];
-    for (const [key, label] of mDefs) {
-      mediaGrid.appendChild(
-        makeSelect("media", key, label, collections.media.fields, effective?.media?.[key] ?? fieldMap.media[key])
-      );
-    }
-    els.schemaBody.appendChild(mediaGrid);
-
     const projTitle = document.createElement("h4");
-    projTitle.style.margin = "8px 0 0";
-    projTitle.textContent = `Projects Collection: ${collections.projects.displayName} (${collections.projects.id})`;
+    projTitle.style.margin = "0";
+    projTitle.textContent = `Projects Collection: ${collections.projects.displayName}`;
     els.schemaBody.appendChild(projTitle);
 
     const projGrid = document.createElement("div");
     projGrid.className = "schema-grid";
     const pDefs = [
-      ["gallery", "Gallery Multi-Ref (for /index)"],
-      ["sequence", "Sequence Number"],
-      ["client", "Client Name"],
-      ["subtitle", "Subtitle"],
+      ["sequence", "Project Number (Number)"],
+      ["subtitle", "Sub-title (PlainText)"],
+      ["details", "Project Details (Text)"],
+      ["projectType", "Project Type (Option)"],
+      ["category", "Category (MultiReference)"],
+      ["gallery", "Gallery (MultiReference -> Media)"],
+      ["cover", "Cover (Reference -> Media)"],
+      ["featured", "Feature in Home (Switch)"],
+      ["featuredSequence", "Featured sequence (Number)"],
     ];
     for (const [key, label] of pDefs) {
-      projGrid.appendChild(
-        makeSelect("projects", key, label, collections.projects.fields, effective?.projects?.[key] ?? fieldMap.projects[key])
-      );
+      projGrid.appendChild(makeSelect("projects", key, label, collections.projects.fields, effective.projects[key]));
     }
     els.schemaBody.appendChild(projGrid);
+
+    const mediaTitle = document.createElement("h4");
+    mediaTitle.style.margin = "10px 0 0";
+    mediaTitle.textContent = `Media Collection: ${collections.media.displayName}`;
+    els.schemaBody.appendChild(mediaTitle);
+
+    const mediaGrid = document.createElement("div");
+    mediaGrid.className = "schema-grid";
+    const mDefs = [
+      ["image", "Image / Thumbnail (Image)"],
+      ["videoId", "Bunny Video ID (PlainText)"],
+      ["fillDesktop", "Fill Screen Desktop (Switch)"],
+      ["fillMobile", "Fill Screen Mobile (Switch)"],
+      ["focusX", "Focus Coordinates X (%)"],
+      ["focusY", "Focus Coordinates Y (%)"],
+      ["alt", "Dedicated Alt Text (Optional)"],
+      ["parent", "Legacy Parent Ref (Optional)"],
+      ["order", "Legacy Order Number (Optional)"],
+    ];
+    for (const [key, label] of mDefs) {
+      mediaGrid.appendChild(makeSelect("media", key, label, collections.media.fields, effective.media[key]));
+    }
+    els.schemaBody.appendChild(mediaGrid);
 
     els.schemaModal.hidden = false;
   }
 
-  // Upload Pipeline
-  async function startUpload(onlyFailed = false) {
-    const project = getSelectedProject();
-    if (!project || state.isUploading || !state.queue.length) return;
-
-    const effectiveMap = getEffectiveFieldMap();
-    if (!effectiveMap?.media?.parent && !effectiveMap?.projects?.gallery) {
-      showBanner("Neither Media 'Parent' nor Project 'Gallery Multi-Ref' is mapped. Check Field Mapping.", "err");
-      return;
-    }
-
-    hideBanner();
-    state.isUploading = true;
-    renderQueue();
-
-    const preset = getPresetConfig();
-    const imageItemsToProcess = state.queue.filter((item) => {
-      if (item.kind !== "image" && !item.file) return false;
-      if (onlyFailed) return item.status === "error" || !item.uploadedAsset;
-      return !item.uploadedAsset;
-    });
-
-    const totalSteps = imageItemsToProcess.length + 1;
-    let completedSteps = 0;
-    const updateProgress = (msg) => {
-      els.progressSummary.textContent = msg;
-      els.progressFill.style.width = `${Math.min(100, Math.round((completedSteps / totalSteps) * 100))}%`;
-    };
-
-    try {
-      updateProgress(`Uploading ${imageItemsToProcess.length} image(s) to Webflow Assets…`);
-
-      await runWithConcurrency(imageItemsToProcess, 2, async (item) => {
-        try {
-          item.error = "";
-          if (!item.compressed) {
-            item.status = "compressing";
-            renderQueue();
-            item.compressed = await compressImageFile(item.file, preset);
-          }
-
-          item.status = "uploading";
-          renderQueue();
-
-          const form = new FormData();
-          form.append("file", item.compressed.blob, item.compressed.fileName);
-          form.append("fileName", item.compressed.fileName);
-          form.append("fileHash", item.compressed.fileHash);
-          form.append("width", String(item.compressed.width));
-          form.append("height", String(item.compressed.height));
-          if (state.bootstrap?.site?.id) {
-            form.append("siteId", state.bootstrap.site.id);
-          }
-
-          item.uploadedAsset = await apiJson("/api/upload-asset", {
-            method: "POST",
-            body: form,
-          });
-          item.status = "uploaded";
-        } catch (err) {
-          item.status = "error";
-          item.error = err?.message || "Upload failed";
-        } finally {
-          completedSteps += 1;
-          updateProgress(`Uploaded ${completedSteps} of ${imageItemsToProcess.length} image(s)…`);
-          renderQueue();
-        }
-      });
-
-      const failed = state.queue.filter((i) => i.status === "error");
-      if (failed.length > 0) {
-        showBanner(
-          `${failed.length} image(s) failed to upload. Fix or click "Retry Failed" — already uploaded assets will be skipped.`,
-          "err"
-        );
-        return;
-      }
-
-      updateProgress(`Creating ${state.queue.length} Media CMS item(s) in Webflow…`);
-
-      const startOrder = project.nextOrder;
-      const slidesPayload = state.queue.map((item, idx) => ({
-        name: item.name.trim() || `${project.name} ${padTwo(startOrder + idx)}`,
-        order: startOrder + idx,
-        alt: item.alt.trim(),
-        fillDesktop: item.fillDesktop,
-        fillMobile: item.fillMobile,
-        focusX: item.focusX,
-        focusY: item.focusY,
-        ...(item.kind === "video" ? { videoId: item.videoId } : {}),
-        ...(item.uploadedAsset ? { fileId: item.uploadedAsset.fileId, url: item.uploadedAsset.url } : {}),
-      }));
-
-      const result = await apiJson("/api/create-slides", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: project.id,
-          slides: slidesPayload,
-          publishMode: els.publishMode.value,
-          fieldMapOverride: state.fieldOverride,
-        }),
-      });
-
-      completedSteps = totalSteps;
-      els.progressFill.style.width = "100%";
-
-      const modeNote = result.publishMode === "live"
-        ? (result.skippedProjectPublishBecauseDraft
-          ? "Media slides published, but the parent Project is still a Draft in Webflow."
-          : "Published live in Webflow.")
-        : "Saved as Staged in Webflow — click Publish in Webflow when ready.";
-
-      clearQueue();
-      await loadBootstrap();
-      showBanner(
-        `Added ${result.createdCount} slide(s) to "${result.projectName}". ${modeNote}`,
-        "ok"
-      );
-    } catch (err) {
-      showBanner(err?.message || "Failed while creating Media CMS items.", "err");
-    } finally {
-      state.isUploading = false;
-      renderQueue();
-    }
+  // New Project Modal
+  function openNewProjectModal() {
+    els.newProjError.hidden = true;
+    els.newProjName.value = "";
+    els.newProjSlug.value = "";
+    state.newProjSlugManual = false;
+    const nums = state.projects.map((p) => Number(p.sequence)).filter((n) => Number.isFinite(n));
+    els.newProjSeq.value = String((nums.length ? Math.max(...nums) : state.projects.length) + 1);
+    els.newProjSubtitle.value = "";
+    els.newProjDetails.value = "";
+    els.newProjFeatured.checked = false;
+    fillProjectTypeSelect(els.newProjType, "", false);
+    renderCategoryPills(els.newProjCategories, []);
+    els.newProjectModal.hidden = false;
+    els.newProjName.focus();
   }
 
   // Event Listeners
+  initPublishMode();
+
   els.loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     els.loginError.hidden = true;
     els.loginBtn.disabled = true;
-
     try {
       const authData = await apiJson("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: els.passwordInput.value }),
       });
-      if (authData?.token) {
-        saveSessionToken(authData.token);
-      }
+      if (authData?.token) saveSessionToken(authData.token);
       els.passwordInput.value = "";
       setAuthenticated(true);
       await loadBootstrap();
@@ -1049,28 +2015,136 @@
 
   els.logoutBtn.addEventListener("click", async () => {
     saveSessionToken("");
-    await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" }).catch(() => { });
+    await fetch("/api/auth", { method: "DELETE", credentials: "same-origin" }).catch(() => {});
     setAuthenticated(false);
   });
 
-  els.refreshBtn.addEventListener("click", loadBootstrap);
-  els.projectSearch.addEventListener("input", renderProjectOptions);
+  els.tabEditorBtn.addEventListener("click", () => switchTab("editor"));
+  els.tabProjectsBtn.addEventListener("click", () => switchTab("projects"));
+  els.refreshBtn.addEventListener("click", () => loadBootstrap(state.selectedProjectId));
+
+  els.publishMode.addEventListener("change", () => {
+    try {
+      localStorage.setItem(PUBLISH_MODE_KEY, els.publishMode.value);
+    } catch {
+      // ignore
+    }
+  });
+
+  els.publishSiteBtn.addEventListener("click", async () => {
+    if (!window.confirm("Trigger a full Webflow site publish now?")) return;
+    els.publishSiteBtn.disabled = true;
+    els.publishSiteBtn.textContent = "Publishing…";
+    try {
+      await apiJson("/api/publish-site", { method: "POST" });
+      showBanner("Triggered full Webflow site publish.", "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.publishSiteBtn.disabled = false;
+      els.publishSiteBtn.textContent = "Publish Site";
+    }
+  });
+
+  els.projectSearch.addEventListener("input", () => {
+    renderProjectOptions();
+    syncEditorFromSelectedProject();
+  });
+
   els.projectSelect.addEventListener("change", () => {
     state.selectedProjectId = els.projectSelect.value;
-    updateProjectMeta();
+    syncEditorFromSelectedProject();
     renderQueue();
   });
 
+  [
+    els.editProjName,
+    els.editProjSlug,
+    els.editProjSeq,
+    els.editProjSubtitle,
+    els.editProjType,
+    els.editProjCover,
+    els.editProjDetails,
+    els.editProjFeatured,
+    els.editProjFeaturedSeq,
+  ].forEach((el) => {
+    el.addEventListener("input", () => setProjectDirty(true));
+    el.addEventListener("change", () => setProjectDirty(true));
+  });
+
+  els.saveProjectDetailsBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    saveProjectDetails();
+  });
+
+  els.publishProjectBtn.addEventListener("click", async () => {
+    const p = getSelectedProject();
+    if (!p) return;
+    els.publishProjectBtn.disabled = true;
+    try {
+      const res = await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "publish", projectId: p.id, fieldMapOverride: state.fieldOverride }),
+      });
+      await loadBootstrap(p.id);
+      showBanner(`Published "${p.name}" and ${res.publishedMediaCount} gallery slide(s) live.`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    } finally {
+      els.publishProjectBtn.disabled = false;
+    }
+  });
+
+  els.unpublishProjectBtn.addEventListener("click", async () => {
+    const p = getSelectedProject();
+    if (!p || !window.confirm(`Unpublish "${p.name}" and move it to Draft?`)) return;
+    try {
+      await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unpublish", projectId: p.id, fieldMapOverride: state.fieldOverride }),
+      });
+      await loadBootstrap(p.id);
+      showBanner(`Moved "${p.name}" to Draft.`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    }
+  });
+
+  els.deleteProjectBtn.addEventListener("click", async () => {
+    const p = getSelectedProject();
+    if (!p || !window.confirm(`Permanently delete project "${p.name}" from Webflow CMS? (Linked Media items are kept unless deleted separately.)`)) return;
+    try {
+      await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", projectId: p.id, fieldMapOverride: state.fieldOverride }),
+      });
+      state.selectedProjectId = "";
+      await loadBootstrap();
+      showBanner(`Deleted project "${p.name}".`, "ok");
+    } catch (err) {
+      showBanner(err.message, "err");
+    }
+  });
+
+  els.saveGalleryOrderBtn.addEventListener("click", saveGalleryOrder);
+  els.resetGalleryOrderBtn.addEventListener("click", () => {
+    const p = getSelectedProject();
+    state.galleryIds = p ? [...(p.galleryIds || [])] : [];
+    renderExistingGallery();
+  });
+
+  // Batch Queue Listeners
   els.browseBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     els.fileInput.click();
   });
-
   els.addVideoBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     addVideoSlideToQueue();
   });
-
   els.dropZone.addEventListener("click", () => els.fileInput.click());
   els.dropZone.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -1078,27 +2152,21 @@
       els.fileInput.click();
     }
   });
-
   els.fileInput.addEventListener("change", () => {
     if (els.fileInput.files?.length) {
       addFilesToQueue(els.fileInput.files);
       els.fileInput.value = "";
     }
   });
-
   els.dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
     els.dropZone.classList.add("is-dragover");
   });
-  els.dropZone.addEventListener("dragleave", () => {
-    els.dropZone.classList.remove("is-dragover");
-  });
+  els.dropZone.addEventListener("dragleave", () => els.dropZone.classList.remove("is-dragover"));
   els.dropZone.addEventListener("drop", (e) => {
     e.preventDefault();
     els.dropZone.classList.remove("is-dragover");
-    if (e.dataTransfer?.files?.length) {
-      addFilesToQueue(e.dataTransfer.files);
-    }
+    if (e.dataTransfer?.files?.length) addFilesToQueue(e.dataTransfer.files);
   });
 
   els.toggleAllDesktopBtn.addEventListener("click", () => {
@@ -1106,23 +2174,18 @@
     state.queue.forEach((i) => { i.fillDesktop = !allOn; });
     renderQueue();
   });
-
   els.toggleAllMobileBtn.addEventListener("click", () => {
     const allOn = state.queue.length > 0 && state.queue.every((i) => i.fillMobile);
     state.queue.forEach((i) => { i.fillMobile = !allOn; });
     renderQueue();
   });
-
-  els.clearQueueBtn.addEventListener("click", () => {
-    if (!state.isUploading) clearQueue();
-  });
-
+  els.clearQueueBtn.addEventListener("click", () => { if (!state.isUploading) clearQueue(); });
   els.uploadBtn.addEventListener("click", () => startUpload(false));
   els.retryFailedBtn.addEventListener("click", () => startUpload(true));
 
   // Focus Modal Listeners
   els.focusStage.addEventListener("click", (e) => {
-    const item = state.queue.find((i) => i.id === state.focusEditingId);
+    const item = getFocusTargetItem();
     if (!item) return;
     const rect = els.focusPreviewImg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -1130,19 +2193,46 @@
     const yPct = Math.round(Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)));
     item.focusX = xPct;
     item.focusY = yPct;
+    if (state.focusTarget?.kind === "existing") item.dirty = true;
     updateFocusModalUI(xPct, yPct);
   });
 
   els.resetFocusBtn.addEventListener("click", () => {
-    const item = state.queue.find((i) => i.id === state.focusEditingId);
+    const item = getFocusTargetItem();
     if (!item) return;
     item.focusX = 50;
     item.focusY = 50;
+    if (state.focusTarget?.kind === "existing") item.dirty = true;
     updateFocusModalUI(50, 50);
   });
+  els.closeFocusModalBtn.addEventListener("click", () => closeFocusModal(true));
+  els.doneFocusBtn.addEventListener("click", () => closeFocusModal(false));
 
-  els.closeFocusModalBtn.addEventListener("click", closeFocusModal);
-  els.doneFocusBtn.addEventListener("click", closeFocusModal);
+  // Directory & Order Listeners
+  els.orderModeAllBtn.addEventListener("click", () => {
+    state.orderMode = "all";
+    renderProjectOrderList();
+  });
+  els.orderModeHomeBtn.addEventListener("click", () => {
+    state.orderMode = "home";
+    renderProjectOrderList();
+  });
+  [els.dirSearchInput, els.dirTypeFilter, els.dirCatFilter, els.dirStatusFilter].forEach((el) => {
+    el.addEventListener("input", renderProjectOrderList);
+    el.addEventListener("change", renderProjectOrderList);
+  });
+  els.clearDirFiltersBtn.addEventListener("click", () => {
+    els.dirSearchInput.value = "";
+    els.dirTypeFilter.value = "";
+    els.dirCatFilter.value = "";
+    els.dirStatusFilter.value = "";
+    renderProjectOrderList();
+  });
+  els.resetOrderBtn.addEventListener("click", () => {
+    resetOrderDrafts();
+    renderProjectOrderList();
+  });
+  els.saveOrderBtn.addEventListener("click", saveOrderChanges);
 
   // Schema Modal Listeners
   els.schemaBtn.addEventListener("click", openSchemaModal);
@@ -1150,7 +2240,7 @@
   els.resetSchemaBtn.addEventListener("click", () => {
     saveFieldOverride(null);
     els.schemaModal.hidden = true;
-    loadBootstrap();
+    loadBootstrap(state.selectedProjectId);
   });
   els.saveSchemaBtn.addEventListener("click", () => {
     const override = { projects: {}, media: {} };
@@ -1162,6 +2252,69 @@
     showBanner("Saved field mapping override in this browser.", "ok");
   });
 
+  // New Project Modal Listeners
+  els.newProjectBtn.addEventListener("click", openNewProjectModal);
+  els.closeNewProjectBtn.addEventListener("click", () => { els.newProjectModal.hidden = true; });
+  els.newProjName.addEventListener("input", () => {
+    if (!state.newProjSlugManual) {
+      els.newProjSlug.value = slugify(els.newProjName.value);
+    }
+  });
+  els.newProjSlug.addEventListener("input", () => {
+    state.newProjSlugManual = Boolean(els.newProjSlug.value.trim());
+  });
+  els.newProjectForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    els.newProjError.hidden = true;
+    els.submitNewProjectBtn.disabled = true;
+    els.submitNewProjectBtn.textContent = "Creating…";
+
+    try {
+      const res = await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: {
+            name: els.newProjName.value.trim(),
+            slug: slugify(els.newProjSlug.value || els.newProjName.value),
+            sequence: els.newProjSeq.value.trim() === "" ? null : Number(els.newProjSeq.value),
+            subtitle: els.newProjSubtitle.value.trim(),
+            details: els.newProjDetails.value,
+            projectType: els.newProjType.value,
+            categoryIds: getSelectedCategoryIds(els.newProjCategories),
+            featured: els.newProjFeatured.checked,
+          },
+        }),
+      });
+
+      els.newProjectModal.hidden = true;
+      await loadBootstrap(res.projectId);
+      switchTab("editor");
+      const draftNote = res.createdAsDraftForMedia
+        ? " Created as Draft until you upload its first Cover/Gallery slide below."
+        : res.published
+          ? " Created and published live."
+          : " Created as staged.";
+      showBanner(`Created project "${els.newProjName.value.trim()}".${draftNote}`, "ok");
+    } catch (err) {
+      els.newProjError.textContent = err.message;
+      els.newProjError.hidden = false;
+    } finally {
+      els.submitNewProjectBtn.disabled = false;
+      els.submitNewProjectBtn.textContent = "Create & Open Editor";
+    }
+  });
+
+  // Slide Delete Modal Listeners
+  els.closeSlideDeleteBtn.addEventListener("click", () => {
+    state.pendingDeleteSlideId = null;
+    els.slideDeleteModal.hidden = true;
+  });
+  els.removeFromGalleryBtn.addEventListener("click", () => executeSlideRemoval("remove-from-gallery"));
+  els.deleteMediaPermanentBtn.addEventListener("click", () => executeSlideRemoval("delete"));
+
   checkInitialAuth();
 })();
-

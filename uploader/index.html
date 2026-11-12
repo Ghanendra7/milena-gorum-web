@@ -4,16 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Milena Gorum — CMS Batch Uploader</title>
+  <title>Milena Gorum — CMS Studio</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <!-- Auth Gate -->
   <main id="authGate" class="auth-gate" hidden>
     <div class="auth-card">
-      <div class="brand-kicker">MILENA GORUM / CMS TOOLS</div>
-      <h1>Batch Media Uploader</h1>
-      <p class="muted">Enter the uploader password to connect to Webflow CMS.</p>
+      <div class="brand-kicker">MILENA GORUM / CMS STUDIO</div>
+      <h1>Portfolio CMS Studio</h1>
+      <p class="muted">Sign in to manage Webflow projects, ordering, media galleries, and batch uploads.</p>
       <form id="loginForm" class="stack-sm">
         <label class="field">
           <span>Password</span>
@@ -31,86 +31,226 @@
       <div class="topbar-left">
         <span class="brand-kicker">MILENA GORUM</span>
         <span class="divider">/</span>
-        <span class="topbar-title">CMS Batch Uploader</span>
+        <span class="topbar-title">CMS Studio</span>
         <span id="siteBadge" class="status-pill">Connecting…</span>
       </div>
+
+      <nav class="topbar-tabs" aria-label="Workspace views">
+        <button id="tabEditorBtn" type="button" class="tab-btn is-active" data-tab="editor">Project &amp; Media Editor</button>
+        <button id="tabProjectsBtn" type="button" class="tab-btn" data-tab="projects">Projects &amp; Order</button>
+      </nav>
+
       <div class="topbar-actions">
-        <button id="schemaBtn" type="button" class="btn btn-ghost">Field Mapping</button>
-        <button id="refreshBtn" type="button" class="btn btn-ghost">Refresh Projects</button>
-        <button id="logoutBtn" type="button" class="btn btn-ghost">Sign Out</button>
+        <button id="newProjectBtn" type="button" class="btn btn-primary btn-sm">+ New Project</button>
+        <button id="publishSiteBtn" type="button" class="btn btn-secondary btn-sm">Publish Site</button>
+        <button id="schemaBtn" type="button" class="btn btn-ghost btn-sm">Field Mapping</button>
+        <button id="refreshBtn" type="button" class="btn btn-ghost btn-sm">Refresh</button>
+        <button id="logoutBtn" type="button" class="btn btn-ghost btn-sm">Sign Out</button>
       </div>
     </header>
 
     <main class="workspace">
-      <!-- Setup / Global Error Banner -->
+      <!-- Setup / Global Status Banner -->
       <div id="globalBanner" class="banner" hidden></div>
 
-      <!-- Step 1: Target Project & Options -->
-      <section class="panel config-panel">
-        <div class="config-grid">
-          <div class="field field-project">
-            <label for="projectSearch">1. Select Target Project</label>
-            <div class="project-picker">
-              <input id="projectSearch" type="search" placeholder="Filter projects by client, title, or number…" />
-              <select id="projectSelect"></select>
+      <!-- VIEW 1: Project & Media Editor -->
+      <section id="editorView" class="view-stack">
+        <!-- Target Project & Settings -->
+        <section class="panel config-panel">
+          <div class="config-grid">
+            <div class="field field-project">
+              <div class="field-label-row">
+                <label for="projectSearch">Target Project</label>
+                <span id="projectStatusPill" class="status-pill" hidden></span>
+              </div>
+              <div class="project-picker">
+                <input id="projectSearch" type="search" placeholder="Filter projects by title, subtitle, or #…" />
+                <select id="projectSelect"></select>
+              </div>
+              <p id="projectMeta" class="field-hint">Loading projects…</p>
             </div>
-            <p id="projectMeta" class="field-hint">Loading projects…</p>
+
+            <div class="field">
+              <label for="compressionPreset">Compression Preset</label>
+              <select id="compressionPreset">
+                <option value="webp-2400">WebP · max 2400px (Recommended)</option>
+                <option value="webp-3000">WebP · max 3000px (High-res)</option>
+                <option value="jpeg-2400">JPEG · max 2400px</option>
+                <option value="jpeg-3000">JPEG · max 3000px</option>
+              </select>
+              <p class="field-hint">Auto-compressed in browser under Webflow's 4 MB cap.</p>
+            </div>
+
+            <div class="field">
+              <label for="publishMode">Publish Behavior</label>
+              <select id="publishMode">
+                <option value="live">Publish Live Immediately</option>
+                <option value="staged">Save as Staged (review in Webflow first)</option>
+              </select>
+              <p class="field-hint">Applies to creates, edits, reorders, and uploads.</p>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="compressionPreset">Compression Preset</label>
-            <select id="compressionPreset">
-              <option value="webp-2400">WebP · max 2400px (Recommended)</option>
-              <option value="webp-3000">WebP · max 3000px (High-res)</option>
-              <option value="jpeg-2400">JPEG · max 2400px</option>
-              <option value="jpeg-3000">JPEG · max 3000px</option>
-            </select>
-            <p class="field-hint">Auto-compressed in browser under Webflow's 4 MB cap.</p>
+          <div class="project-bar-actions">
+            <div class="project-bar-links">
+              <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp; Media</button>
+              <button id="unpublishProjectBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
+            </div>
+            <button id="deleteProjectBtn" type="button" class="btn btn-ghost btn-sm btn-danger-text">Delete Project</button>
+          </div>
+        </section>
+
+        <!-- Project Fields Editor -->
+        <details id="projectDetailsPanel" class="panel details-panel" open>
+          <summary class="panel-summary">
+            <div class="panel-summary-left">
+              <h2>Project Details</h2>
+              <span id="projectDirtyBadge" class="badge-dirty" hidden>Unsaved changes</span>
+            </div>
+            <button id="saveProjectDetailsBtn" type="button" class="btn btn-primary btn-sm" disabled>Save Details</button>
+          </summary>
+
+          <div class="details-grid">
+            <div class="field">
+              <label for="editProjName">Title *</label>
+              <input id="editProjName" type="text" placeholder="e.g. Role Model" />
+            </div>
+
+            <div class="field">
+              <label for="editProjSlug">Slug *</label>
+              <input id="editProjSlug" type="text" placeholder="role-model" />
+            </div>
+
+            <div class="field">
+              <label for="editProjSeq">Project Number</label>
+              <input id="editProjSeq" type="number" step="1" placeholder="e.g. 37" />
+            </div>
+
+            <div class="field">
+              <label for="editProjSubtitle">Sub-title</label>
+              <input id="editProjSubtitle" type="text" placeholder="e.g. 'Chuck Timely' Album Cover" />
+            </div>
+
+            <div class="field">
+              <label for="editProjType">Project Type</label>
+              <select id="editProjType"></select>
+            </div>
+
+            <div class="field">
+              <label for="editProjCover">Cover Slide</label>
+              <select id="editProjCover"></select>
+            </div>
+
+            <div class="field field-span-2">
+              <label for="editProjDetails">Project Details (Credits / Description)</label>
+              <textarea id="editProjDetails" rows="2" placeholder="Photography by…"></textarea>
+            </div>
+
+            <div class="field">
+              <label>Category</label>
+              <div id="editProjCategories" class="pill-checkbox-list"></div>
+            </div>
+
+            <div class="field">
+              <label>Homepage Feature</label>
+              <div class="feature-inline">
+                <label class="inline-check">
+                  <input id="editProjFeatured" type="checkbox" />
+                  <span>Feature in Home</span>
+                </label>
+                <input id="editProjFeaturedSeq" type="number" step="1" placeholder="Featured seq #" class="input-compact" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Existing Gallery Slides -->
+        <section id="existingGallerySection" class="panel gallery-panel">
+          <div class="queue-toolbar">
+            <div class="queue-toolbar-left">
+              <h2 id="existingGalleryHeading">Existing Gallery (0)</h2>
+              <span class="muted">Drag cards or use ← / → to reorder, edit fields inline, or set Cover.</span>
+            </div>
+            <div class="queue-toolbar-right">
+              <button id="resetGalleryOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Reset Order</button>
+              <button id="saveGalleryOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Gallery Order</button>
+            </div>
+          </div>
+          <div id="existingGalleryGrid" class="queue-grid"></div>
+          <p id="existingGalleryEmpty" class="muted" hidden>No slides linked in this project's Gallery yet. Drop images below to add slides.</p>
+        </section>
+
+        <!-- Batch Upload Drop Zone -->
+        <section id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
+          <input id="fileInput" type="file" accept="image/*" multiple hidden />
+          <div class="dropzone-inner">
+            <p class="dropzone-title">Add New Slides — Drop raw images here</p>
+            <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media CMS creation happen automatically.</p>
+            <div class="dropzone-buttons">
+              <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
+              <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- New Upload Queue -->
+        <section id="queueSection" class="queue-section" hidden>
+          <div class="queue-toolbar">
+            <div class="queue-toolbar-left">
+              <h2 id="queueHeading">Queued New Slides (0)</h2>
+              <span id="queueStats" class="muted"></span>
+            </div>
+            <div class="queue-toolbar-right">
+              <button id="toggleAllDesktopBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Desktop</button>
+              <button id="toggleAllMobileBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Mobile</button>
+              <button id="clearQueueBtn" type="button" class="btn btn-ghost btn-sm">Clear Queue</button>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="publishMode">Publish Behavior</label>
-            <select id="publishMode">
-              <option value="staged">Save as Staged (review in Webflow first)</option>
-              <option value="live">Publish Live Immediately</option>
-            </select>
-            <p class="field-hint">Staged lets you check staging before pushing live.</p>
-          </div>
-        </div>
+          <div id="queueGrid" class="queue-grid"></div>
+        </section>
       </section>
 
-      <!-- Step 2: Drop Zone -->
-      <section id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
-        <input id="fileInput" type="file" accept="image/*" multiple hidden />
-        <div class="dropzone-inner">
-          <p class="dropzone-title">2. Drop raw project images here</p>
-          <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, ordering, and Media CMS creation happen automatically.</p>
-          <div class="dropzone-buttons">
-            <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
-            <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
-          </div>
-        </div>
-      </section>
+      <!-- VIEW 2: Projects Directory & Ordering -->
+      <section id="projectsView" class="view-stack" hidden>
+        <section class="panel order-toolbar-panel">
+          <div class="order-header-row">
+            <div class="segmented" role="group" aria-label="Order list mode">
+              <button id="orderModeAllBtn" type="button" class="seg-btn is-active">All Projects (Project Number)</button>
+              <button id="orderModeHomeBtn" type="button" class="seg-btn">Homepage Featured (Featured sequence)</button>
+            </div>
 
-      <!-- Step 3: Queue Controls & Cards -->
-      <section id="queueSection" class="queue-section" hidden>
-        <div class="queue-toolbar">
-          <div class="queue-toolbar-left">
-            <h2 id="queueHeading">Queued Slides (0)</h2>
-            <span id="queueStats" class="muted"></span>
+            <div class="order-save-actions">
+              <span id="orderDirtyCount" class="muted"></span>
+              <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" disabled>Reset</button>
+              <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" disabled>Save Order</button>
+            </div>
           </div>
-          <div class="queue-toolbar-right">
-            <button id="toggleAllDesktopBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Desktop</button>
-            <button id="toggleAllMobileBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Mobile</button>
-            <button id="clearQueueBtn" type="button" class="btn btn-ghost btn-sm">Clear Queue</button>
-          </div>
-        </div>
 
-        <div id="queueGrid" class="queue-grid"></div>
+          <div id="dirFilterRow" class="dir-filters">
+            <input id="dirSearchInput" type="search" placeholder="Filter by title, subtitle, slug, or #…" />
+            <select id="dirTypeFilter">
+              <option value="">All Project Types</option>
+            </select>
+            <select id="dirCatFilter">
+              <option value="">All Categories</option>
+            </select>
+            <select id="dirStatusFilter">
+              <option value="">All Statuses</option>
+              <option value="published">Published Only</option>
+              <option value="draft">Drafts Only</option>
+              <option value="featured">Featured on Home</option>
+            </select>
+            <button id="clearDirFiltersBtn" type="button" class="btn btn-ghost btn-sm" hidden>Clear Filters</button>
+          </div>
+          <p id="dirOrderHint" class="field-hint"></p>
+        </section>
+
+        <div id="projectOrderList" class="project-order-list"></div>
       </section>
     </main>
 
-    <!-- Sticky Action Footer -->
+    <!-- Sticky Action Footer (for queued new slides) -->
     <footer id="actionBar" class="action-bar" hidden>
       <div class="action-bar-info">
         <div id="progressSummary" class="progress-summary">Ready to upload</div>
@@ -133,7 +273,7 @@
           <h3 id="focusModalTitle">Set Focal Point</h3>
           <p class="muted">Click anywhere on the image to set <code>object-position</code> (Focus X / Y).</p>
         </div>
-        <button id="closeFocusModalBtn" type="button" class="btn btn-ghost btn-sm">Done</button>
+        <button id="closeFocusModalBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
       </div>
       <div class="focus-stage-wrap">
         <div id="focusStage" class="focus-stage">
@@ -157,7 +297,7 @@
       <div class="modal-header">
         <div>
           <h3 id="schemaModalTitle">Webflow CMS Field Mapping</h3>
-          <p class="muted">Auto-detected from your Webflow collections. Adjust only if a field name differs.</p>
+          <p class="muted">Auto-detected from your Webflow collections. Adjust only if a field slug differs.</p>
         </div>
         <button id="closeSchemaModalBtn" type="button" class="btn btn-ghost btn-sm">Close</button>
       </div>
@@ -169,8 +309,86 @@
     </div>
   </div>
 
+  <!-- New Project Modal -->
+  <div id="newProjectModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="newProjectModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="newProjectModalTitle">Create New Project</h3>
+          <p class="muted">Creates the Webflow Project item and opens it so you can drop slides right away.</p>
+        </div>
+        <button id="closeNewProjectBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <form id="newProjectForm" class="schema-body">
+        <div class="details-grid">
+          <div class="field">
+            <label for="newProjName">Title *</label>
+            <input id="newProjName" type="text" required placeholder="e.g. Nike Running" />
+          </div>
+          <div class="field">
+            <label for="newProjSlug">Slug *</label>
+            <input id="newProjSlug" type="text" required placeholder="nike-running" />
+          </div>
+          <div class="field">
+            <label for="newProjSeq">Project Number</label>
+            <input id="newProjSeq" type="number" step="1" />
+          </div>
+          <div class="field">
+            <label for="newProjSubtitle">Sub-title</label>
+            <input id="newProjSubtitle" type="text" placeholder="Campaign Title" />
+          </div>
+          <div class="field">
+            <label for="newProjType">Project Type</label>
+            <select id="newProjType"></select>
+          </div>
+          <div class="field">
+            <label>Homepage</label>
+            <label class="inline-check" style="margin-top: 6px;">
+              <input id="newProjFeatured" type="checkbox" />
+              <span>Feature in Home</span>
+            </label>
+          </div>
+          <div class="field field-span-2">
+            <label for="newProjDetails">Project Details (Credits)</label>
+            <textarea id="newProjDetails" rows="2" placeholder="Photography by…"></textarea>
+          </div>
+          <div class="field field-span-2">
+            <label>Category</label>
+            <div id="newProjCategories" class="pill-checkbox-list"></div>
+          </div>
+        </div>
+        <p id="newProjError" class="error-text" hidden></p>
+        <div class="modal-footer" style="padding: 14px 0 0; border-top: 1px solid var(--border);">
+          <span class="field-hint">Created as Draft until its first Cover/Gallery slide is added.</span>
+          <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open Editor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Slide Remove / Delete Modal -->
+  <div id="slideDeleteModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="slideDeleteTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="slideDeleteTitle">Remove or Delete Slide</h3>
+          <p id="slideDeleteDesc" class="muted"></p>
+        </div>
+        <button id="closeSlideDeleteBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <div class="schema-body">
+        <p style="margin:0;">Choose whether to unlink this slide from the current project's Gallery only, or permanently delete the Media CMS item from Webflow.</p>
+        <p id="slideDeleteCoverWarn" class="banner is-warn" hidden></p>
+      </div>
+      <div class="modal-footer">
+        <button id="removeFromGalleryBtn" type="button" class="btn btn-secondary btn-sm">Remove from Gallery Only</button>
+        <button id="deleteMediaPermanentBtn" type="button" class="btn btn-danger btn-sm">Delete Media Permanently</button>
+      </div>
+    </div>
+  </div>
+
   <script src="./md5.js"></script>
+  <script src="./media-utils.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
-

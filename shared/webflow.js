@@ -1,7 +1,65 @@
+import { md5Hex } from "./md5.js";
+
 const WEBFLOW_API_BASE = "https://api.webflow.com/v2";
+export const BUNNY_CDN_BASE = "https://vz-ada4eb16-135.b-cdn.net";
+export const MAX_WEBFLOW_IMAGE_BYTES = 4 * 1024 * 1024;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function randomShortId(len = 4) {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => (b % 36).toString(36)).join("");
+}
+
+export function chunkArray(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export function coerceFieldValue(value, fieldMeta) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (!fieldMeta) return value;
+
+  if (fieldMeta.type === "Number") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  if (fieldMeta.type === "PlainText" || fieldMeta.type === "Link" || fieldMeta.type === "RichText") {
+    return String(value);
+  }
+  if (fieldMeta.type === "Switch") {
+    return Boolean(value);
+  }
+  if (fieldMeta.type === "Option") {
+    const raw = String(value).trim();
+    const options = fieldMeta?.validations?.options;
+    if (Array.isArray(options) && options.length > 0) {
+      const match = options.find((o) => o.id === raw || o.name === raw);
+      if (match) return match.id || match.name;
+    }
+    return raw;
+  }
+  return value;
+}
+
+export function extractVideoUuid(input) {
+  const trimmed = String(input || "").trim();
+  const match = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match ? match[0] : trimmed;
 }
 
 export class WebflowApiError extends Error {
@@ -101,13 +159,16 @@ function findField(fields, { types = null, slugPatterns = [], namePatterns = [] 
   return null;
 }
 
-function getReferencedCollectionId(field) {
+export function getReferencedCollectionId(field) {
   return field?.metadata?.collectionId || field?.validations?.collectionId || null;
 }
 
 export function detectProjectFields(fields, mediaCollectionId) {
   const byRef = fields.find(
     (f) => f.type === "MultiReference" && getReferencedCollectionId(f) === mediaCollectionId
+  );
+  const coverByRef = fields.find(
+    (f) => f.type === "Reference" && getReferencedCollectionId(f) === mediaCollectionId
   );
 
   return {
@@ -128,6 +189,21 @@ export function detectProjectFields(fields, mediaCollectionId) {
       slugPatterns: [/subtitle/, /sub-title/, /^title$/],
       namePatterns: [/subtitle/, /sub-title/, /title/],
     }),
+    details: findField(fields, {
+      types: ["PlainText", "RichText"],
+      slugPatterns: [/project-details/, /details/, /credits/, /description/],
+      namePatterns: [/project details/, /details/, /credits/],
+    }),
+    projectType: findField(fields, {
+      types: ["Option"],
+      slugPatterns: [/project-type/, /type/],
+      namePatterns: [/project type/, /type/],
+    }),
+    category: findField(fields, {
+      types: ["MultiReference", "Reference"],
+      slugPatterns: [/category/, /subcategor/],
+      namePatterns: [/category/, /subcategor/],
+    }),
     gallery:
       byRef?.slug ||
       findField(fields, {
@@ -135,6 +211,23 @@ export function detectProjectFields(fields, mediaCollectionId) {
         slugPatterns: [/gallery/, /media/, /slides/, /images/],
         namePatterns: [/gallery/, /media/, /slides/],
       }),
+    cover:
+      coverByRef?.slug ||
+      findField(fields, {
+        types: ["Reference"],
+        slugPatterns: [/cover/, /thumbnail/],
+        namePatterns: [/cover/, /thumbnail/],
+      }),
+    featured: findField(fields, {
+      types: ["Switch"],
+      slugPatterns: [/feature.*home/, /featured/, /^home$/],
+      namePatterns: [/feature in home/, /featured/],
+    }),
+    featuredSequence: findField(fields, {
+      types: ["Number"],
+      slugPatterns: [/featured.*seq/, /home.*seq/, /featured.*order/, /home.*order/],
+      namePatterns: [/featured sequence/, /featured.*order/],
+    }),
   };
 }
 
@@ -328,6 +421,23 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
   projectsFields = applyFieldOverrides(projectsFields, runtimeOverride?.projects, projectValidSlugs);
   mediaFields = applyFieldOverrides(mediaFields, runtimeOverride?.media, mediaValidSlugs);
 
+  const categoryFieldDef = (projectsSchema.fields || []).find(
+    (f) => f.slug === projectsFields.category
+  );
+  const categoryCollectionId = getReferencedCollectionId(categoryFieldDef);
+  const categorySchema = categoryCollectionId
+    ? schemas.find((s) => s.id === categoryCollectionId) || null
+    : null;
+
+  const mapFieldSummary = (f) => ({
+    slug: f.slug,
+    displayName: f.displayName,
+    type: f.type,
+    isRequired: Boolean(f.isRequired),
+    validations: f.validations || null,
+    metadata: f.metadata || null,
+  });
+
   return {
     site: {
       id: site.id,
@@ -339,24 +449,21 @@ export async function resolveSiteAndSchemas(env, runtimeOverride = null) {
       id: projectsSchema.id,
       displayName: projectsSchema.displayName,
       slug: projectsSchema.slug,
-      fields: (projectsSchema.fields || []).map((f) => ({
-        slug: f.slug,
-        displayName: f.displayName,
-        type: f.type,
-        isRequired: Boolean(f.isRequired),
-      })),
+      fields: (projectsSchema.fields || []).map(mapFieldSummary),
     },
     mediaCollection: {
       id: mediaSchema.id,
       displayName: mediaSchema.displayName,
       slug: mediaSchema.slug,
-      fields: (mediaSchema.fields || []).map((f) => ({
-        slug: f.slug,
-        displayName: f.displayName,
-        type: f.type,
-        isRequired: Boolean(f.isRequired),
-      })),
+      fields: (mediaSchema.fields || []).map(mapFieldSummary),
     },
+    categoryCollection: categorySchema
+      ? {
+          id: categorySchema.id,
+          displayName: categorySchema.displayName,
+          slug: categorySchema.slug,
+        }
+      : null,
     fieldMap: {
       projects: projectsFields,
       media: mediaFields,
@@ -421,5 +528,173 @@ export async function uploadAssetToWebflow(
     hostedUrl,
     fileName: asset.originalFileName || fileName,
   };
+}
+
+export async function fetchBunnyThumbnailAsAsset(env, siteId, videoInput) {
+  const videoUuid = extractVideoUuid(videoInput);
+  if (!videoUuid) {
+    throw new WebflowApiError("Missing Bunny video UUID.", 400);
+  }
+  const thumbUrl = `${BUNNY_CDN_BASE}/${videoUuid}/thumbnail.jpg`;
+  const thumbRes = await fetch(thumbUrl);
+  if (!thumbRes.ok) {
+    throw new Error(`HTTP ${thumbRes.status}`);
+  }
+  const arrBuf = await thumbRes.arrayBuffer();
+  const bytes = new Uint8Array(arrBuf);
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_WEBFLOW_IMAGE_BYTES) {
+    throw new Error(`Invalid thumbnail size (${bytes.byteLength} bytes)`);
+  }
+  const contentType = thumbRes.headers.get("content-type") || "image/jpeg";
+  const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+  const blob = new Blob([bytes], { type: contentType });
+  return uploadAssetToWebflow(env, siteId, {
+    blob,
+    fileName: `bunny-${videoUuid.slice(0, 8)}.${ext}`,
+    fileHash: md5Hex(bytes),
+    size: bytes.byteLength,
+  });
+}
+
+export async function publishCollectionItems(env, collectionId, itemIds) {
+  const uniqueIds = Array.from(new Set((itemIds || []).filter(Boolean)));
+  for (const chunk of chunkArray(uniqueIds, 100)) {
+    await webflowRequest(env, `/collections/${collectionId}/items/publish`, {
+      method: "POST",
+      body: JSON.stringify({ itemIds: chunk }),
+    });
+  }
+  return uniqueIds.length;
+}
+
+export async function unpublishCollectionItem(env, collectionId, itemId) {
+  try {
+    await webflowRequest(env, `/collections/${collectionId}/items/${itemId}/live`, {
+      method: "DELETE",
+    });
+  } catch (err) {
+    // Ignore 404/400 when item is already unpublished or draft-only
+    if (!(err instanceof WebflowApiError) || (err.status !== 404 && err.status !== 400)) {
+      throw err;
+    }
+  }
+}
+
+export function buildMediaFieldData(slide, mFields, mediaFieldBySlug, { includeIdentity = false, baseName = "", slug = "" } = {}) {
+  const fieldData = {};
+  if (includeIdentity) {
+    if (baseName) fieldData.name = baseName;
+    if (slug) fieldData.slug = slug;
+  } else {
+    if (typeof slide.name === "string" && slide.name.trim()) {
+      fieldData.name = slide.name.trim().slice(0, 200);
+    }
+    if (typeof slide.slug === "string" && slide.slug.trim()) {
+      fieldData.slug = slugify(slide.slug).slice(0, 200);
+    }
+  }
+
+  if (mFields.image && slide.fileId && slide.url) {
+    fieldData[mFields.image] = {
+      fileId: slide.fileId,
+      url: slide.url,
+      ...(slide.alt ? { alt: String(slide.alt).slice(0, 500) } : {}),
+    };
+  }
+
+  if (mFields.videoId && slide.videoId !== undefined) {
+    if (slide.videoId === "" || slide.videoId === null) {
+      fieldData[mFields.videoId] = "";
+    } else {
+      const coerced = coerceFieldValue(String(slide.videoId).trim(), mediaFieldBySlug.get(mFields.videoId));
+      if (coerced !== undefined) fieldData[mFields.videoId] = coerced;
+    }
+  }
+
+  if (mFields.fillDesktop && typeof slide.fillDesktop === "boolean") {
+    fieldData[mFields.fillDesktop] = slide.fillDesktop;
+  }
+
+  if (mFields.fillMobile && typeof slide.fillMobile === "boolean") {
+    fieldData[mFields.fillMobile] = slide.fillMobile;
+  }
+
+  if (mFields.focusX && slide.focusX !== undefined) {
+    if (slide.focusX === null || slide.focusX === "") {
+      fieldData[mFields.focusX] = null;
+    } else {
+      const coerced = coerceFieldValue(slide.focusX, mediaFieldBySlug.get(mFields.focusX));
+      if (coerced !== undefined) fieldData[mFields.focusX] = coerced;
+    }
+  }
+
+  if (mFields.focusY && slide.focusY !== undefined) {
+    if (slide.focusY === null || slide.focusY === "") {
+      fieldData[mFields.focusY] = null;
+    } else {
+      const coerced = coerceFieldValue(slide.focusY, mediaFieldBySlug.get(mFields.focusY));
+      if (coerced !== undefined) fieldData[mFields.focusY] = coerced;
+    }
+  }
+
+  if (mFields.alt && slide.alt !== undefined) {
+    fieldData[mFields.alt] = slide.alt === null ? "" : String(slide.alt);
+  }
+
+  return fieldData;
+}
+
+export function buildProjectFieldData(input, pFields, projectFieldBySlug) {
+  const fieldData = {};
+  if (typeof input.name === "string" && input.name.trim()) {
+    fieldData.name = input.name.trim().slice(0, 200);
+  }
+  if (typeof input.slug === "string" && input.slug.trim()) {
+    fieldData.slug = slugify(input.slug).slice(0, 200);
+  }
+  if (pFields.subtitle && input.subtitle !== undefined) {
+    fieldData[pFields.subtitle] = input.subtitle === null ? "" : String(input.subtitle).trim();
+  }
+  if (pFields.details && input.details !== undefined) {
+    fieldData[pFields.details] = input.details === null ? "" : String(input.details);
+  }
+  if (pFields.sequence && input.sequence !== undefined) {
+    if (input.sequence === null || input.sequence === "") {
+      fieldData[pFields.sequence] = null;
+    } else {
+      const coerced = coerceFieldValue(input.sequence, projectFieldBySlug.get(pFields.sequence));
+      if (coerced !== undefined) fieldData[pFields.sequence] = coerced;
+    }
+  }
+  if (pFields.projectType && input.projectType !== undefined && input.projectType !== "") {
+    const coerced = coerceFieldValue(input.projectType, projectFieldBySlug.get(pFields.projectType));
+    if (coerced !== undefined) fieldData[pFields.projectType] = coerced;
+  }
+  if (pFields.category && Array.isArray(input.categoryIds)) {
+    const fieldMeta = projectFieldBySlug.get(pFields.category);
+    if (fieldMeta?.type === "Reference") {
+      fieldData[pFields.category] = input.categoryIds[0] || null;
+    } else {
+      fieldData[pFields.category] = input.categoryIds;
+    }
+  }
+  if (pFields.gallery && Array.isArray(input.galleryIds)) {
+    fieldData[pFields.gallery] = input.galleryIds;
+  }
+  if (pFields.cover && input.coverId !== undefined) {
+    fieldData[pFields.cover] = input.coverId || null;
+  }
+  if (pFields.featured && typeof input.featured === "boolean") {
+    fieldData[pFields.featured] = input.featured;
+  }
+  if (pFields.featuredSequence && input.featuredSequence !== undefined) {
+    if (input.featuredSequence === null || input.featuredSequence === "") {
+      fieldData[pFields.featuredSequence] = null;
+    } else {
+      const coerced = coerceFieldValue(input.featuredSequence, projectFieldBySlug.get(pFields.featuredSequence));
+      if (coerced !== undefined) fieldData[pFields.featuredSequence] = coerced;
+    }
+  }
+  return fieldData;
 }
 
