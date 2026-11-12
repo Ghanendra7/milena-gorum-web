@@ -72,7 +72,8 @@ export class WebflowApiError extends Error {
 }
 
 export async function webflowRequest(env, path, options = {}, attempt = 0) {
-  if (!env.WEBFLOW_API_TOKEN) {
+  const token = String(env.WEBFLOW_API_TOKEN || "").trim().replace(/^Bearer\s+/i, "");
+  if (!token) {
     throw new WebflowApiError(
       "Server misconfiguration: WEBFLOW_API_TOKEN environment variable is not set.",
       500
@@ -81,7 +82,7 @@ export async function webflowRequest(env, path, options = {}, attempt = 0) {
 
   const url = path.startsWith("http") ? path : `${WEBFLOW_API_BASE}${path}`;
   const headers = {
-    Authorization: `Bearer ${env.WEBFLOW_API_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     Accept: "application/json",
     ...(options.body ? { "Content-Type": "application/json" } : {}),
     ...(options.headers || {}),
