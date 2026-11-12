@@ -16,7 +16,7 @@
   const state = {
     authenticated: false,
     sessionToken: loadSessionToken(),
-    activeTab: "editor",
+    activeView: "projects", // "projects" | "editor"
     bootstrap: null,
     projects: [],
     mediaById: {},
@@ -29,7 +29,7 @@
     isUploading: false,
     dragQueueId: null,
     dragGalleryId: null,
-    focusTarget: null, // { kind: "queue" | "existing", id: string, prevX: number, prevY: number, prevDirty: boolean }
+    focusTarget: null, // { kind: "queue" | "existing", id, prevX, prevY, prevDirty }
     pendingDeleteSlideId: null,
     orderMode: "all", // "all" | "home"
     orderDraftAll: [],
@@ -46,9 +46,10 @@
     loginBtn: document.getElementById("loginBtn"),
     loginError: document.getElementById("loginError"),
     appShell: document.getElementById("appShell"),
+    backToProjectsBtn: document.getElementById("backToProjectsBtn"),
+    topbarTitle: document.getElementById("topbarTitle"),
     siteBadge: document.getElementById("siteBadge"),
-    tabEditorBtn: document.getElementById("tabEditorBtn"),
-    tabProjectsBtn: document.getElementById("tabProjectsBtn"),
+    publishMode: document.getElementById("publishMode"),
     newProjectBtn: document.getElementById("newProjectBtn"),
     publishSiteBtn: document.getElementById("publishSiteBtn"),
     schemaBtn: document.getElementById("schemaBtn"),
@@ -56,18 +57,30 @@
     logoutBtn: document.getElementById("logoutBtn"),
     globalBanner: document.getElementById("globalBanner"),
 
-    editorView: document.getElementById("editorView"),
     projectsView: document.getElementById("projectsView"),
+    editorView: document.getElementById("editorView"),
 
-    projectSearch: document.getElementById("projectSearch"),
-    projectSelect: document.getElementById("projectSelect"),
-    projectMeta: document.getElementById("projectMeta"),
+    orderModeAllBtn: document.getElementById("orderModeAllBtn"),
+    orderModeHomeBtn: document.getElementById("orderModeHomeBtn"),
+    orderDirtyCount: document.getElementById("orderDirtyCount"),
+    resetOrderBtn: document.getElementById("resetOrderBtn"),
+    saveOrderBtn: document.getElementById("saveOrderBtn"),
+    dirFilterRow: document.getElementById("dirFilterRow"),
+    dirSearchInput: document.getElementById("dirSearchInput"),
+    dirTypeFilter: document.getElementById("dirTypeFilter"),
+    dirCatFilter: document.getElementById("dirCatFilter"),
+    dirStatusFilter: document.getElementById("dirStatusFilter"),
+    clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
+    dirOrderHint: document.getElementById("dirOrderHint"),
+    projectOrderList: document.getElementById("projectOrderList"),
+
+    editorProjNumBadge: document.getElementById("editorProjNumBadge"),
+    editorProjHeading: document.getElementById("editorProjHeading"),
     projectStatusPill: document.getElementById("projectStatusPill"),
+    projectMeta: document.getElementById("projectMeta"),
     publishProjectBtn: document.getElementById("publishProjectBtn"),
     unpublishProjectBtn: document.getElementById("unpublishProjectBtn"),
     deleteProjectBtn: document.getElementById("deleteProjectBtn"),
-    compressionPreset: document.getElementById("compressionPreset"),
-    publishMode: document.getElementById("publishMode"),
 
     projectDetailsPanel: document.getElementById("projectDetailsPanel"),
     projectDirtyBadge: document.getElementById("projectDirtyBadge"),
@@ -89,6 +102,7 @@
     resetGalleryOrderBtn: document.getElementById("resetGalleryOrderBtn"),
     saveGalleryOrderBtn: document.getElementById("saveGalleryOrderBtn"),
 
+    compressionPreset: document.getElementById("compressionPreset"),
     dropZone: document.getElementById("dropZone"),
     fileInput: document.getElementById("fileInput"),
     browseBtn: document.getElementById("browseBtn"),
@@ -106,20 +120,6 @@
     progressFill: document.getElementById("progressFill"),
     retryFailedBtn: document.getElementById("retryFailedBtn"),
     uploadBtn: document.getElementById("uploadBtn"),
-
-    orderModeAllBtn: document.getElementById("orderModeAllBtn"),
-    orderModeHomeBtn: document.getElementById("orderModeHomeBtn"),
-    orderDirtyCount: document.getElementById("orderDirtyCount"),
-    resetOrderBtn: document.getElementById("resetOrderBtn"),
-    saveOrderBtn: document.getElementById("saveOrderBtn"),
-    dirFilterRow: document.getElementById("dirFilterRow"),
-    dirSearchInput: document.getElementById("dirSearchInput"),
-    dirTypeFilter: document.getElementById("dirTypeFilter"),
-    dirCatFilter: document.getElementById("dirCatFilter"),
-    dirStatusFilter: document.getElementById("dirStatusFilter"),
-    clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
-    dirOrderHint: document.getElementById("dirOrderHint"),
-    projectOrderList: document.getElementById("projectOrderList"),
 
     focusModal: document.getElementById("focusModal"),
     focusStage: document.getElementById("focusStage"),
@@ -265,20 +265,6 @@
     return data;
   }
 
-  function getProjectTypeOptions() {
-    const typeSlug = getEffectiveFieldMap()?.projects?.projectType;
-    const fields = state.bootstrap?.collections?.projects?.fields || [];
-    const def = fields.find((f) => f.slug === typeSlug);
-    return Array.isArray(def?.validations?.options) ? def.validations.options : [];
-  }
-
-  function getProjectTypeLabel(val) {
-    if (!val) return "";
-    const opts = getProjectTypeOptions();
-    const match = opts.find((o) => o.id === val || o.name === val);
-    return match ? match.name : val;
-  }
-
   function getEffectiveFieldMap() {
     if (!state.bootstrap) return null;
     const base = state.bootstrap.fieldMap;
@@ -289,17 +275,56 @@
     };
   }
 
-  function switchTab(tab) {
-    state.activeTab = tab;
-    const isEditor = tab === "editor";
-    els.editorView.hidden = !isEditor;
-    els.projectsView.hidden = isEditor;
-    els.tabEditorBtn.classList.toggle("is-active", isEditor);
-    els.tabProjectsBtn.classList.toggle("is-active", !isEditor);
-    els.actionBar.hidden = !isEditor || state.queue.length === 0;
-    if (!isEditor) {
-      renderProjectOrderList();
+  function getProjectTypeOptions() {
+    const typeSlug = getEffectiveFieldMap()?.projects?.projectType;
+    const fields = state.bootstrap?.collections?.projects?.fields || [];
+    const def = fields.find((f) => f.slug === typeSlug);
+    return Array.isArray(def?.validations?.options) ? def.validations.options : [];
+  }
+
+  function syncUrlHash() {
+    const targetHash =
+      state.activeView === "editor" && state.selectedProjectId
+        ? `#project=${encodeURIComponent(state.selectedProjectId)}`
+        : "#/";
+    if (window.location.hash !== targetHash) {
+      history.replaceState(null, "", targetHash);
     }
+  }
+
+  function showProjectsView() {
+    if (state.queue.length > 0 && state.activeView === "editor") {
+      if (!window.confirm("Leave this project? Your queued (not yet uploaded) slides will be cleared.")) {
+        return;
+      }
+      clearQueue();
+    }
+    state.activeView = "projects";
+    els.projectsView.hidden = false;
+    els.editorView.hidden = true;
+    els.backToProjectsBtn.hidden = true;
+    els.topbarTitle.textContent = "Projects";
+    els.actionBar.hidden = true;
+    syncUrlHash();
+    renderProjectOrderList();
+  }
+
+  function openProjectEditor(projectId) {
+    const target = state.projects.find((p) => p.id === projectId);
+    if (!target) {
+      showProjectsView();
+      return;
+    }
+    state.selectedProjectId = target.id;
+    state.activeView = "editor";
+    els.projectsView.hidden = true;
+    els.editorView.hidden = false;
+    els.backToProjectsBtn.hidden = false;
+    els.topbarTitle.textContent = target.name;
+    syncUrlHash();
+    syncEditorFromSelectedProject();
+    renderQueue();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function checkInitialAuth() {
@@ -328,18 +353,35 @@
       state.mediaById = data.mediaById || {};
       state.categories = data.categories || [];
 
-      if (preferredProjectId && state.projects.some((p) => p.id === preferredProjectId)) {
-        state.selectedProjectId = preferredProjectId;
+      const hashMatch = window.location.hash.match(/^#project=([^&]+)/);
+      const hashProjectId = hashMatch ? decodeURIComponent(hashMatch[1]) : "";
+      const targetId = preferredProjectId || (state.activeView === "editor" ? state.selectedProjectId : hashProjectId);
+
+      if (targetId && state.projects.some((p) => p.id === targetId)) {
+        state.selectedProjectId = targetId;
+        state.activeView = "editor";
+      } else if (state.activeView === "editor") {
+        state.activeView = "projects";
+        state.selectedProjectId = "";
       }
 
       els.siteBadge.textContent = `${data.site.displayName} · ${state.projects.length} Projects`;
       els.siteBadge.className = "status-pill is-ok";
 
       populateDirectoryFilters();
-      renderProjectOptions();
-      syncEditorFromSelectedProject();
       resetOrderDrafts();
-      renderProjectOrderList();
+      updateModeCounts();
+
+      if (state.activeView === "editor" && getSelectedProject()) {
+        openProjectEditor(state.selectedProjectId);
+      } else {
+        els.projectsView.hidden = false;
+        els.editorView.hidden = true;
+        els.backToProjectsBtn.hidden = true;
+        els.topbarTitle.textContent = "Projects";
+        els.actionBar.hidden = true;
+        renderProjectOrderList();
+      }
     } catch (err) {
       els.siteBadge.textContent = "Connection Error";
       els.siteBadge.className = "status-pill is-err";
@@ -347,57 +389,24 @@
     }
   }
 
-  function renderProjectOptions() {
-    const query = els.projectSearch.value.trim().toLowerCase();
-    const filtered = state.projects.filter((p) => {
-      if (!query) return true;
-      return `${p.sequence} ${p.client} ${p.name} ${p.subtitle} ${p.slug}`
-        .toLowerCase()
-        .includes(query);
-    });
-
-    const prevId = state.selectedProjectId;
-    els.projectSelect.innerHTML = "";
-
-    if (!filtered.length) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "No matching projects";
-      els.projectSelect.appendChild(opt);
-      state.selectedProjectId = "";
-      updateProjectMeta();
-      return;
-    }
-
-    for (const p of filtered) {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      const seqLabel = p.sequence !== "" ? padTwo(p.sequence) : "--";
-      const titlePart = p.subtitle && p.subtitle !== p.name ? `${p.name} — ${p.subtitle}` : p.name;
-      const draftTag = p.isDraft ? " [Draft]" : "";
-      opt.textContent = `${seqLabel} · ${titlePart} (${p.existingSlideCount} slides)${draftTag}`;
-      els.projectSelect.appendChild(opt);
-    }
-
-    const stillExists = filtered.some((p) => p.id === prevId);
-    state.selectedProjectId = stillExists ? prevId : filtered[0].id;
-    els.projectSelect.value = state.selectedProjectId;
-    updateProjectMeta();
+  function updateModeCounts() {
+    const homeCount = state.projects.filter((p) => p.featured).length;
+    els.orderModeAllBtn.textContent = `All Projects (${state.projects.length})`;
+    els.orderModeHomeBtn.textContent = `Homepage Featured (${homeCount})`;
   }
 
+  // Project Detail Editor Helpers
   function updateProjectMeta() {
     const p = getSelectedProject();
-    if (!p) {
-      els.projectMeta.textContent = "No project selected.";
-      els.projectStatusPill.hidden = true;
-      return;
-    }
-    els.projectStatusPill.hidden = false;
-    els.projectStatusPill.textContent = p.isDraft ? "Draft" : "Published / Ready";
+    if (!p) return;
+    els.editorProjNumBadge.textContent = p.sequence !== "" ? `#${padTwo(p.sequence)}` : "--";
+    els.editorProjHeading.textContent = p.subtitle && p.subtitle !== p.name ? `${p.name} — ${p.subtitle}` : p.name;
+    els.topbarTitle.textContent = p.name;
+    els.projectStatusPill.textContent = p.isDraft ? "Draft" : "Live";
     els.projectStatusPill.className = `status-pill ${p.isDraft ? "" : "is-ok"}`;
     els.publishProjectBtn.textContent = p.isDraft ? "Publish Project & Media" : "Re-publish Project & Media";
     els.unpublishProjectBtn.disabled = p.isDraft;
-    els.projectMeta.textContent = `Slug: /projects/${p.slug} · ${p.existingSlideCount} slide(s) · Next new slide starts at #${p.nextOrder}`;
+    els.projectMeta.textContent = `/projects/${p.slug} · ${p.existingSlideCount} slide(s) · Next new slide starts at #${p.nextOrder}`;
   }
 
   function renderCategoryPills(container, selectedIds, onToggle = null) {
@@ -424,13 +433,13 @@
     }
   }
 
-  function fillProjectTypeSelect(selectEl, currentValue, includeEmpty = false) {
+  function fillProjectTypeSelect(selectEl, currentValue, emptyLabel = null) {
     const options = getProjectTypeOptions();
     selectEl.innerHTML = "";
-    if (includeEmpty || !options.length) {
+    if (emptyLabel !== null || !options.length) {
       const opt = document.createElement("option");
       opt.value = "";
-      opt.textContent = options.length ? "(Select Type)" : "(Not mapped)";
+      opt.textContent = options.length ? emptyLabel : "(Not mapped)";
       selectEl.appendChild(opt);
     }
     for (const o of options) {
@@ -453,31 +462,15 @@
 
   function syncEditorFromSelectedProject() {
     const p = getSelectedProject();
+    if (!p) return;
     updateProjectMeta();
-
-    if (!p) {
-      els.editProjName.value = "";
-      els.editProjSlug.value = "";
-      els.editProjSeq.value = "";
-      els.editProjSubtitle.value = "";
-      els.editProjDetails.value = "";
-      els.editProjFeatured.checked = false;
-      els.editProjFeaturedSeq.value = "";
-      els.editProjCover.innerHTML = "";
-      els.editProjCategories.innerHTML = "";
-      state.galleryIds = [];
-      state.existingEdits = {};
-      setProjectDirty(false);
-      renderExistingGallery();
-      return;
-    }
 
     els.editProjName.value = p.name || "";
     els.editProjSlug.value = p.slug || "";
     els.editProjSeq.value = p.sequence === "" ? "" : String(p.sequence);
     els.editProjSubtitle.value = p.subtitle || "";
     els.editProjDetails.value = p.details || "";
-    fillProjectTypeSelect(els.editProjType, p.projectType, true);
+    fillProjectTypeSelect(els.editProjType, p.projectType, "(Select Type)");
     renderCategoryPills(els.editProjCategories, p.categoryIds, () => setProjectDirty(true));
     els.editProjFeatured.checked = Boolean(p.featured);
     els.editProjFeaturedSeq.value = p.featuredSequence === "" ? "" : String(p.featuredSequence);
@@ -498,8 +491,7 @@
     els.editProjCover.appendChild(noneOpt);
 
     const seen = new Set();
-    const galleryIds = project.galleryIds || [];
-    galleryIds.forEach((id, idx) => {
+    (project.galleryIds || []).forEach((id, idx) => {
       const m = state.mediaById[id];
       const opt = document.createElement("option");
       opt.value = id;
@@ -610,7 +602,7 @@
     const dirtyOrder = isGalleryOrderDirty();
     els.saveGalleryOrderBtn.hidden = !dirtyOrder;
     els.resetGalleryOrderBtn.hidden = !dirtyOrder;
-    els.existingGalleryHeading.textContent = `Existing Gallery (${state.galleryIds.length})`;
+    els.existingGalleryHeading.textContent = `Gallery Slides (${state.galleryIds.length})`;
 
     if (!p || !state.galleryIds.length) {
       els.existingGalleryEmpty.hidden = false;
@@ -627,9 +619,18 @@
       const card = document.createElement("article");
       card.className = "slide-card";
       card.draggable = !edit.busy;
-      card.dataset.mediaId = mediaId;
 
+      card.addEventListener("focusin", (e) => {
+        if (e.target.matches("input, textarea, select")) card.draggable = false;
+      });
+      card.addEventListener("focusout", () => {
+        card.draggable = !edit.busy;
+      });
       card.addEventListener("dragstart", (e) => {
+        if (e.target.closest("input, select, textarea, button")) {
+          e.preventDefault();
+          return;
+        }
         state.dragGalleryId = mediaId;
         card.classList.add("is-dragging");
         e.dataTransfer.effectAllowed = "move";
@@ -1137,7 +1138,7 @@
   function renderQueue() {
     const hasItems = state.queue.length > 0;
     els.queueSection.hidden = !hasItems;
-    els.actionBar.hidden = !hasItems || state.activeTab !== "editor";
+    els.actionBar.hidden = !hasItems || state.activeView !== "editor";
 
     if (!hasItems) {
       els.queueGrid.innerHTML = "";
@@ -1191,7 +1192,17 @@
       card.className = `slide-card${item.status === "uploaded" ? " is-done" : ""}${item.status === "error" ? " is-error" : ""}`;
       card.draggable = !state.isUploading;
 
+      card.addEventListener("focusin", (e) => {
+        if (e.target.matches("input, textarea, select")) card.draggable = false;
+      });
+      card.addEventListener("focusout", () => {
+        card.draggable = !state.isUploading;
+      });
       card.addEventListener("dragstart", (e) => {
+        if (e.target.closest("input, select, textarea, button")) {
+          e.preventDefault();
+          return;
+        }
         state.dragQueueId = item.id;
         card.classList.add("is-dragging");
         e.dataTransfer.effectAllowed = "move";
@@ -1509,11 +1520,10 @@
     }
   }
 
-  // Projects Directory & Reordering
+  // Front Page: Projects Directory, Quick Inline Fields & Drag Reordering
   function populateDirectoryFilters() {
     const typeVal = els.dirTypeFilter.value;
-    fillProjectTypeSelect(els.dirTypeFilter, typeVal, true);
-    els.dirTypeFilter.firstElementChild.textContent = "All Project Types";
+    fillProjectTypeSelect(els.dirTypeFilter, typeVal, "All Project Types");
 
     const catVal = els.dirCatFilter.value;
     els.dirCatFilter.innerHTML = '<option value="">All Categories</option>';
@@ -1561,6 +1571,57 @@
     );
   }
 
+  async function inlinePatchProjectRow(project, patch, feedbackEl = null) {
+    if (feedbackEl) {
+      feedbackEl.hidden = false;
+      feedbackEl.textContent = "Saving…";
+      feedbackEl.className = "meta-pill";
+    }
+    try {
+      const res = await apiJson("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          projectId: project.id,
+          publishMode: els.publishMode.value,
+          fieldMapOverride: state.fieldOverride,
+          project: patch,
+        }),
+      });
+
+      if (patch.name !== undefined) project.name = patch.name;
+      if (patch.subtitle !== undefined) project.subtitle = patch.subtitle;
+      if (patch.projectType !== undefined) project.projectType = patch.projectType;
+      if (typeof patch.featured === "boolean") {
+        project.featured = patch.featured;
+        if (patch.featuredSequence !== undefined) {
+          project.featuredSequence = patch.featuredSequence ?? "";
+          project.featuredSequenceSort = patch.featuredSequence ?? Number.MAX_SAFE_INTEGER;
+        }
+        resetOrderDrafts();
+        updateModeCounts();
+      }
+      if (res.isDraft !== undefined) project.isDraft = Boolean(res.isDraft);
+
+      if (feedbackEl) {
+        feedbackEl.textContent = res.published ? "Saved Live" : "Saved";
+        feedbackEl.className = "meta-pill is-live";
+        window.setTimeout(() => {
+          if (feedbackEl.isConnected) feedbackEl.hidden = true;
+        }, 1600);
+      }
+      return true;
+    } catch (err) {
+      if (feedbackEl) {
+        feedbackEl.textContent = "Error";
+        feedbackEl.className = "meta-pill is-draft";
+      }
+      showBanner(err.message, "err");
+      return false;
+    }
+  }
+
   function renderProjectOrderList() {
     const byId = new Map(state.projects.map((p) => [p.id, p]));
     const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
@@ -1571,17 +1632,19 @@
     els.dirFilterRow.hidden = isHomeMode;
 
     const changes = getOrderChanges();
-    els.saveOrderBtn.disabled = changes.length === 0;
-    els.resetOrderBtn.disabled = changes.length === 0;
-    els.orderDirtyCount.textContent = changes.length ? `${changes.length} project number(s) changed` : "";
+    const hasOrderChanges = changes.length > 0;
+    els.saveOrderBtn.hidden = !hasOrderChanges;
+    els.resetOrderBtn.hidden = !hasOrderChanges;
+    els.orderDirtyCount.hidden = !hasOrderChanges;
+    els.orderDirtyCount.textContent = `${changes.length} moved`;
 
     const filtersActive = hasActiveDirFilters();
     els.clearDirFiltersBtn.hidden = !filtersActive;
     els.dirOrderHint.textContent = filtersActive
       ? "Clear filters to drag-and-drop reorder Project Numbers."
       : isHomeMode
-        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured slides (auto-numbers Featured sequence 1..N)."
-        : "Drag rows or use ↑ / ↓ to reorder all projects (auto-numbers Project Number 1..N).";
+        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured slides. Edit titles inline or click any thumbnail / Open → to edit slides."
+        : "Drag rows to reorder Project Numbers, edit Title / Sub-title / Type inline, or click any project to manage its gallery & upload media.";
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
     const search = els.dirSearchInput.value.trim().toLowerCase();
@@ -1629,8 +1692,19 @@
       row.className = `project-row${canReorder ? " is-draggable" : ""}`;
       row.draggable = canReorder;
 
+      row.addEventListener("focusin", (e) => {
+        if (e.target.matches("input, select, textarea")) row.draggable = false;
+      });
+      row.addEventListener("focusout", () => {
+        row.draggable = canReorder;
+      });
+
       if (canReorder) {
         row.addEventListener("dragstart", (e) => {
+          if (e.target.closest("input, select, textarea, button")) {
+            e.preventDefault();
+            return;
+          }
           state.dragOrderProjectId = id;
           row.classList.add("is-dragging");
           e.dataTransfer.effectAllowed = "move";
@@ -1663,6 +1737,7 @@
 
       const handle = document.createElement("div");
       handle.className = "project-row-handle";
+      handle.title = canReorder ? "Drag to reorder" : "Clear filters to drag";
       handle.textContent = canReorder ? "⋮⋮" : "·";
       row.appendChild(handle);
 
@@ -1671,55 +1746,172 @@
       numCell.textContent = `#${padTwo(targetNum)}`;
       row.appendChild(numCell);
 
+      const thumbBtn = document.createElement("button");
+      thumbBtn.type = "button";
+      thumbBtn.className = "row-open-thumb";
+      thumbBtn.title = `Open ${p.name}`;
       const thumb = document.createElement("img");
       thumb.className = "project-row-thumb";
       if (p.coverUrl) {
         thumb.src = p.coverUrl;
         thumb.alt = p.name;
       }
-      row.appendChild(thumb);
+      thumbBtn.appendChild(thumb);
+      thumbBtn.addEventListener("click", () => openProjectEditor(p.id));
+      row.appendChild(thumbBtn);
 
+      // Inline editable Title + Sub-title + Meta badges
       const info = document.createElement("div");
       info.className = "project-row-info";
 
-      const titleLine = document.createElement("div");
-      titleLine.className = "project-row-title";
-      const titleSpan = document.createElement("span");
-      titleSpan.textContent = p.subtitle && p.subtitle !== p.name ? `${p.name} — ${p.subtitle}` : p.name;
-      titleLine.appendChild(titleSpan);
+      const inputsRow = document.createElement("div");
+      inputsRow.className = "project-row-inputs";
 
-      const statusPill = document.createElement("span");
-      statusPill.className = `meta-pill ${p.isDraft ? "is-draft" : "is-live"}`;
-      statusPill.textContent = p.isDraft ? "Draft" : "Live";
-      titleLine.appendChild(statusPill);
+      const titleInput = document.createElement("input");
+      titleInput.type = "text";
+      titleInput.className = "inline-input inline-input-title";
+      titleInput.value = p.name;
+      titleInput.placeholder = "Title *";
+
+      const subInput = document.createElement("input");
+      subInput.type = "text";
+      subInput.className = "inline-input inline-input-sub";
+      subInput.value = p.subtitle || "";
+      subInput.placeholder = "Sub-title (optional)";
+
+      inputsRow.appendChild(titleInput);
+      inputsRow.appendChild(subInput);
+      info.appendChild(inputsRow);
+
+      const metaLine = document.createElement("div");
+      metaLine.className = "project-row-meta";
+
+      const slidesCountSpan = document.createElement("span");
+      slidesCountSpan.textContent = `${p.existingSlideCount} slides`;
+      metaLine.appendChild(slidesCountSpan);
+
+      const cats = p.categoryIds.map((cid) => catNameById.get(cid)).filter(Boolean);
+      if (cats.length) {
+        const catSpan = document.createElement("span");
+        catSpan.textContent = `· ${cats.join(", ")}`;
+        metaLine.appendChild(catSpan);
+      }
+
+      const statusBtn = document.createElement("button");
+      statusBtn.type = "button";
+      statusBtn.className = `meta-pill meta-pill-btn ${p.isDraft ? "is-draft" : "is-live"}`;
+      statusBtn.textContent = p.isDraft ? "Draft" : "Live";
+      statusBtn.title = p.isDraft ? "Click to publish live" : "Click to move to Draft";
+      statusBtn.addEventListener("click", async () => {
+        statusBtn.disabled = true;
+        try {
+          const action = p.isDraft ? "publish" : "unpublish";
+          if (action === "unpublish" && !window.confirm(`Move "${p.name}" to Draft?`)) {
+            statusBtn.disabled = false;
+            return;
+          }
+          await apiJson("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, projectId: p.id, fieldMapOverride: state.fieldOverride }),
+          });
+          p.isDraft = !p.isDraft;
+          statusBtn.textContent = p.isDraft ? "Draft" : "Live";
+          statusBtn.className = `meta-pill meta-pill-btn ${p.isDraft ? "is-draft" : "is-live"}`;
+          showBanner(p.isDraft ? `Moved "${p.name}" to Draft.` : `Published "${p.name}" & its slides live.`, "ok");
+        } catch (err) {
+          showBanner(err.message, "err");
+        } finally {
+          statusBtn.disabled = false;
+        }
+      });
+      metaLine.appendChild(statusBtn);
 
       if (numChanged) {
         const movedPill = document.createElement("span");
         movedPill.className = "meta-pill is-moved";
         movedPill.textContent = `was #${oldNum === "" ? "--" : padTwo(oldNum)}`;
-        titleLine.appendChild(movedPill);
+        metaLine.appendChild(movedPill);
       }
-      info.appendChild(titleLine);
 
-      const metaLine = document.createElement("div");
-      metaLine.className = "project-row-meta";
-      const metaParts = [`${p.existingSlideCount} slides`];
-      const typeLabel = getProjectTypeLabel(p.projectType);
-      if (typeLabel) metaParts.push(typeLabel);
-      const cats = p.categoryIds.map((cid) => catNameById.get(cid)).filter(Boolean);
-      if (cats.length) metaParts.push(cats.join(", "));
-      metaLine.textContent = metaParts.join(" · ");
+      const rowSavePill = document.createElement("span");
+      rowSavePill.className = "meta-pill";
+      rowSavePill.hidden = true;
+      metaLine.appendChild(rowSavePill);
+
+      const inlineSaveBtn = document.createElement("button");
+      inlineSaveBtn.type = "button";
+      inlineSaveBtn.className = "icon-btn";
+      inlineSaveBtn.textContent = "Save";
+      inlineSaveBtn.hidden = true;
+      metaLine.appendChild(inlineSaveBtn);
+
+      const commitTextChanges = async () => {
+        const nextName = titleInput.value.trim();
+        const nextSub = subInput.value.trim();
+        if (!nextName) {
+          showBanner("Project Title cannot be empty.", "err");
+          titleInput.value = p.name;
+          inlineSaveBtn.hidden = true;
+          return;
+        }
+        if (nextName === p.name && nextSub === (p.subtitle || "")) {
+          inlineSaveBtn.hidden = true;
+          return;
+        }
+        inlineSaveBtn.disabled = true;
+        const ok = await inlinePatchProjectRow(p, { name: nextName, subtitle: nextSub }, rowSavePill);
+        inlineSaveBtn.disabled = false;
+        if (ok) inlineSaveBtn.hidden = true;
+      };
+
+      const checkTextDirty = () => {
+        const changed = titleInput.value.trim() !== p.name || subInput.value.trim() !== (p.subtitle || "");
+        inlineSaveBtn.hidden = !changed;
+      };
+      titleInput.addEventListener("input", checkTextDirty);
+      subInput.addEventListener("input", checkTextDirty);
+      titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
+      subInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
+      inlineSaveBtn.addEventListener("click", commitTextChanges);
+
       info.appendChild(metaLine);
-
       row.appendChild(info);
 
+      // Inline Project Type selector
+      const typeSelect = document.createElement("select");
+      typeSelect.className = "inline-select";
+      typeSelect.title = "Project Type";
+      fillProjectTypeSelect(typeSelect, p.projectType, "(Type)");
+      typeSelect.addEventListener("change", async () => {
+        const prev = p.projectType;
+        typeSelect.disabled = true;
+        const ok = await inlinePatchProjectRow(p, { projectType: typeSelect.value }, rowSavePill);
+        if (!ok) typeSelect.value = prev || "";
+        typeSelect.disabled = false;
+      });
+      row.appendChild(typeSelect);
+
+      // Quick Home feature toggle
       const homeBtn = document.createElement("button");
       homeBtn.type = "button";
-      homeBtn.className = `icon-btn`;
-      homeBtn.textContent = p.featured ? "★ On Home" : "☆ Add to Home";
-      homeBtn.addEventListener("click", () => toggleFeaturedProject(p));
+      homeBtn.className = "icon-btn";
+      homeBtn.textContent = p.featured ? "★ Home" : "☆ Home";
+      homeBtn.title = p.featured ? "Remove from Homepage Featured" : "Feature on Homepage";
+      homeBtn.addEventListener("click", async () => {
+        homeBtn.disabled = true;
+        const nextFeatured = !p.featured;
+        const nextHomeSeq = nextFeatured ? state.orderDraftHome.length + 1 : null;
+        await inlinePatchProjectRow(
+          p,
+          { featured: nextFeatured, ...(nextHomeSeq !== null ? { featuredSequence: nextHomeSeq } : {}) },
+          rowSavePill
+        );
+        renderProjectOrderList();
+      });
       row.appendChild(homeBtn);
 
+      // Order up/down buttons
       const moveBox = document.createElement("div");
       moveBox.className = "slide-move-btns";
       const upBtn = document.createElement("button");
@@ -1749,45 +1941,16 @@
       moveBox.appendChild(downBtn);
       row.appendChild(moveBox);
 
+      // Open project button
       const editBtn = document.createElement("button");
       editBtn.type = "button";
       editBtn.className = "btn btn-secondary btn-sm";
-      editBtn.textContent = "Edit";
-      editBtn.addEventListener("click", () => {
-        state.selectedProjectId = p.id;
-        els.projectSelect.value = p.id;
-        syncEditorFromSelectedProject();
-        switchTab("editor");
-      });
+      editBtn.textContent = "Open →";
+      editBtn.addEventListener("click", () => openProjectEditor(p.id));
       row.appendChild(editBtn);
 
       els.projectOrderList.appendChild(row);
     });
-  }
-
-  async function toggleFeaturedProject(p) {
-    const nextFeatured = !p.featured;
-    try {
-      const nextHomeSeq = nextFeatured ? state.orderDraftHome.length + 1 : null;
-      await apiJson("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update",
-          projectId: p.id,
-          publishMode: els.publishMode.value,
-          fieldMapOverride: state.fieldOverride,
-          project: {
-            featured: nextFeatured,
-            ...(nextHomeSeq !== null ? { featuredSequence: nextHomeSeq } : {}),
-          },
-        }),
-      });
-      await loadBootstrap(state.selectedProjectId);
-      showBanner(nextFeatured ? `Added "${p.name}" to Homepage Featured.` : `Removed "${p.name}" from Homepage Featured.`, "ok");
-    } catch (err) {
-      showBanner(err.message, "err");
-    }
   }
 
   async function saveOrderChanges() {
@@ -1815,9 +1978,9 @@
         }),
       });
 
-      await loadBootstrap(state.selectedProjectId);
+      await loadBootstrap();
       showBanner(
-        `Updated ${res.updatedCount} project number(s)${res.publishedCount ? ` and published ${res.publishedCount} live` : " (staged)"}.`,
+        `Saved order for ${res.updatedCount} project(s)${res.publishedCount ? ` and published ${res.publishedCount} live` : " (staged)"}.`,
         "ok"
       );
     } catch (err) {
@@ -1982,7 +2145,7 @@
     els.newProjSubtitle.value = "";
     els.newProjDetails.value = "";
     els.newProjFeatured.checked = false;
-    fillProjectTypeSelect(els.newProjType, "", false);
+    fillProjectTypeSelect(els.newProjType, "", null);
     renderCategoryPills(els.newProjCategories, []);
     els.newProjectModal.hidden = false;
     els.newProjName.focus();
@@ -2019,9 +2182,17 @@
     setAuthenticated(false);
   });
 
-  els.tabEditorBtn.addEventListener("click", () => switchTab("editor"));
-  els.tabProjectsBtn.addEventListener("click", () => switchTab("projects"));
-  els.refreshBtn.addEventListener("click", () => loadBootstrap(state.selectedProjectId));
+  els.backToProjectsBtn.addEventListener("click", showProjectsView);
+  window.addEventListener("hashchange", () => {
+    const match = window.location.hash.match(/^#project=([^&]+)/);
+    if (match && state.projects.length) {
+      openProjectEditor(decodeURIComponent(match[1]));
+    } else if (state.projects.length && state.activeView !== "projects") {
+      showProjectsView();
+    }
+  });
+
+  els.refreshBtn.addEventListener("click", () => loadBootstrap(state.activeView === "editor" ? state.selectedProjectId : null));
 
   els.publishMode.addEventListener("change", () => {
     try {
@@ -2044,17 +2215,6 @@
       els.publishSiteBtn.disabled = false;
       els.publishSiteBtn.textContent = "Publish Site";
     }
-  });
-
-  els.projectSearch.addEventListener("input", () => {
-    renderProjectOptions();
-    syncEditorFromSelectedProject();
-  });
-
-  els.projectSelect.addEventListener("change", () => {
-    state.selectedProjectId = els.projectSelect.value;
-    syncEditorFromSelectedProject();
-    renderQueue();
   });
 
   [
@@ -2122,7 +2282,9 @@
         body: JSON.stringify({ action: "delete", projectId: p.id, fieldMapOverride: state.fieldOverride }),
       });
       state.selectedProjectId = "";
+      state.activeView = "projects";
       await loadBootstrap();
+      syncUrlHash();
       showBanner(`Deleted project "${p.name}".`, "ok");
     } catch (err) {
       showBanner(err.message, "err");
@@ -2240,7 +2402,7 @@
   els.resetSchemaBtn.addEventListener("click", () => {
     saveFieldOverride(null);
     els.schemaModal.hidden = true;
-    loadBootstrap(state.selectedProjectId);
+    loadBootstrap(state.activeView === "editor" ? state.selectedProjectId : null);
   });
   els.saveSchemaBtn.addEventListener("click", () => {
     const override = { projects: {}, media: {} };
@@ -2292,7 +2454,6 @@
 
       els.newProjectModal.hidden = true;
       await loadBootstrap(res.projectId);
-      switchTab("editor");
       const draftNote = res.createdAsDraftForMedia
         ? " Created as Draft until you upload its first Cover/Gallery slide below."
         : res.published
@@ -2304,7 +2465,7 @@
       els.newProjError.hidden = false;
     } finally {
       els.submitNewProjectBtn.disabled = false;
-      els.submitNewProjectBtn.textContent = "Create & Open Editor";
+      els.submitNewProjectBtn.textContent = "Create & Open Project";
     }
   });
 

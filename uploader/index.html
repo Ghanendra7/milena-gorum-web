@@ -13,7 +13,7 @@
     <div class="auth-card">
       <div class="brand-kicker">MILENA GORUM / CMS STUDIO</div>
       <h1>Portfolio CMS Studio</h1>
-      <p class="muted">Sign in to manage Webflow projects, ordering, media galleries, and batch uploads.</p>
+      <p class="muted">Sign in to manage projects, ordering, media galleries, and batch uploads.</p>
       <form id="loginForm" class="stack-sm">
         <label class="field">
           <span>Password</span>
@@ -29,74 +29,88 @@
   <div id="appShell" class="app-shell" hidden>
     <header class="topbar">
       <div class="topbar-left">
+        <button id="backToProjectsBtn" type="button" class="btn btn-ghost btn-sm" hidden>← All Projects</button>
         <span class="brand-kicker">MILENA GORUM</span>
         <span class="divider">/</span>
-        <span class="topbar-title">CMS Studio</span>
+        <span id="topbarTitle" class="topbar-title">Projects</span>
         <span id="siteBadge" class="status-pill">Connecting…</span>
       </div>
 
-      <nav class="topbar-tabs" aria-label="Workspace views">
-        <button id="tabEditorBtn" type="button" class="tab-btn is-active" data-tab="editor">Project &amp; Media Editor</button>
-        <button id="tabProjectsBtn" type="button" class="tab-btn" data-tab="projects">Projects &amp; Order</button>
-      </nav>
-
       <div class="topbar-actions">
+        <label class="publish-pill" title="Publish behavior for edits, reorders, and uploads">
+          <span>Save Mode:</span>
+          <select id="publishMode" aria-label="Publish behavior">
+            <option value="live">Publish Live</option>
+            <option value="staged">Save Staged</option>
+          </select>
+        </label>
         <button id="newProjectBtn" type="button" class="btn btn-primary btn-sm">+ New Project</button>
         <button id="publishSiteBtn" type="button" class="btn btn-secondary btn-sm">Publish Site</button>
-        <button id="schemaBtn" type="button" class="btn btn-ghost btn-sm">Field Mapping</button>
+        <button id="schemaBtn" type="button" class="btn btn-ghost btn-sm">Fields</button>
         <button id="refreshBtn" type="button" class="btn btn-ghost btn-sm">Refresh</button>
         <button id="logoutBtn" type="button" class="btn btn-ghost btn-sm">Sign Out</button>
       </div>
     </header>
 
     <main class="workspace">
-      <!-- Setup / Global Status Banner -->
+      <!-- Global Status Banner -->
       <div id="globalBanner" class="banner" hidden></div>
 
-      <!-- VIEW 1: Project & Media Editor -->
-      <section id="editorView" class="view-stack">
-        <!-- Target Project & Settings -->
-        <section class="panel config-panel">
-          <div class="config-grid">
-            <div class="field field-project">
-              <div class="field-label-row">
-                <label for="projectSearch">Target Project</label>
-                <span id="projectStatusPill" class="status-pill" hidden></span>
-              </div>
-              <div class="project-picker">
-                <input id="projectSearch" type="search" placeholder="Filter projects by title, subtitle, or #…" />
-                <select id="projectSelect"></select>
-              </div>
-              <p id="projectMeta" class="field-hint">Loading projects…</p>
+      <!-- FRONT PAGE: All Projects Directory, Quick Inline Edit & Drag Reorder -->
+      <section id="projectsView" class="view-stack">
+        <section class="panel order-toolbar-panel">
+          <div class="order-header-row">
+            <div class="segmented" role="group" aria-label="Project list view">
+              <button id="orderModeAllBtn" type="button" class="seg-btn is-active">All Projects</button>
+              <button id="orderModeHomeBtn" type="button" class="seg-btn">Homepage Featured</button>
             </div>
 
-            <div class="field">
-              <label for="compressionPreset">Compression Preset</label>
-              <select id="compressionPreset">
-                <option value="webp-2400">WebP · max 2400px (Recommended)</option>
-                <option value="webp-3000">WebP · max 3000px (High-res)</option>
-                <option value="jpeg-2400">JPEG · max 2400px</option>
-                <option value="jpeg-3000">JPEG · max 3000px</option>
-              </select>
-              <p class="field-hint">Auto-compressed in browser under Webflow's 4 MB cap.</p>
-            </div>
-
-            <div class="field">
-              <label for="publishMode">Publish Behavior</label>
-              <select id="publishMode">
-                <option value="live">Publish Live Immediately</option>
-                <option value="staged">Save as Staged (review in Webflow first)</option>
-              </select>
-              <p class="field-hint">Applies to creates, edits, reorders, and uploads.</p>
+            <div class="order-save-actions">
+              <span id="orderDirtyCount" class="badge-dirty" hidden></span>
+              <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Discard Order</button>
+              <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Order</button>
             </div>
           </div>
 
-          <div class="project-bar-actions">
-            <div class="project-bar-links">
-              <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp; Media</button>
-              <button id="unpublishProjectBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
+          <div id="dirFilterRow" class="dir-filters">
+            <input id="dirSearchInput" type="search" placeholder="Search projects by title, subtitle, slug, or #…" />
+            <select id="dirTypeFilter">
+              <option value="">All Project Types</option>
+            </select>
+            <select id="dirCatFilter">
+              <option value="">All Categories</option>
+            </select>
+            <select id="dirStatusFilter">
+              <option value="">All Statuses</option>
+              <option value="published">Published Only</option>
+              <option value="draft">Drafts Only</option>
+              <option value="featured">Featured on Home</option>
+            </select>
+            <button id="clearDirFiltersBtn" type="button" class="btn btn-ghost btn-sm" hidden>Clear</button>
+          </div>
+          <p id="dirOrderHint" class="field-hint"></p>
+        </section>
+
+        <div id="projectOrderList" class="project-order-list"></div>
+      </section>
+
+      <!-- DETAIL VIEW: Inside a Single Project (Details + Gallery + Uploader) -->
+      <section id="editorView" class="view-stack" hidden>
+        <!-- Project Header Bar -->
+        <section class="panel editor-hero-panel">
+          <div class="editor-hero-left">
+            <div class="editor-hero-title-row">
+              <span id="editorProjNumBadge" class="slide-order-badge static-badge">#00</span>
+              <h1 id="editorProjHeading" class="editor-hero-title">Project</h1>
+              <span id="projectStatusPill" class="status-pill">Ready</span>
             </div>
-            <button id="deleteProjectBtn" type="button" class="btn btn-ghost btn-sm btn-danger-text">Delete Project</button>
+            <p id="projectMeta" class="field-hint"></p>
+          </div>
+
+          <div class="editor-hero-actions">
+            <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp; Media</button>
+            <button id="unpublishProjectBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
+            <button id="deleteProjectBtn" type="button" class="btn btn-ghost btn-sm btn-danger-text">Delete</button>
           </div>
         </section>
 
@@ -168,7 +182,7 @@
         <section id="existingGallerySection" class="panel gallery-panel">
           <div class="queue-toolbar">
             <div class="queue-toolbar-left">
-              <h2 id="existingGalleryHeading">Existing Gallery (0)</h2>
+              <h2 id="existingGalleryHeading">Gallery Slides (0)</h2>
               <span class="muted">Drag cards or use ← / → to reorder, edit fields inline, or set Cover.</span>
             </div>
             <div class="queue-toolbar-right">
@@ -177,18 +191,38 @@
             </div>
           </div>
           <div id="existingGalleryGrid" class="queue-grid"></div>
-          <p id="existingGalleryEmpty" class="muted" hidden>No slides linked in this project's Gallery yet. Drop images below to add slides.</p>
+          <p id="existingGalleryEmpty" class="muted" hidden>No slides in this project yet. Drop photos or add a Bunny video below.</p>
         </section>
 
         <!-- Batch Upload Drop Zone -->
-        <section id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
-          <input id="fileInput" type="file" accept="image/*" multiple hidden />
-          <div class="dropzone-inner">
-            <p class="dropzone-title">Add New Slides — Drop raw images here</p>
-            <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media CMS creation happen automatically.</p>
-            <div class="dropzone-buttons">
-              <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
-              <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
+        <section class="panel upload-panel">
+          <div class="queue-toolbar" style="margin-bottom: 12px;">
+            <div class="queue-toolbar-left">
+              <h2>Add New Slides</h2>
+              <span class="muted">Auto-compressed under Webflow's 4 MB cap; first slide auto-sets Cover if empty.</span>
+            </div>
+            <div class="queue-toolbar-right">
+              <label class="publish-pill">
+                <span>Format:</span>
+                <select id="compressionPreset" aria-label="Compression preset">
+                  <option value="webp-2400">WebP · max 2400px (Recommended)</option>
+                  <option value="webp-3000">WebP · max 3000px (High-res)</option>
+                  <option value="jpeg-2400">JPEG · max 2400px</option>
+                  <option value="jpeg-3000">JPEG · max 3000px</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
+            <input id="fileInput" type="file" accept="image/*" multiple hidden />
+            <div class="dropzone-inner">
+              <p class="dropzone-title">Drop raw project images here</p>
+              <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media CMS creation happen automatically.</p>
+              <div class="dropzone-buttons">
+                <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
+                <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
+              </div>
             </div>
           </div>
         </section>
@@ -209,44 +243,6 @@
 
           <div id="queueGrid" class="queue-grid"></div>
         </section>
-      </section>
-
-      <!-- VIEW 2: Projects Directory & Ordering -->
-      <section id="projectsView" class="view-stack" hidden>
-        <section class="panel order-toolbar-panel">
-          <div class="order-header-row">
-            <div class="segmented" role="group" aria-label="Order list mode">
-              <button id="orderModeAllBtn" type="button" class="seg-btn is-active">All Projects (Project Number)</button>
-              <button id="orderModeHomeBtn" type="button" class="seg-btn">Homepage Featured (Featured sequence)</button>
-            </div>
-
-            <div class="order-save-actions">
-              <span id="orderDirtyCount" class="muted"></span>
-              <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" disabled>Reset</button>
-              <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" disabled>Save Order</button>
-            </div>
-          </div>
-
-          <div id="dirFilterRow" class="dir-filters">
-            <input id="dirSearchInput" type="search" placeholder="Filter by title, subtitle, slug, or #…" />
-            <select id="dirTypeFilter">
-              <option value="">All Project Types</option>
-            </select>
-            <select id="dirCatFilter">
-              <option value="">All Categories</option>
-            </select>
-            <select id="dirStatusFilter">
-              <option value="">All Statuses</option>
-              <option value="published">Published Only</option>
-              <option value="draft">Drafts Only</option>
-              <option value="featured">Featured on Home</option>
-            </select>
-            <button id="clearDirFiltersBtn" type="button" class="btn btn-ghost btn-sm" hidden>Clear Filters</button>
-          </div>
-          <p id="dirOrderHint" class="field-hint"></p>
-        </section>
-
-        <div id="projectOrderList" class="project-order-list"></div>
       </section>
     </main>
 
@@ -360,7 +356,7 @@
         <p id="newProjError" class="error-text" hidden></p>
         <div class="modal-footer" style="padding: 14px 0 0; border-top: 1px solid var(--border);">
           <span class="field-hint">Created as Draft until its first Cover/Gallery slide is added.</span>
-          <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open Editor</button>
+          <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open Project</button>
         </div>
       </form>
     </div>

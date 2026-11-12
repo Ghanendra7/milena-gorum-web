@@ -504,19 +504,83 @@ input:focus, select:focus, textarea:focus {
   gap: 8px;
 }
 
+.publish-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.publish-pill select {
+  width: auto;
+  height: 30px;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.editor-hero-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.editor-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.editor-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.static-badge {
+  position: static;
+}
+
+.editor-hero-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.editor-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.upload-panel {
+  padding: 18px;
+}
+
 .project-row {
   display: grid;
-  grid-template-columns: 24px 68px 52px 1fr auto auto auto;
+  grid-template-columns: 20px 54px 56px minmax(220px, 1.8fr) 130px auto auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
-  transition: border-color 0.15s ease, opacity 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
-.project-row.is-draggable {
+.project-row:hover {
+  border-color: var(--border-strong);
+}
+
+.project-row.is-draggable .project-row-handle {
   cursor: grab;
 }
 
@@ -543,13 +607,27 @@ input:focus, select:focus, textarea:focus {
   font-weight: 600;
 }
 
+.row-open-thumb {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: block;
+}
+
 .project-row-thumb {
-  width: 52px;
-  height: 38px;
+  width: 56px;
+  height: 40px;
   border-radius: 4px;
   object-fit: cover;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.row-open-thumb:hover .project-row-thumb {
+  transform: scale(1.04);
 }
 
 .project-row-info {
@@ -559,12 +637,56 @@ input:focus, select:focus, textarea:focus {
   gap: 3px;
 }
 
-.project-row-title {
-  font-weight: 600;
-  display: flex;
+.project-row-inputs {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.3fr);
+  gap: 6px;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+}
+
+.inline-input {
+  width: 100%;
+  height: 28px !important;
+  padding: 0 7px !important;
+  border: 1px solid transparent !important;
+  border-radius: 5px;
+  background: transparent !important;
+  font-size: 13px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.inline-input:hover {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+}
+
+.inline-input:focus {
+  border-color: var(--text) !important;
+  background: var(--bg) !important;
+  outline: none !important;
+}
+
+.inline-input-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.inline-input-sub {
+  color: var(--muted);
+}
+
+.inline-select {
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 0 6px !important;
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+}
+
+.inline-select:hover,
+.inline-select:focus {
+  border-color: var(--text) !important;
+  background: var(--bg) !important;
 }
 
 .project-row-meta {
@@ -572,17 +694,33 @@ input:focus, select:focus, textarea:focus {
   color: var(--muted);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  padding-left: 7px;
+}
+
+.project-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .meta-pill {
   font-size: 11px;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
+}
+
+.meta-pill-btn {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.meta-pill-btn:hover {
+  filter: brightness(0.95);
 }
 
 .meta-pill.is-draft {
@@ -1123,7 +1261,10 @@ input:focus, select:focus, textarea:focus {
     grid-template-columns: 1fr;
   }
   .project-row {
-    grid-template-columns: 20px 52px 44px 1fr;
+    grid-template-columns: 20px 46px 50px 1fr;
+  }
+  .project-row-inputs {
+    grid-template-columns: 1fr;
   }
   .project-row > :nth-child(n+5) {
     grid-column: 1 / -1;
