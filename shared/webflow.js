@@ -115,8 +115,8 @@ export function detectProjectFields(fields, mediaCollectionId) {
     slug: "slug",
     sequence: findField(fields, {
       types: ["Number", "PlainText"],
-      slugPatterns: [/^sequence$/, /sequence/, /seq/, /number/, /^order$/],
-      namePatterns: [/sequence/, /number/, /order/],
+      slugPatterns: [/^sequence$/, /^project-number$/, /project.*number/, /number/, /sequence/, /seq/, /^order$/],
+      namePatterns: [/^project\s*number$/, /project.*number/, /number/, /sequence/, /order/],
     }),
     client: findField(fields, {
       types: ["PlainText"],
@@ -193,13 +193,13 @@ export function detectMediaFields(fields, projectsCollectionId) {
     fillMobile,
     focusX: findField(fields, {
       types: ["Number", "PlainText"],
-      slugPatterns: [/focus-x/, /focal-x/, /focus_x/, /-x$/],
-      namePatterns: [/focus\s*x/, /focal\s*x/],
+      slugPatterns: [/focus-x/, /focal-x/, /focus_x/, /\bx-axis\b/, /coordinates-x\b/, /-x$/],
+      namePatterns: [/focus\s*x/, /focal\s*x/, /\bx\s*axis\b/, /coordinates\s+x\b/],
     }),
     focusY: findField(fields, {
       types: ["Number", "PlainText"],
-      slugPatterns: [/focus-y/, /focal-y/, /focus_y/, /-y$/],
-      namePatterns: [/focus\s*y/, /focal\s*y/],
+      slugPatterns: [/focus-y/, /focal-y/, /focus_y/, /\by-axis\b/, /coordinates-y\b/, /-y$/],
+      namePatterns: [/focus\s*y/, /focal\s*y/, /\by\s*axis\b/, /coordinates\s+y\b/],
     }),
     alt: findField(fields, {
       types: ["PlainText"],
