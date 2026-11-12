@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Milena Gorum — CMS</title>
+  <title>Milena Gorum | CMS</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
   <!-- Auth Gate -->
   <main id="authGate" class="auth-gate" hidden>
@@ -108,7 +110,8 @@
           </div>
 
           <div class="editor-hero-actions">
-            <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp; Media</button>
+            <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp;
+              Media</button>
             <button id="unpublishProjectBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
             <button id="deleteProjectBtn" type="button" class="btn btn-ghost btn-sm btn-danger-text">Delete</button>
           </div>
@@ -121,7 +124,8 @@
               <h2>Project Details</h2>
               <span id="projectDirtyBadge" class="badge-dirty" hidden>Unsaved changes</span>
             </div>
-            <button id="saveProjectDetailsBtn" type="button" class="btn btn-primary btn-sm" disabled>Save Details</button>
+            <button id="saveProjectDetailsBtn" type="button" class="btn btn-primary btn-sm" disabled>Save
+              Details</button>
           </summary>
 
           <div class="details-grid">
@@ -172,7 +176,8 @@
                   <input id="editProjFeatured" type="checkbox" />
                   <span>Feature in Home</span>
                 </label>
-                <input id="editProjFeaturedSeq" type="number" step="1" placeholder="Featured seq #" class="input-compact" />
+                <input id="editProjFeaturedSeq" type="number" step="1" placeholder="Featured seq #"
+                  class="input-compact" />
               </div>
             </div>
           </div>
@@ -187,11 +192,13 @@
             </div>
             <div class="queue-toolbar-right">
               <button id="resetGalleryOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Reset Order</button>
-              <button id="saveGalleryOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Gallery Order</button>
+              <button id="saveGalleryOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Gallery
+                Order</button>
             </div>
           </div>
           <div id="existingGalleryGrid" class="queue-grid"></div>
-          <p id="existingGalleryEmpty" class="muted" hidden>No slides in this project yet. Drop photos or add a Bunny video below.</p>
+          <p id="existingGalleryEmpty" class="muted" hidden>No slides in this project yet. Drop photos or add a Bunny
+            video below.</p>
         </section>
 
         <!-- Batch Upload Drop Zone -->
@@ -218,7 +225,8 @@
             <input id="fileInput" type="file" accept="image/*" multiple hidden />
             <div class="dropzone-inner">
               <p class="dropzone-title">Drop raw project images here</p>
-              <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media CMS creation happen automatically.</p>
+              <p class="dropzone-sub">Select dozens of photos at once—resizing, compression, Cover fallback, and Media
+                CMS creation happen automatically.</p>
               <div class="dropzone-buttons">
                 <button id="browseBtn" type="button" class="btn btn-primary">Choose Images</button>
                 <button id="addVideoBtn" type="button" class="btn btn-secondary">+ Add Bunny Video Slide</button>
@@ -235,7 +243,8 @@
               <span id="queueStats" class="muted"></span>
             </div>
             <div class="queue-toolbar-right">
-              <button id="toggleAllDesktopBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Desktop</button>
+              <button id="toggleAllDesktopBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill
+                Desktop</button>
               <button id="toggleAllMobileBtn" type="button" class="btn btn-ghost btn-sm">Toggle All Fill Mobile</button>
               <button id="clearQueueBtn" type="button" class="btn btn-ghost btn-sm">Clear Queue</button>
             </div>
@@ -356,7 +365,8 @@
         <p id="newProjError" class="error-text" hidden></p>
         <div class="modal-footer" style="padding: 14px 0 0; border-top: 1px solid var(--border);">
           <span class="field-hint">Created as Draft until its first Cover/Gallery slide is added.</span>
-          <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open Project</button>
+          <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open
+            Project</button>
         </div>
       </form>
     </div>
@@ -373,12 +383,15 @@
         <button id="closeSlideDeleteBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
       </div>
       <div class="schema-body">
-        <p style="margin:0;">Choose whether to unlink this slide from the current project's Gallery only, or permanently delete the Media CMS item from Webflow.</p>
+        <p style="margin:0;">Choose whether to unlink this slide from the current project's Gallery only, or permanently
+          delete the Media CMS item from Webflow.</p>
         <p id="slideDeleteCoverWarn" class="banner is-warn" hidden></p>
       </div>
       <div class="modal-footer">
-        <button id="removeFromGalleryBtn" type="button" class="btn btn-secondary btn-sm">Remove from Gallery Only</button>
-        <button id="deleteMediaPermanentBtn" type="button" class="btn btn-danger btn-sm">Delete Media Permanently</button>
+        <button id="removeFromGalleryBtn" type="button" class="btn btn-secondary btn-sm">Remove from Gallery
+          Only</button>
+        <button id="deleteMediaPermanentBtn" type="button" class="btn btn-danger btn-sm">Delete Media
+          Permanently</button>
       </div>
     </div>
   </div>
@@ -387,4 +400,5 @@
   <script src="./media-utils.js"></script>
   <script src="./app.js"></script>
 </body>
+
 </html>

@@ -46,3 +46,4 @@ export async function onRequestPost({ request, env }) {
     return jsonError(err?.message || "Failed to trigger Webflow site publish.", 500);
   }
 }
+
