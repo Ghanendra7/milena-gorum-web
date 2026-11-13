@@ -771,13 +771,6 @@
         statusBadge.textContent = "Edited";
         statusBadge.className = "slide-state-badge is-dirty";
       });
-      nameInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          nameInput.blur();
-          if (edit.dirty && !edit.busy) saveExistingSlide(mediaId);
-        }
-      });
       body.appendChild(nameInput);
 
       const videoInput = document.createElement("input");
@@ -793,13 +786,6 @@
         saveSlideBtn.classList.add("is-dirty");
         statusBadge.textContent = "Edited";
         statusBadge.className = "slide-state-badge is-dirty";
-      });
-      videoInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          videoInput.blur();
-          if (edit.dirty && !edit.busy) saveExistingSlide(mediaId);
-        }
       });
       body.appendChild(videoInput);
 
@@ -2733,23 +2719,6 @@
 
   els.editProjFeatured.addEventListener("change", () => {
     els.editProjFeaturedSeq.disabled = !els.editProjFeatured.checked;
-  });
-
-  [
-    els.editProjName,
-    els.editProjSlug,
-    els.editProjSeq,
-    els.editProjSubtitle,
-    els.editProjFeaturedSeq,
-  ].forEach((el) => {
-    if (!el) return;
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        el.blur();
-        if (state.projectDirty) saveProjectDetails();
-      }
-    });
   });
 
   els.saveProjectDetailsBtn.addEventListener("click", (e) => {
