@@ -38,6 +38,54 @@
     return { mime: "image/webp", ext: "webp", maxEdge: 2400 };
   }
 
+  function isTiffFile(file) {
+    if (!file) return false;
+    const type = String(file.type || "").toLowerCase();
+    const name = String(file.name || "").toLowerCase();
+    return type === "image/tiff" || type === "image/tif" || /\.(tiff?|tif)$/i.test(name);
+  }
+
+  async function decodeTiffToCanvas(file) {
+    const buffer = await file.arrayBuffer();
+    const UTIF = window.UTIF || (typeof self !== "undefined" && self.UTIF);
+    if (!UTIF || typeof UTIF.decode !== "function") {
+      throw new Error("TIFF decoder library is not loaded.");
+    }
+    const ifds = UTIF.decode(buffer);
+    if (!ifds || !ifds.length) {
+      throw new Error("Could not parse TIFF structure (no image directories found).");
+    }
+
+    // Select the primary/highest-resolution image IFD
+    let selectedIFD = ifds[0];
+    let maxPixels = ((selectedIFD.t256 && selectedIFD.t256[0]) || 0) * ((selectedIFD.t257 && selectedIFD.t257[0]) || 0);
+    for (let i = 1; i < ifds.length; i++) {
+      const ifd = ifds[i];
+      const px = ((ifd.t256 && ifd.t256[0]) || 0) * ((ifd.t257 && ifd.t257[0]) || 0);
+      if (px > maxPixels) {
+        maxPixels = px;
+        selectedIFD = ifd;
+      }
+    }
+
+    UTIF.decodeImage(buffer, selectedIFD);
+    const rgba = UTIF.toRGBA8(selectedIFD);
+    const width = selectedIFD.width;
+    const height = selectedIFD.height;
+    if (!width || !height) {
+      throw new Error("Invalid TIFF dimensions.");
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    const clamped = new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+    const imgData = new ImageData(clamped, width, height);
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  }
+
   async function loadBitmap(file) {
     if (typeof createImageBitmap === "function") {
       return createImageBitmap(file);
@@ -64,9 +112,10 @@
   }
 
   async function compressImageFile(file, preset) {
-    const bitmap = await loadBitmap(file);
-    const origW = bitmap.width;
-    const origH = bitmap.height;
+    const isTiff = isTiffFile(file);
+    const source = isTiff ? await decodeTiffToCanvas(file) : await loadBitmap(file);
+    const origW = source.width;
+    const origH = source.height;
 
     let scale = 1;
     const longest = Math.max(origW, origH);
@@ -88,7 +137,7 @@
       canvas.width = w;
       canvas.height = h;
       ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(bitmap, 0, 0, w, h);
+      ctx.drawImage(source, 0, 0, w, h);
       return canvasToBlob(canvas, mime, quality);
     };
 
@@ -109,7 +158,11 @@
       blob = await tryEncode(targetW, targetH, outputMime, 0.72);
     }
 
-    if (typeof bitmap.close === "function") bitmap.close();
+    if (typeof source.close === "function") source.close();
+    if (isTiff && source instanceof HTMLCanvasElement) {
+      source.width = 0;
+      source.height = 0;
+    }
 
     if (!blob || blob.size > MAX_WEBFLOW_IMAGE_BYTES) {
       throw new Error(`Compressed image still exceeds Webflow's 4 MB cap (${formatBytes(blob?.size || 0)}).`);
@@ -138,6 +191,8 @@
     formatBytes,
     extractVideoId,
     getPresetConfig,
+    isTiffFile,
+    decodeTiffToCanvas,
     compressImageFile,
   };
 })();

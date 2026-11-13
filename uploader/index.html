@@ -138,7 +138,7 @@
                 <span id="infoPicEmpty" class="muted">No image</span>
               </div>
               <p class="field-hint" style="margin:0;">3:4 Aspect Ratio recommended</p>
-              <input id="infoPicInput" type="file" accept="image/*" hidden />
+              <input id="infoPicInput" type="file" accept="image/*,.tif,.tiff" hidden />
               <div class="info-pic-actions">
                 <button id="replaceInfoPicBtn" type="button" class="btn btn-secondary btn-sm">Replace</button>
                 <button id="removeInfoPicBtn" type="button" class="btn btn-ghost btn-sm">Remove</button>
@@ -288,7 +288,7 @@
           </div>
 
           <div id="dropZone" class="dropzone" tabindex="0" role="button" aria-label="Drop images or click to select">
-            <input id="fileInput" type="file" accept="image/*" multiple hidden />
+            <input id="fileInput" type="file" accept="image/*,.tif,.tiff" multiple hidden />
             <div class="dropzone-inner">
               <p class="dropzone-title">Drop images here</p>
               <p class="dropzone-sub">Select multiple images or add a Bunny video slide.</p>
@@ -533,6 +533,7 @@
     </div>
   </div>
 
+  <script src="./utif.js"></script>
   <script src="./md5.js"></script>
   <script src="./media-utils.js"></script>
   <script src="./app.js"></script>

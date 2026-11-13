@@ -6,6 +6,7 @@
     formatBytes,
     extractVideoId,
     getPresetConfig,
+    isTiffFile,
     compressImageFile,
   } = window.mgMediaUtils;
 
@@ -1022,10 +1023,10 @@
 
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = "image/*,.tif,.tiff";
     input.addEventListener("change", async () => {
       const file = input.files?.[0];
-      if (!file || !file.type.startsWith("image/")) return;
+      if (!file || (!file.type.startsWith("image/") && !isTiffFile(file))) return;
       edit.busy = true;
       renderExistingGallery();
       try {
@@ -1189,17 +1190,18 @@
   }
 
   async function addFilesToQueue(fileList) {
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
+    const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/") || isTiffFile(f));
     if (!files.length) return;
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
 
     const newItems = files.map((file) => {
       const baseName = file.name.replace(/\.[^.]+$/, "");
+      const isTiff = isTiffFile(file);
       return {
         id: makeQueueId(),
         kind: "image",
         file,
-        previewUrl: URL.createObjectURL(file),
+        previewUrl: isTiff ? "" : URL.createObjectURL(file),
         name: formatDefaultMediaName(baseName),
         alt: "",
         origSize: file.size,
@@ -1221,6 +1223,10 @@
     await runWithConcurrency(newItems, 2, async (item) => {
       try {
         item.compressed = await compressImageFile(item.file, preset);
+        if (isTiffFile(item.file) && item.compressed?.blob) {
+          if (item.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(item.previewUrl);
+          item.previewUrl = URL.createObjectURL(item.compressed.blob);
+        }
         item.status = "ready";
       } catch (err) {
         item.status = "error";
@@ -1373,7 +1379,12 @@
         thumbWrap.appendChild(img);
       } else {
         const img = document.createElement("img");
-        img.src = item.previewUrl;
+        if (item.previewUrl) {
+          img.src = item.previewUrl;
+        } else {
+          img.alt = item.name;
+          img.style.background = "#f4f4f5";
+        }
         img.alt = item.name;
         img.style.objectPosition = `${item.focusX}% ${item.focusY}%`;
         thumbWrap.appendChild(img);
@@ -1455,13 +1466,13 @@
         posterBtn.addEventListener("click", () => {
           const input = document.createElement("input");
           input.type = "file";
-          input.accept = "image/*";
+          input.accept = "image/*,.tif,.tiff";
           input.addEventListener("change", async () => {
             const file = input.files?.[0];
-            if (!file || !file.type.startsWith("image/")) return;
+            if (!file || (!file.type.startsWith("image/") && !isTiffFile(file))) return;
             if (item.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(item.previewUrl);
             item.file = file;
-            item.previewUrl = URL.createObjectURL(file);
+            item.previewUrl = isTiffFile(file) ? "" : URL.createObjectURL(file);
             item.origSize = file.size;
             item.compressed = null;
             item.uploadedAsset = null;
@@ -1470,6 +1481,10 @@
             renderQueue();
             try {
               item.compressed = await compressImageFile(file, getPresetConfig(els.compressionPreset.value));
+              if (isTiffFile(file) && item.compressed?.blob) {
+                if (item.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(item.previewUrl);
+                item.previewUrl = URL.createObjectURL(item.compressed.blob);
+              }
               item.status = "ready";
             } catch (err) {
               item.status = "error";
@@ -3172,7 +3187,7 @@
   els.replaceInfoPicBtn.addEventListener("click", () => els.infoPicInput.click());
   els.infoPicInput.addEventListener("change", async () => {
     const file = els.infoPicInput.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file || (!file.type.startsWith("image/") && !isTiffFile(file))) return;
     els.replaceInfoPicBtn.disabled = true;
     els.replaceInfoPicBtn.textContent = "Compressing…";
     try {
