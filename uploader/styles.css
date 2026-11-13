@@ -19,11 +19,14 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background: var(--bg);
@@ -187,7 +190,7 @@ html, body {
 }
 
 .field label,
-.field > span {
+.field>span {
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
@@ -233,7 +236,9 @@ textarea {
   resize: vertical;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: 2px solid #0f0f0f;
   outline-offset: -1px;
 }
@@ -480,7 +485,7 @@ input:focus, select:focus, textarea:focus {
   background: transparent;
   color: var(--muted);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: -0.01em;
   padding: 7px 15px;
@@ -1311,58 +1316,74 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 900px) {
+
   .config-grid,
   .details-grid,
   .dir-filters {
     grid-template-columns: 1fr;
   }
+
   .field-span-2 {
     grid-column: span 1;
   }
+
   .project-picker {
     grid-template-columns: 1fr;
   }
+
   .project-row {
     grid-template-columns: 20px 46px 50px 1fr;
   }
+
   .project-row-inputs {
     grid-template-columns: 1fr;
   }
-  .project-row > :nth-child(n+5) {
+
+  .project-row> :nth-child(n+5) {
     grid-column: 1 / -1;
     justify-self: start;
   }
+
   .info-top-panel {
     grid-template-columns: 1fr !important;
   }
+
   .info-row-item {
     grid-template-columns: 1fr auto !important;
   }
+
   .info-row-item .info-row-url {
     grid-column: 1 / -1;
   }
+
   .workspace-nav {
     flex-wrap: wrap;
     gap: 8px;
   }
+
   .workspace-tabs {
     gap: 2px;
   }
+
   .workspace-tab {
     font-size: 12.5px;
     padding: 6px 11px;
   }
+
   .topbar {
     padding: 12px 16px;
   }
+
   .workspace {
     padding: 16px;
   }
+
   .action-bar {
     flex-direction: column;
     align-items: stretch;
     padding: 12px 16px;
   }
+
   .app-shell {
     padding-bottom: 140px;
   }
@@ -1521,4 +1542,3 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   gap: 4px;
 }
-
