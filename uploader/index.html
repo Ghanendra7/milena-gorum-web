@@ -91,14 +91,17 @@
               <option value="draft">Drafts Only</option>
               <option value="featured">Featured on Home</option>
             </select>
-            <select id="dirSortSelect" aria-label="Sort projects">
-              <option value="manual">Manual</option>
-              <option value="alpha">A to Z</option>
-              <option value="newest">Newly added</option>
-            </select>
             <button id="clearDirFiltersBtn" type="button" class="btn btn-ghost btn-sm" hidden>Clear</button>
           </div>
-          <p id="dirOrderHint" class="field-hint"></p>
+          <div class="dir-toolbar-footer">
+            <p id="dirOrderHint" class="field-hint"></p>
+            <div id="dirAutoSortGroup" class="dir-auto-sort">
+              <span class="muted">Auto-sort:</span>
+              <button id="sortAlphaBtn" type="button" class="btn-link">A to Z</button>
+              <span class="muted">·</span>
+              <button id="sortNewestBtn" type="button" class="btn-link">Newly added</button>
+            </div>
+          </div>
         </section>
 
         <div id="projectOrderList" class="project-order-list"></div>
