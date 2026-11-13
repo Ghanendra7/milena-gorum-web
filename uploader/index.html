@@ -13,18 +13,20 @@
 <body>
   <!-- Auth Gate -->
   <main id="authGate" class="auth-gate" hidden>
-    <div class="auth-card">
-      <div class="brand-kicker">MILENA GORUM</div>
-      <h1>CMS</h1>
-      <form id="loginForm" class="stack-sm">
-        <label class="field">
-          <span>Password</span>
-          <input id="passwordInput" type="password" autocomplete="current-password" required placeholder="••••••••" />
-        </label>
-        <button id="loginBtn" type="submit" class="btn btn-primary">Sign In</button>
-        <p id="loginError" class="error-text" hidden></p>
-      </form>
-    </div>
+    <form id="loginForm" class="auth-minimal-form">
+      <div class="auth-input-wrap">
+        <input
+          id="passwordInput"
+          type="password"
+          autocomplete="current-password"
+          required
+          placeholder="Password"
+          autofocus
+        />
+        <button id="loginBtn" type="submit" class="auth-submit-btn" aria-label="Sign In" title="Sign In">→</button>
+      </div>
+      <p id="loginError" class="error-text" hidden></p>
+    </form>
   </main>
 
   <!-- Main Workspace -->

@@ -272,6 +272,9 @@
     state.authenticated = isAuthed;
     els.authGate.hidden = isAuthed;
     els.appShell.hidden = !isAuthed;
+    if (!isAuthed) {
+      setTimeout(() => els.passwordInput?.focus(), 60);
+    }
   }
 
   async function apiJson(url, options = {}) {
