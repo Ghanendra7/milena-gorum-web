@@ -1771,7 +1771,7 @@
       els.dirOrderHint.textContent = "Clear filters to drag-and-drop reorder Project Numbers.";
     } else if (isHomeMode) {
       els.dirOrderHint.textContent =
-        "Drag rows or use ↑ / ↓ to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence.";
+        "Drag rows to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence.";
     } else if (sortMode === "alpha") {
       els.dirOrderHint.textContent =
         "Sorted A to Z. Project numbers (#01–#41) have updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
@@ -1780,7 +1780,7 @@
         "Sorted by Newest first. Project numbers (#01–#41) have updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
     } else {
       els.dirOrderHint.textContent =
-        "Drag rows or use ↑ / ↓ to reorder Project Numbers, edit Title / Sub-title inline, or click any project to manage its gallery & upload media.";
+        "Drag rows to reorder Project Numbers, edit Title / Sub-title inline, or click any project to manage its gallery & upload media.";
     }
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
@@ -1818,7 +1818,7 @@
 
     const canReorder = !filtersActive && (isHomeMode || isManualSort);
 
-    visibleIds.forEach((id, visibleIdx) => {
+    visibleIds.forEach((id) => {
       const p = byId.get(id);
       const listIdx = sourceIds.indexOf(id);
       const targetNum = listIdx + 1;
@@ -2046,9 +2046,17 @@
       // Quick Home feature toggle
       const homeBtn = document.createElement("button");
       homeBtn.type = "button";
-      homeBtn.className = "icon-btn";
-      homeBtn.textContent = p.featured ? "★ Home" : "☆ Home";
-      homeBtn.title = p.featured ? "Remove from Homepage Featured" : "Feature on Homepage";
+      homeBtn.className = `icon-btn home-star-btn${p.featured ? " is-featured" : ""}`;
+      homeBtn.title = p.featured
+        ? "Featured on Homepage (Click to remove)"
+        : "Feature on Homepage (Click to add)";
+      homeBtn.setAttribute(
+        "aria-label",
+        p.featured ? "Featured on Homepage" : "Feature on Homepage"
+      );
+      homeBtn.innerHTML = p.featured
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       homeBtn.addEventListener("click", async () => {
         homeBtn.disabled = true;
         const nextFeatured = !p.featured;
@@ -2061,42 +2069,6 @@
         renderProjectOrderList();
       });
       row.appendChild(homeBtn);
-
-      // Order up/down buttons
-      const moveBox = document.createElement("div");
-      moveBox.className = "slide-move-btns";
-      const upBtn = document.createElement("button");
-      upBtn.type = "button";
-      upBtn.className = "icon-btn";
-      upBtn.textContent = "↑";
-      upBtn.disabled = !canReorder || visibleIdx === 0;
-      upBtn.addEventListener("click", () => {
-        const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
-        const [m] = arr.splice(listIdx, 1);
-        arr.splice(listIdx - 1, 0, m);
-        if (!isHomeMode && els.dirSortSelect) {
-          els.dirSortSelect.value = "manual";
-        }
-        renderProjectOrderList();
-      });
-
-      const downBtn = document.createElement("button");
-      downBtn.type = "button";
-      downBtn.className = "icon-btn";
-      downBtn.textContent = "↓";
-      downBtn.disabled = !canReorder || listIdx >= sourceIds.length - 1;
-      downBtn.addEventListener("click", () => {
-        const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
-        const [m] = arr.splice(listIdx, 1);
-        arr.splice(listIdx + 1, 0, m);
-        if (!isHomeMode && els.dirSortSelect) {
-          els.dirSortSelect.value = "manual";
-        }
-        renderProjectOrderList();
-      });
-      moveBox.appendChild(upBtn);
-      moveBox.appendChild(downBtn);
-      row.appendChild(moveBox);
 
       // Open project button
       const editBtn = document.createElement("button");
