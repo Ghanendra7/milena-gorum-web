@@ -35,6 +35,7 @@
     orderDraftAll: [],
     orderDraftHome: [],
     dragOrderProjectId: null,
+    dragInfoRow: null,
     newProjSlugManual: false,
     information: null,
     infoDraft: null,
@@ -2118,13 +2119,18 @@
   }
 
   // Information Page CMS Helpers
-  const INFO_SECTIONS = [
-    { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Link (Optional)" },
-    { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Link (Optional)" },
-    { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "Link (Optional)" },
-    { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "Link (Optional)" },
-    { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "Link (Optional)" },
+  const INFO_COLUMNS = [
+    [
+      { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Link (Optional)" },
+      { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Link (Optional)" },
+      { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "Link (Optional)" },
+      { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "Link (Optional)" },
+    ],
+    [
+      { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "Link (Optional)" },
+    ],
   ];
+  const INFO_SECTIONS = INFO_COLUMNS.flat();
 
   function escapeHtml(str) {
     return String(str || "")
@@ -2247,6 +2253,7 @@
     state.infoDirty = dirty;
     els.infoDirtyBadge.hidden = !dirty;
     els.saveInfoBtn.disabled = !dirty;
+    els.saveInfoBtn.classList.toggle("is-dirty", Boolean(dirty));
   }
 
   function renderInformationEditor() {
@@ -2276,122 +2283,163 @@
     renderInfoListsGrid();
   }
 
+  function buildInfoListPanel(draft, { key, title, textPlaceholder, urlPlaceholder }) {
+    const rows = draft[key] || [];
+    const panel = document.createElement("section");
+    panel.className = "panel info-list-panel";
+    panel.dataset.sectionKey = key;
+
+    const header = document.createElement("div");
+    header.className = "info-list-header";
+    const h3 = document.createElement("h3");
+    h3.textContent = `${title} (${rows.length})`;
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "btn btn-ghost btn-sm";
+    addBtn.textContent = "+ Add";
+    addBtn.title = `Add ${title.replace(/s$/, "")}`;
+    addBtn.addEventListener("click", () => {
+      rows.push({ text: "", url: "" });
+      setInfoDirty(true);
+      renderInfoListsGrid();
+      const newPanel = els.infoListsGrid.querySelector(`[data-section-key="${key}"]`);
+      if (newPanel) {
+        const inputs = newPanel.querySelectorAll(".info-row-text");
+        const lastInput = inputs[inputs.length - 1];
+        if (lastInput) lastInput.focus();
+      }
+    });
+
+    header.appendChild(h3);
+    header.appendChild(addBtn);
+    panel.appendChild(header);
+
+    const stack = document.createElement("div");
+    stack.className = "info-rows-stack";
+
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "field-hint";
+      empty.style.margin = "4px 0 0";
+      empty.textContent = `No items yet. Click "+ Add" to add the first row.`;
+      stack.appendChild(empty);
+    } else {
+      rows.forEach((row, idx) => {
+        const itemEl = document.createElement("div");
+        itemEl.className = "info-row-item is-draggable";
+        itemEl.draggable = true;
+
+        itemEl.addEventListener("focusin", (e) => {
+          if (e.target.matches("input, textarea, select")) itemEl.draggable = false;
+        });
+        itemEl.addEventListener("focusout", () => {
+          itemEl.draggable = true;
+        });
+
+        itemEl.addEventListener("dragstart", (e) => {
+          if (e.target.closest("input, select, textarea, button")) {
+            e.preventDefault();
+            return;
+          }
+          state.dragInfoRow = { key, index: idx };
+          itemEl.classList.add("is-dragging");
+          e.dataTransfer.effectAllowed = "move";
+        });
+
+        itemEl.addEventListener("dragend", () => {
+          state.dragInfoRow = null;
+          itemEl.classList.remove("is-dragging");
+          panel.querySelectorAll(".is-drag-target").forEach((el) => el.classList.remove("is-drag-target"));
+        });
+
+        itemEl.addEventListener("dragover", (e) => {
+          if (!state.dragInfoRow || state.dragInfoRow.key !== key || state.dragInfoRow.index === idx) return;
+          e.preventDefault();
+          itemEl.classList.add("is-drag-target");
+        });
+
+        itemEl.addEventListener("dragleave", () => {
+          itemEl.classList.remove("is-drag-target");
+        });
+
+        itemEl.addEventListener("drop", (e) => {
+          e.preventDefault();
+          itemEl.classList.remove("is-drag-target");
+          if (!state.dragInfoRow || state.dragInfoRow.key !== key || state.dragInfoRow.index === idx) return;
+          const fromIdx = state.dragInfoRow.index;
+          const toIdx = idx;
+          const [moved] = rows.splice(fromIdx, 1);
+          rows.splice(toIdx, 0, moved);
+          state.dragInfoRow = null;
+          setInfoDirty(true);
+          renderInfoListsGrid();
+        });
+
+        const handle = document.createElement("div");
+        handle.className = "info-row-handle";
+        handle.textContent = "⋮⋮";
+        handle.title = "Drag to reorder";
+
+        const textInput = document.createElement("input");
+        textInput.type = "text";
+        textInput.className = "inline-input info-row-text";
+        textInput.value = row.text || "";
+        textInput.placeholder = textPlaceholder;
+        textInput.addEventListener("input", () => {
+          row.text = textInput.value;
+          setInfoDirty(true);
+        });
+
+        const urlInput = document.createElement("input");
+        urlInput.type = "text";
+        urlInput.className = "inline-input info-row-url";
+        urlInput.value = row.url || "";
+        urlInput.placeholder = urlPlaceholder;
+        urlInput.addEventListener("input", () => {
+          row.url = urlInput.value;
+          setInfoDirty(true);
+        });
+
+        const controls = document.createElement("div");
+        controls.className = "info-row-controls";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "icon-btn is-danger";
+        delBtn.textContent = "✕";
+        delBtn.title = "Delete row";
+        delBtn.addEventListener("click", () => {
+          rows.splice(idx, 1);
+          setInfoDirty(true);
+          renderInfoListsGrid();
+        });
+
+        controls.appendChild(delBtn);
+
+        itemEl.appendChild(handle);
+        itemEl.appendChild(textInput);
+        itemEl.appendChild(urlInput);
+        itemEl.appendChild(controls);
+        stack.appendChild(itemEl);
+      });
+    }
+
+    panel.appendChild(stack);
+    return panel;
+  }
+
   function renderInfoListsGrid() {
     const draft = state.infoDraft;
     if (!draft) return;
     els.infoListsGrid.innerHTML = "";
 
-    INFO_SECTIONS.forEach(({ key, title, textPlaceholder, urlPlaceholder }) => {
-      const rows = draft[key] || [];
-      const panel = document.createElement("section");
-      panel.className = "panel info-list-panel";
-
-      const header = document.createElement("div");
-      header.className = "info-list-header";
-      const h3 = document.createElement("h3");
-      h3.textContent = `${title} (${rows.length})`;
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "btn btn-ghost btn-sm";
-      addBtn.textContent = `+ Add ${title.replace(/s$/, "")}`;
-      addBtn.addEventListener("click", () => {
-        rows.push({ text: "", url: "" });
-        setInfoDirty(true);
-        renderInfoListsGrid();
-        const inputs = panel.querySelectorAll(".info-row-text");
-        const lastInput = inputs[inputs.length - 1];
-        if (lastInput) lastInput.focus();
+    INFO_COLUMNS.forEach((colSections) => {
+      const colEl = document.createElement("div");
+      colEl.className = "info-lists-col";
+      colSections.forEach((sectionDef) => {
+        colEl.appendChild(buildInfoListPanel(draft, sectionDef));
       });
-
-      header.appendChild(h3);
-      header.appendChild(addBtn);
-      panel.appendChild(header);
-
-      const stack = document.createElement("div");
-      stack.className = "info-rows-stack";
-
-      if (!rows.length) {
-        const empty = document.createElement("p");
-        empty.className = "field-hint";
-        empty.style.margin = "4px 0 0";
-        empty.textContent = `No items yet. Click "+ Add ${title.replace(/s$/, "")}" to add the first row.`;
-        stack.appendChild(empty);
-      } else {
-        rows.forEach((row, idx) => {
-          const itemEl = document.createElement("div");
-          itemEl.className = "info-row-item";
-
-          const textInput = document.createElement("input");
-          textInput.type = "text";
-          textInput.className = "inline-input info-row-text";
-          textInput.value = row.text || "";
-          textInput.placeholder = textPlaceholder;
-          textInput.addEventListener("input", () => {
-            row.text = textInput.value;
-            setInfoDirty(true);
-          });
-
-          const urlInput = document.createElement("input");
-          urlInput.type = "text";
-          urlInput.className = "inline-input info-row-url";
-          urlInput.value = row.url || "";
-          urlInput.placeholder = urlPlaceholder;
-          urlInput.addEventListener("input", () => {
-            row.url = urlInput.value;
-            setInfoDirty(true);
-          });
-
-          const controls = document.createElement("div");
-          controls.className = "info-row-controls";
-
-          const upBtn = document.createElement("button");
-          upBtn.type = "button";
-          upBtn.className = "icon-btn";
-          upBtn.textContent = "↑";
-          upBtn.disabled = idx === 0;
-          upBtn.addEventListener("click", () => {
-            const [m] = rows.splice(idx, 1);
-            rows.splice(idx - 1, 0, m);
-            setInfoDirty(true);
-            renderInfoListsGrid();
-          });
-
-          const downBtn = document.createElement("button");
-          downBtn.type = "button";
-          downBtn.className = "icon-btn";
-          downBtn.textContent = "↓";
-          downBtn.disabled = idx === rows.length - 1;
-          downBtn.addEventListener("click", () => {
-            const [m] = rows.splice(idx, 1);
-            rows.splice(idx + 1, 0, m);
-            setInfoDirty(true);
-            renderInfoListsGrid();
-          });
-
-          const delBtn = document.createElement("button");
-          delBtn.type = "button";
-          delBtn.className = "icon-btn is-danger";
-          delBtn.textContent = "✕";
-          delBtn.title = "Delete row";
-          delBtn.addEventListener("click", () => {
-            rows.splice(idx, 1);
-            setInfoDirty(true);
-            renderInfoListsGrid();
-          });
-
-          controls.appendChild(upBtn);
-          controls.appendChild(downBtn);
-          controls.appendChild(delBtn);
-
-          itemEl.appendChild(textInput);
-          itemEl.appendChild(urlInput);
-          itemEl.appendChild(controls);
-          stack.appendChild(itemEl);
-        });
-      }
-
-      panel.appendChild(stack);
-      els.infoListsGrid.appendChild(panel);
+      els.infoListsGrid.appendChild(colEl);
     });
   }
 
@@ -2399,6 +2447,7 @@
     const draft = state.infoDraft;
     if (!draft) return;
     els.saveInfoBtn.disabled = true;
+    els.saveInfoBtn.classList.remove("is-dirty");
     els.saveInfoBtn.textContent = "Saving…";
 
     try {
@@ -2438,6 +2487,7 @@
     } catch (err) {
       showBanner(err.message, "err");
       els.saveInfoBtn.disabled = false;
+      els.saveInfoBtn.classList.add("is-dirty");
     } finally {
       els.saveInfoBtn.textContent = "Save Information";
     }
