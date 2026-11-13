@@ -63,7 +63,7 @@ body {
   gap: 12px;
 }
 
-/* Auth Gate (Ultra-Minimal) */
+/* Auth Gate (Apple Lock Screen Minimal) */
 .auth-gate {
   min-height: 100dvh;
   display: flex;
@@ -75,10 +75,11 @@ body {
 
 .auth-minimal-form {
   width: 100%;
-  max-width: 290px;
+  max-width: 260px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
 .auth-input-wrap {
@@ -90,31 +91,37 @@ body {
 
 .auth-input-wrap input {
   width: 100%;
-  height: 42px;
-  padding: 0 44px 0 16px;
-  font-size: 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  height: 40px;
+  padding: 0 40px 0 16px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.03);
   color: var(--text);
   outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-input-wrap input::placeholder {
+  color: #8e8e93;
+  font-size: 13px;
 }
 
 .auth-input-wrap input:focus {
-  border-color: var(--text);
+  border-color: rgba(0, 0, 0, 0.28);
   background: var(--bg);
-  box-shadow: 0 0 0 1px var(--text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .auth-submit-btn {
   position: absolute;
   right: 5px;
   top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  transform: translateY(-50%) scale(0.8);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   border: none;
   background: #0f0f10;
   color: #ffffff;
@@ -122,28 +129,50 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: opacity 0.15s ease, transform 0.1s ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease;
+}
+
+/* Reveal arrow smoothly when input has text */
+.auth-input-wrap.has-value .auth-submit-btn,
+.auth-input-wrap input:not(:placeholder-shown) + .auth-submit-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  background: #2a2a2e;
 }
 
 .auth-submit-btn:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.95);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .auth-submit-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Apple-style gentle horizontal shake on error */
+.auth-input-wrap.is-shaking {
+  animation: authShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes authShake {
+  10%, 90% { transform: translate3d(-3px, 0, 0); }
+  20%, 80% { transform: translate3d(5px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
 }
 
 .auth-minimal-form .error-text {
   text-align: center;
   font-size: 12px;
-  margin: 4px 0 0;
+  color: var(--err);
+  margin: 0;
+  min-height: 16px;
 }
 
 .brand-kicker {

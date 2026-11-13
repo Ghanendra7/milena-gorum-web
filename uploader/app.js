@@ -268,11 +268,22 @@
     els.globalBanner.className = `banner is-${type}`;
   }
 
+  const authInputWrap = els.passwordInput ? els.passwordInput.closest(".auth-input-wrap") : null;
+  function updateAuthInputState() {
+    if (authInputWrap) {
+      authInputWrap.classList.toggle("has-value", Boolean(els.passwordInput?.value));
+    }
+  }
+  if (els.passwordInput) {
+    els.passwordInput.addEventListener("input", updateAuthInputState);
+  }
+
   function setAuthenticated(isAuthed) {
     state.authenticated = isAuthed;
     els.authGate.hidden = isAuthed;
     els.appShell.hidden = !isAuthed;
     if (!isAuthed) {
+      updateAuthInputState();
       setTimeout(() => els.passwordInput?.focus(), 60);
     }
   }
@@ -2762,11 +2773,20 @@
       });
       if (authData?.token) saveSessionToken(authData.token);
       els.passwordInput.value = "";
+      updateAuthInputState();
       setAuthenticated(true);
       await loadBootstrap();
     } catch (err) {
-      els.loginError.textContent = err.message;
+      els.loginError.textContent = err.message || "Incorrect password";
       els.loginError.hidden = false;
+      if (authInputWrap) {
+        authInputWrap.classList.remove("is-shaking");
+        void authInputWrap.offsetWidth;
+        authInputWrap.classList.add("is-shaking");
+      }
+      els.passwordInput.value = "";
+      updateAuthInputState();
+      els.passwordInput.focus();
     } finally {
       els.loginBtn.disabled = false;
     }
