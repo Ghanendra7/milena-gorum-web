@@ -1799,3 +1799,8 @@ textarea:focus {
   opacity: 1 !important;
   cursor: pointer !important;
 }
+
+#slideDeleteModal .modal-footer {
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -179,7 +179,7 @@
     slideDeleteDesc: document.getElementById("slideDeleteDesc"),
     slideDeleteCoverWarn: document.getElementById("slideDeleteCoverWarn"),
     closeSlideDeleteBtn: document.getElementById("closeSlideDeleteBtn"),
-    removeFromGalleryBtn: document.getElementById("removeFromGalleryBtn"),
+    closeSlideDeleteFooterBtn: document.getElementById("closeSlideDeleteFooterBtn"),
     deleteMediaPermanentBtn: document.getElementById("deleteMediaPermanentBtn"),
   };
 
@@ -876,7 +876,7 @@
       delBtn.type = "button";
       delBtn.className = "icon-btn is-danger";
       delBtn.textContent = "✕";
-      delBtn.title = "Remove or Delete Slide";
+      delBtn.title = "Delete Slide";
       delBtn.disabled = edit.busy;
       delBtn.addEventListener("click", () => openSlideDeleteModal(mediaId));
       commitGroup.appendChild(delBtn);
@@ -1032,31 +1032,31 @@
     const m = state.mediaById[mediaId];
     if (!p || !m) return;
     state.pendingDeleteSlideId = mediaId;
-    els.slideDeleteDesc.textContent = `Slide "${m.name}" (${mediaId})`;
+    els.slideDeleteDesc.textContent = `Slide "${m.name}"`;
     if (p.coverId === mediaId) {
       els.slideDeleteCoverWarn.hidden = false;
       els.slideDeleteCoverWarn.textContent =
-        "This slide is currently the project's Cover. Removing it will automatically switch Cover to the next remaining slide.";
+        "This slide is currently the project's Cover. Deleting it will automatically switch the Cover to the next slide.";
     } else {
       els.slideDeleteCoverWarn.hidden = true;
     }
     els.slideDeleteModal.hidden = false;
   }
 
-  async function executeSlideRemoval(mode) {
+  async function executeSlideRemoval() {
     const p = getSelectedProject();
     const mediaId = state.pendingDeleteSlideId;
     if (!p || !mediaId) return;
 
-    els.removeFromGalleryBtn.disabled = true;
     els.deleteMediaPermanentBtn.disabled = true;
+    els.deleteMediaPermanentBtn.textContent = "Deleting…";
 
     try {
       await apiJson("/api/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: mode === "delete" ? "delete" : "remove-from-gallery",
+          action: "delete",
           projectId: p.id,
           mediaId,
           publishMode: els.publishMode.value,
@@ -1066,12 +1066,12 @@
       els.slideDeleteModal.hidden = true;
       state.pendingDeleteSlideId = null;
       await loadBootstrap(p.id);
-      showBanner(mode === "delete" ? "Slide permanently deleted from Webflow CMS." : "Slide removed from project's Gallery.", "ok");
+      showBanner("Slide deleted successfully.", "ok");
     } catch (err) {
       showBanner(err.message, "err");
     } finally {
-      els.removeFromGalleryBtn.disabled = false;
       els.deleteMediaPermanentBtn.disabled = false;
+      els.deleteMediaPermanentBtn.textContent = "Delete Slide";
     }
   }
 
@@ -3155,12 +3155,15 @@
   });
 
   // Slide Delete Modal Listeners
-  els.closeSlideDeleteBtn.addEventListener("click", () => {
+  const closeSlideDeleteModal = () => {
     state.pendingDeleteSlideId = null;
     els.slideDeleteModal.hidden = true;
-  });
-  els.removeFromGalleryBtn.addEventListener("click", () => executeSlideRemoval("remove-from-gallery"));
-  els.deleteMediaPermanentBtn.addEventListener("click", () => executeSlideRemoval("delete"));
+  };
+  els.closeSlideDeleteBtn.addEventListener("click", closeSlideDeleteModal);
+  if (els.closeSlideDeleteFooterBtn) {
+    els.closeSlideDeleteFooterBtn.addEventListener("click", closeSlideDeleteModal);
+  }
+  els.deleteMediaPermanentBtn.addEventListener("click", executeSlideRemoval);
 
   // Modal Escape / Backdrop Close & Upload Leave Guard
   [

@@ -430,26 +430,23 @@
     </div>
   </div>
 
-  <!-- Slide Remove / Delete Modal -->
+  <!-- Slide Delete Modal -->
   <div id="slideDeleteModal" class="modal-backdrop" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="slideDeleteTitle">
       <div class="modal-header">
         <div>
-          <h3 id="slideDeleteTitle">Remove or Delete Slide</h3>
+          <h3 id="slideDeleteTitle">Delete Slide</h3>
           <p id="slideDeleteDesc" class="muted"></p>
         </div>
         <button id="closeSlideDeleteBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
       </div>
       <div class="schema-body">
-        <p style="margin:0;">Choose whether to unlink this slide from the current project's Gallery only, or permanently
-          delete the Media CMS item from Webflow.</p>
+        <p style="margin:0;">Are you sure you want to delete this slide? This action cannot be undone.</p>
         <p id="slideDeleteCoverWarn" class="banner is-warn" hidden></p>
       </div>
       <div class="modal-footer">
-        <button id="removeFromGalleryBtn" type="button" class="btn btn-secondary btn-sm">Remove from Gallery
-          Only</button>
-        <button id="deleteMediaPermanentBtn" type="button" class="btn btn-danger btn-sm">Delete Media
-          Permanently</button>
+        <button id="closeSlideDeleteFooterBtn" type="button" class="btn btn-secondary btn-sm">Cancel</button>
+        <button id="deleteMediaPermanentBtn" type="button" class="btn btn-danger btn-sm">Delete Slide</button>
       </div>
     </div>
   </div>
