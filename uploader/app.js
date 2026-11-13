@@ -181,6 +181,29 @@
     closeSlideDeleteBtn: document.getElementById("closeSlideDeleteBtn"),
     closeSlideDeleteFooterBtn: document.getElementById("closeSlideDeleteFooterBtn"),
     deleteMediaPermanentBtn: document.getElementById("deleteMediaPermanentBtn"),
+
+    bunnyVideoModal: document.getElementById("bunnyVideoModal"),
+    bunnyVideoForm: document.getElementById("bunnyVideoForm"),
+    bunnyVideoInput: document.getElementById("bunnyVideoInput"),
+    bunnyVideoError: document.getElementById("bunnyVideoError"),
+    closeBunnyVideoBtn: document.getElementById("closeBunnyVideoBtn"),
+    cancelBunnyVideoBtn: document.getElementById("cancelBunnyVideoBtn"),
+    submitBunnyVideoBtn: document.getElementById("submitBunnyVideoBtn"),
+
+    confirmModal: document.getElementById("confirmModal"),
+    confirmModalTitle: document.getElementById("confirmModalTitle"),
+    confirmModalDesc: document.getElementById("confirmModalDesc"),
+    confirmModalMessage: document.getElementById("confirmModalMessage"),
+    closeConfirmModalBtn: document.getElementById("closeConfirmModalBtn"),
+    cancelConfirmModalBtn: document.getElementById("cancelConfirmModalBtn"),
+    okConfirmModalBtn: document.getElementById("okConfirmModalBtn"),
+
+    bioLinkModal: document.getElementById("bioLinkModal"),
+    bioLinkForm: document.getElementById("bioLinkForm"),
+    bioLinkInput: document.getElementById("bioLinkInput"),
+    closeBioLinkBtn: document.getElementById("closeBioLinkBtn"),
+    cancelBioLinkBtn: document.getElementById("cancelBioLinkBtn"),
+    submitBioLinkBtn: document.getElementById("submitBioLinkBtn"),
   };
 
   function loadSessionToken() {
@@ -315,11 +338,59 @@
     }
   }
 
-  function showProjectsView() {
-    if (state.queue.length > 0 && state.activeView === "editor") {
-      if (!window.confirm("Leave this project? Your queued (not yet uploaded) slides will be cleared.")) {
-        return;
+  let activeConfirmCleanup = null;
+  function showConfirmModal({
+    title = "Confirm",
+    message = "Are you sure?",
+    desc = "",
+    confirmText = "Confirm",
+    isDanger = false,
+  }) {
+    if (activeConfirmCleanup) activeConfirmCleanup(false);
+    return new Promise((resolve) => {
+      els.confirmModalTitle.textContent = title;
+      els.confirmModalMessage.textContent = message;
+      if (desc) {
+        els.confirmModalDesc.textContent = desc;
+        els.confirmModalDesc.hidden = false;
+      } else {
+        els.confirmModalDesc.hidden = true;
       }
+      els.okConfirmModalBtn.textContent = confirmText;
+      els.okConfirmModalBtn.className = `btn btn-sm ${isDanger ? "btn-danger" : "btn-primary"}`;
+      els.confirmModal.hidden = false;
+
+      const cleanup = (confirmed) => {
+        activeConfirmCleanup = null;
+        els.confirmModal.hidden = true;
+        els.closeConfirmModalBtn.removeEventListener("click", onCancel);
+        els.cancelConfirmModalBtn.removeEventListener("click", onCancel);
+        els.okConfirmModalBtn.removeEventListener("click", onConfirm);
+        resolve(confirmed);
+      };
+      activeConfirmCleanup = cleanup;
+      const onCancel = () => cleanup(false);
+      const onConfirm = () => cleanup(true);
+
+      els.closeConfirmModalBtn.addEventListener("click", onCancel);
+      els.cancelConfirmModalBtn.addEventListener("click", onCancel);
+      els.okConfirmModalBtn.addEventListener("click", onConfirm);
+    });
+  }
+
+  function closeConfirmModal() {
+    if (activeConfirmCleanup) activeConfirmCleanup(false);
+  }
+
+  async function showProjectsView() {
+    if (state.queue.length > 0 && state.activeView === "editor") {
+      const confirmed = await showConfirmModal({
+        title: "Discard Queued Slides?",
+        message: "Leave this project? Your queued (not yet uploaded) slides will be cleared.",
+        confirmText: "Discard & Leave",
+        isDanger: true,
+      });
+      if (!confirmed) return;
       clearQueue();
     }
     if (state.orderMode === "info") {
@@ -1142,27 +1213,17 @@
     });
   }
 
-  function addVideoSlideToQueue() {
-    const raw = window.prompt("Paste Bunny Stream Video ID (UUID) or URL:");
-    if (!raw || !raw.trim()) return;
-    const videoId = extractVideoId(raw);
-    if (!videoId) return;
+  function openBunnyVideoModal() {
+    els.bunnyVideoInput.value = "";
+    els.bunnyVideoError.hidden = true;
+    els.bunnyVideoModal.hidden = false;
+    setTimeout(() => els.bunnyVideoInput.focus(), 60);
+  }
 
-    state.queue.push({
-      id: makeQueueId(),
-      kind: "video",
-      videoId,
-      previewUrl: `${BUNNY_CDN_BASE}/${videoId}/thumbnail.jpg`,
-      name: formatDefaultMediaName(`Video ${videoId.slice(0, 8)}`),
-      alt: "",
-      fillDesktop: false,
-      fillMobile: false,
-      focusX: 50,
-      focusY: 50,
-      status: "ready",
-      error: "",
-    });
-    renderQueue();
+  function closeBunnyVideoModal() {
+    els.bunnyVideoModal.hidden = true;
+    els.bunnyVideoInput.value = "";
+    els.bunnyVideoError.hidden = true;
   }
 
   function removeQueueItem(id) {
@@ -1947,9 +2008,16 @@
         statusBtn.disabled = true;
         try {
           const action = p.isDraft ? "publish" : "unpublish";
-          if (action === "unpublish" && !window.confirm(`Move "${p.name}" to Draft?`)) {
-            statusBtn.disabled = false;
-            return;
+          if (action === "unpublish") {
+            const confirmed = await showConfirmModal({
+              title: "Move to Draft",
+              message: `Unpublish "${p.name}" and move it to Draft?`,
+              confirmText: "Move to Draft",
+            });
+            if (!confirmed) {
+              statusBtn.disabled = false;
+              return;
+            }
           }
           await apiJson("/api/projects", {
             method: "POST",
@@ -2737,7 +2805,12 @@
   });
 
   els.publishSiteBtn.addEventListener("click", async () => {
-    if (!window.confirm("Trigger a full Webflow site publish now?")) return;
+    const confirmed = await showConfirmModal({
+      title: "Publish Site",
+      message: "Trigger a full Webflow site publish now? This will push all staged updates live.",
+      confirmText: "Publish Site",
+    });
+    if (!confirmed) return;
     els.publishSiteBtn.disabled = true;
     els.publishSiteBtn.textContent = "Publishing…";
     try {
@@ -2797,7 +2870,13 @@
 
   els.unpublishProjectBtn.addEventListener("click", async () => {
     const p = getSelectedProject();
-    if (!p || !window.confirm(`Unpublish "${p.name}" and move it to Draft?`)) return;
+    if (!p) return;
+    const confirmed = await showConfirmModal({
+      title: "Move to Draft",
+      message: `Unpublish "${p.name}" and move it to Draft?`,
+      confirmText: "Move to Draft",
+    });
+    if (!confirmed) return;
     try {
       await apiJson("/api/projects", {
         method: "POST",
@@ -2813,14 +2892,14 @@
 
   els.deleteProjectBtn.addEventListener("click", async () => {
     const p = getSelectedProject();
-    if (
-      !p ||
-      !window.confirm(
-        `Permanently delete project "${p.name}" along with its unshared Media items and image files from Webflow CMS?`
-      )
-    ) {
-      return;
-    }
+    if (!p) return;
+    const confirmed = await showConfirmModal({
+      title: "Delete Project",
+      message: `Permanently delete "${p.name}" along with its unshared Media items and image files from Webflow? This action cannot be undone.`,
+      confirmText: "Delete Project",
+      isDanger: true,
+    });
+    if (!confirmed) return;
     try {
       const res = await apiJson("/api/projects", {
         method: "POST",
@@ -2854,7 +2933,37 @@
   });
   els.addVideoBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    addVideoSlideToQueue();
+    openBunnyVideoModal();
+  });
+  els.closeBunnyVideoBtn.addEventListener("click", closeBunnyVideoModal);
+  els.cancelBunnyVideoBtn.addEventListener("click", closeBunnyVideoModal);
+  els.bunnyVideoForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const raw = els.bunnyVideoInput.value.trim();
+    if (!raw) return;
+    const videoId = extractVideoId(raw);
+    if (!videoId) {
+      els.bunnyVideoError.textContent = "Please enter a valid Bunny video ID or URL.";
+      els.bunnyVideoError.hidden = false;
+      return;
+    }
+
+    state.queue.push({
+      id: makeQueueId(),
+      kind: "video",
+      videoId,
+      previewUrl: `${BUNNY_CDN_BASE}/${videoId}/thumbnail.jpg`,
+      name: formatDefaultMediaName(`Video ${videoId.slice(0, 8)}`),
+      alt: "",
+      fillDesktop: false,
+      fillMobile: false,
+      focusX: 50,
+      focusY: 50,
+      status: "ready",
+      error: "",
+    });
+    closeBunnyVideoModal();
+    renderQueue();
   });
   els.dropZone.addEventListener("click", () => els.fileInput.click());
   els.dropZone.addEventListener("keydown", (e) => {
@@ -3076,9 +3185,15 @@
     }
   });
 
-  els.removeInfoPicBtn.addEventListener("click", () => {
+  els.removeInfoPicBtn.addEventListener("click", async () => {
     if (!state.infoDraft?.profilePicture?.url) return;
-    if (!window.confirm("Remove profile picture? Click Save Information to commit.")) return;
+    const confirmed = await showConfirmModal({
+      title: "Remove Profile Picture",
+      message: "Remove profile picture? Click 'Save Information' afterwards to commit your changes.",
+      confirmText: "Remove Picture",
+      isDanger: true,
+    });
+    if (!confirmed) return;
     state.infoDraft.profilePicture = null;
     setInfoDirty(true);
     renderInformationEditor();
@@ -3098,17 +3213,42 @@
     document.execCommand("italic");
     setInfoDirty(true);
   });
-  els.bioLinkBtn.addEventListener("click", () => {
-    const sel = window.getSelection();
-    const savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
-    const anchorNode = sel?.anchorNode;
-    const existingLink =
-      anchorNode?.nodeType === 1 ? anchorNode.closest?.("a") : anchorNode?.parentElement?.closest?.("a");
-    const currentHref = existingLink ? existingLink.getAttribute("href") : "";
-    const rawUrl = window.prompt("Enter link URL:", currentHref || "https://");
-    if (!rawUrl || !rawUrl.trim()) return;
 
-    let cleanUrl = rawUrl.trim();
+  let savedBioLinkRange = null;
+  let existingBioLinkNode = null;
+
+  function openBioLinkModal() {
+    const sel = window.getSelection();
+    savedBioLinkRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+    const anchorNode = sel?.anchorNode;
+    existingBioLinkNode =
+      anchorNode?.nodeType === 1 ? anchorNode.closest?.("a") : anchorNode?.parentElement?.closest?.("a");
+    const currentHref = existingBioLinkNode ? existingBioLinkNode.getAttribute("href") : "";
+
+    els.bioLinkInput.value = currentHref || "https://";
+    els.bioLinkModal.hidden = false;
+    setTimeout(() => {
+      els.bioLinkInput.focus();
+      els.bioLinkInput.select();
+    }, 60);
+  }
+
+  function closeBioLinkModal() {
+    els.bioLinkModal.hidden = true;
+    savedBioLinkRange = null;
+    existingBioLinkNode = null;
+  }
+
+  els.bioLinkBtn.addEventListener("click", openBioLinkModal);
+  els.closeBioLinkBtn.addEventListener("click", closeBioLinkModal);
+  els.cancelBioLinkBtn.addEventListener("click", closeBioLinkModal);
+
+  els.bioLinkForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const rawUrl = els.bioLinkInput.value.trim();
+    if (!rawUrl) return;
+
+    let cleanUrl = rawUrl;
     if (cleanUrl.includes("@") && !cleanUrl.startsWith("mailto:") && !cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
       cleanUrl = `mailto:${cleanUrl}`;
     } else if (!/^[a-z]+:\/\//i.test(cleanUrl) && !cleanUrl.startsWith("mailto:") && !cleanUrl.startsWith("#") && !cleanUrl.startsWith("/")) {
@@ -3116,24 +3256,24 @@
     }
 
     els.infoBioEditor.focus();
-    if (savedRange) {
+    if (savedBioLinkRange) {
       const nextSel = window.getSelection();
       nextSel.removeAllRanges();
-      nextSel.addRange(savedRange);
+      nextSel.addRange(savedBioLinkRange);
     }
 
-    if (savedRange && !savedRange.collapsed) {
+    if (savedBioLinkRange && !savedBioLinkRange.collapsed) {
       document.execCommand("createLink", false, cleanUrl);
-    } else if (existingLink) {
-      existingLink.setAttribute("href", cleanUrl);
+    } else if (existingBioLinkNode) {
+      existingBioLinkNode.setAttribute("href", cleanUrl);
     } else {
       const a = document.createElement("a");
       a.href = cleanUrl;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
       a.textContent = cleanUrl.replace(/^mailto:/i, "");
-      if (savedRange) {
-        savedRange.insertNode(a);
+      if (savedBioLinkRange) {
+        savedBioLinkRange.insertNode(a);
       } else {
         els.infoBioEditor.appendChild(a);
       }
@@ -3144,7 +3284,9 @@
       a.setAttribute("rel", "noopener noreferrer");
     });
     setInfoDirty(true);
+    closeBioLinkModal();
   });
+
   els.bioUnlinkBtn.addEventListener("click", () => {
     els.infoBioEditor.focus();
     document.execCommand("unlink");
@@ -3171,7 +3313,11 @@
     [els.schemaModal, () => { els.schemaModal.hidden = true; }],
     [els.newProjectModal, () => { els.newProjectModal.hidden = true; }],
     [els.slideDeleteModal, () => { state.pendingDeleteSlideId = null; els.slideDeleteModal.hidden = true; }],
+    [els.bunnyVideoModal, closeBunnyVideoModal],
+    [els.confirmModal, closeConfirmModal],
+    [els.bioLinkModal, closeBioLinkModal],
   ].forEach(([modalEl, closeFn]) => {
+    if (!modalEl) return;
     modalEl.addEventListener("click", (e) => {
       if (e.target === modalEl) closeFn();
     });
@@ -3179,13 +3325,17 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!els.focusModal.hidden) return closeFocusModal(true);
-    if (!els.schemaModal.hidden) { els.schemaModal.hidden = true; return; }
-    if (!els.newProjectModal.hidden) { els.newProjectModal.hidden = true; return; }
-    if (!els.slideDeleteModal.hidden) {
+    if (els.focusModal && !els.focusModal.hidden) return closeFocusModal(true);
+    if (els.schemaModal && !els.schemaModal.hidden) { els.schemaModal.hidden = true; return; }
+    if (els.newProjectModal && !els.newProjectModal.hidden) { els.newProjectModal.hidden = true; return; }
+    if (els.slideDeleteModal && !els.slideDeleteModal.hidden) {
       state.pendingDeleteSlideId = null;
       els.slideDeleteModal.hidden = true;
+      return;
     }
+    if (els.bunnyVideoModal && !els.bunnyVideoModal.hidden) return closeBunnyVideoModal();
+    if (els.confirmModal && !els.confirmModal.hidden) return closeConfirmModal();
+    if (els.bioLinkModal && !els.bioLinkModal.hidden) return closeBioLinkModal();
   });
 
   window.addEventListener("beforeunload", (e) => {

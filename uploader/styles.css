@@ -1408,6 +1408,10 @@ textarea:focus {
   overflow: hidden;
 }
 
+.modal-card-sm {
+  max-width: 440px;
+}
+
 .modal-card-wide {
   max-width: 780px;
 }

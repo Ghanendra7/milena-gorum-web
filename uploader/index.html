@@ -451,6 +451,81 @@
     </div>
   </div>
 
+  <!-- Add Bunny Video Slide Modal -->
+  <div id="bunnyVideoModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="bunnyVideoModalTitle">
+      <div class="modal-header">
+        <h3 id="bunnyVideoModalTitle">Add Video Slide</h3>
+        <button id="closeBunnyVideoBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <form id="bunnyVideoForm" class="schema-body">
+        <div class="field">
+          <label for="bunnyVideoInput">Paste Bunny Stream Video ID</label>
+          <input
+            id="bunnyVideoInput"
+            type="text"
+            required
+            placeholder="e.g. 6111d22f-ebd5-4824-96da-4b04444a073b or video URL"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <p id="bunnyVideoError" class="field-hint" style="color: var(--err); margin: 4px 0 0;" hidden>Please enter a valid Bunny video ID or URL.</p>
+        <div class="modal-footer" style="padding: 14px 0 0; margin-top: 12px; justify-content: flex-end; gap: 8px;">
+          <button id="cancelBunnyVideoBtn" type="button" class="btn btn-secondary btn-sm">Cancel</button>
+          <button id="submitBunnyVideoBtn" type="submit" class="btn btn-primary btn-sm">+ Add Video Slide</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- In-App Confirmation Modal -->
+  <div id="confirmModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="confirmModalTitle">Confirm</h3>
+          <p id="confirmModalDesc" class="muted" hidden></p>
+        </div>
+        <button id="closeConfirmModalBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <div class="schema-body">
+        <p id="confirmModalMessage" style="margin:0;"></p>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end; gap: 8px;">
+        <button id="cancelConfirmModalBtn" type="button" class="btn btn-secondary btn-sm">Cancel</button>
+        <button id="okConfirmModalBtn" type="button" class="btn btn-primary btn-sm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bio Link Modal -->
+  <div id="bioLinkModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="bioLinkModalTitle">
+      <div class="modal-header">
+        <h3 id="bioLinkModalTitle">Insert Link</h3>
+        <button id="closeBioLinkBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <form id="bioLinkForm" class="schema-body">
+        <div class="field">
+          <label for="bioLinkInput">Link URL</label>
+          <input
+            id="bioLinkInput"
+            type="text"
+            required
+            placeholder="e.g. https://example.com or mailto:you@example.com"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="modal-footer" style="padding: 14px 0 0; margin-top: 12px; justify-content: flex-end; gap: 8px;">
+          <button id="cancelBioLinkBtn" type="button" class="btn btn-secondary btn-sm">Cancel</button>
+          <button id="submitBioLinkBtn" type="submit" class="btn btn-primary btn-sm">Add Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="./md5.js"></script>
   <script src="./media-utils.js"></script>
   <script src="./app.js"></script>
