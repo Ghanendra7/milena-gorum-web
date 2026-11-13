@@ -86,9 +86,14 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (action === "remove-from-gallery" || action === "delete") {
-      const mediaId = String(body?.mediaId || "").trim();
+      const rawMediaIds = Array.isArray(body?.mediaIds)
+        ? body.mediaIds
+        : (body?.mediaId ? [body.mediaId] : []);
+      const mediaIds = rawMediaIds.map((id) => String(id || "").trim()).filter(Boolean);
       const projectId = String(body?.projectId || "").trim();
-      if (!mediaId) return jsonError("mediaId is required.", 400);
+      if (!mediaIds.length) return jsonError("mediaId or mediaIds is required.", 400);
+
+      const deleteIdSet = new Set(mediaIds);
 
       if (action === "remove-from-gallery") {
         if (!projectId) return jsonError("projectId is required.", 400);
@@ -101,14 +106,14 @@ export async function onRequestPost({ request, env }) {
         const existingGallery = Array.isArray(projectItem?.fieldData?.[pFields.gallery])
           ? projectItem.fieldData[pFields.gallery]
           : [];
-        const nextGallery = existingGallery.filter((id) => id !== mediaId);
+        const nextGallery = existingGallery.filter((id) => !deleteIdSet.has(id));
 
         const coverRequired = Boolean(pFields.cover && projectFieldBySlug.get(pFields.cover)?.isRequired);
         const galleryRequired = Boolean(projectFieldBySlug.get(pFields.gallery)?.isRequired);
 
         if ((galleryRequired || coverRequired) && nextGallery.length === 0 && !projectItem?.isDraft) {
           return jsonError(
-            "Cannot remove the last slide from a published project while Gallery/Cover is required. Add another slide first or unpublish the project.",
+            "Cannot remove all slides from a published project while Gallery/Cover is required. Add another slide first or unpublish the project.",
             400
           );
         }
@@ -118,7 +123,7 @@ export async function onRequestPost({ request, env }) {
         if (pFields.cover) {
           const curCover = projectItem?.fieldData?.[pFields.cover];
           const curCoverId = typeof curCover === "string" ? curCover : curCover?.id || null;
-          if (curCoverId === mediaId) {
+          if (deleteIdSet.has(curCoverId)) {
             reassignedCoverId = nextGallery[0] || null;
             patchData[pFields.cover] = reassignedCoverId;
           }
@@ -142,7 +147,8 @@ export async function onRequestPost({ request, env }) {
         return jsonResponse({
           action: "remove-from-gallery",
           projectId,
-          mediaId,
+          mediaIds,
+          mediaId: mediaIds[0] || null,
           nextGallery,
           reassignedCoverId,
           published,
@@ -161,14 +167,14 @@ export async function onRequestPost({ request, env }) {
         const curCover = pFields.cover ? fd[pFields.cover] : null;
         const curCoverId = typeof curCover === "string" ? curCover : curCover?.id || null;
 
-        const inGallery = gallery.includes(mediaId);
-        const isCover = curCoverId === mediaId;
+        const inGallery = gallery.some((id) => deleteIdSet.has(id));
+        const isCover = deleteIdSet.has(curCoverId);
         if (!inGallery && !isCover) continue;
 
-        const nextGallery = gallery.filter((id) => id !== mediaId);
+        const nextGallery = gallery.filter((id) => !deleteIdSet.has(id));
         if ((galleryRequired || coverRequired) && nextGallery.length === 0 && !proj.isDraft) {
           return jsonError(
-            `Slide is the last image/cover for published project "${fd.name || proj.id}". Add another slide or unpublish the project before deleting.`,
+            `Slide(s) include the last image/cover for published project "${fd.name || proj.id}". Add another slide or unpublish the project before deleting.`,
             400
           );
         }
@@ -193,17 +199,19 @@ export async function onRequestPost({ request, env }) {
       }
 
       const allMedia = await listAllCollectionItems(env, mediaCollection.id);
-      const { deletedAssetCount } = await deleteMediaItemsAndUnsharedAssets(
+      const { deletedMediaCount, deletedAssetCount } = await deleteMediaItemsAndUnsharedAssets(
         env,
         mediaCollection.id,
-        [mediaId],
+        Array.from(deleteIdSet),
         allMedia,
         mFields
       );
 
       return jsonResponse({
         action: "delete",
-        mediaId,
+        mediaIds: Array.from(deleteIdSet),
+        mediaId: mediaIds[0] || null,
+        deletedMediaCount,
         detachedProjectCount: touchedProjectIdsToPublish.length,
         deletedAssetCount,
       });

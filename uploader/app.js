@@ -32,6 +32,9 @@
     dragGalleryId: null,
     focusTarget: null, // { kind: "queue" | "existing", id, prevX, prevY, prevDirty }
     pendingDeleteSlideId: null,
+    pendingDeleteSlideIds: null,
+    selectedGalleryIds: new Set(),
+    lastSelectedGalleryId: null,
     orderMode: "all", // "all" | "home" | "info"
     orderDraftAll: [],
     orderDraftHome: [],
@@ -125,6 +128,8 @@
     existingGalleryHeading: document.getElementById("existingGalleryHeading"),
     existingGalleryGrid: document.getElementById("existingGalleryGrid"),
     existingGalleryEmpty: document.getElementById("existingGalleryEmpty"),
+    selectAllGalleryBtn: document.getElementById("selectAllGalleryBtn"),
+    deleteSelectedGalleryBtn: document.getElementById("deleteSelectedGalleryBtn"),
     resetGalleryOrderBtn: document.getElementById("resetGalleryOrderBtn"),
     saveGalleryOrderBtn: document.getElementById("saveGalleryOrderBtn"),
 
@@ -177,7 +182,9 @@
     submitNewProjectBtn: document.getElementById("submitNewProjectBtn"),
 
     slideDeleteModal: document.getElementById("slideDeleteModal"),
+    slideDeleteTitle: document.getElementById("slideDeleteTitle"),
     slideDeleteDesc: document.getElementById("slideDeleteDesc"),
+    slideDeletePrompt: document.getElementById("slideDeletePrompt"),
     slideDeleteCoverWarn: document.getElementById("slideDeleteCoverWarn"),
     closeSlideDeleteBtn: document.getElementById("closeSlideDeleteBtn"),
     closeSlideDeleteFooterBtn: document.getElementById("closeSlideDeleteFooterBtn"),
@@ -431,6 +438,8 @@
       return;
     }
     state.selectedProjectId = target.id;
+    state.selectedGalleryIds.clear();
+    state.lastSelectedGalleryId = null;
     state.activeView = "editor";
     els.projectsView.hidden = true;
     els.editorView.hidden = false;
@@ -739,14 +748,19 @@
     }
     els.existingGalleryEmpty.hidden = true;
 
+    for (const id of state.selectedGalleryIds) {
+      if (!state.galleryIds.includes(id)) state.selectedGalleryIds.delete(id);
+    }
+
     state.galleryIds.forEach((mediaId, idx) => {
       const m = state.mediaById[mediaId];
       if (!m) return;
       const edit = getExistingEditState(mediaId);
       const isCover = p.coverId === mediaId;
+      const isSelected = state.selectedGalleryIds.has(mediaId);
 
       const card = document.createElement("article");
-      card.className = "slide-card";
+      card.className = `slide-card${isSelected ? " is-selected" : ""}`;
       card.draggable = !edit.busy;
 
       card.addEventListener("focusin", (e) => {
@@ -756,7 +770,7 @@
         card.draggable = !edit.busy;
       });
       card.addEventListener("dragstart", (e) => {
-        if (e.target.closest("input, select, textarea, button")) {
+        if (e.target.closest("input, select, textarea, button, label, .slide-select-wrap")) {
           e.preventDefault();
           return;
         }
@@ -818,6 +832,46 @@
         ph.textContent = edit.videoId ? "BUNNY VIDEO" : "NO IMAGE";
         thumbWrap.appendChild(ph);
       }
+
+      const selectWrap = document.createElement("label");
+      selectWrap.className = "slide-select-wrap";
+      selectWrap.title = "Select slide";
+      const selectCb = document.createElement("input");
+      selectCb.type = "checkbox";
+      selectCb.className = "slide-select-cb";
+      selectCb.checked = isSelected;
+      selectCb.disabled = edit.busy;
+      selectCb.addEventListener("click", (e) => e.stopPropagation());
+      selectCb.addEventListener("change", (e) => {
+        e.stopPropagation();
+        const checked = selectCb.checked;
+        if (e.shiftKey && state.lastSelectedGalleryId && state.lastSelectedGalleryId !== mediaId) {
+          const fromIdx = state.galleryIds.indexOf(state.lastSelectedGalleryId);
+          const toIdx = state.galleryIds.indexOf(mediaId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const start = Math.min(fromIdx, toIdx);
+            const end = Math.max(fromIdx, toIdx);
+            for (let i = start; i <= end; i++) {
+              const id = state.galleryIds[i];
+              if (checked) state.selectedGalleryIds.add(id);
+              else state.selectedGalleryIds.delete(id);
+            }
+            renderExistingGallery();
+            return;
+          }
+        }
+        state.lastSelectedGalleryId = mediaId;
+        if (checked) {
+          state.selectedGalleryIds.add(mediaId);
+          card.classList.add("is-selected");
+        } else {
+          state.selectedGalleryIds.delete(mediaId);
+          card.classList.remove("is-selected");
+        }
+        updateGallerySelectionUI();
+      });
+      selectWrap.appendChild(selectCb);
+      thumbWrap.appendChild(selectWrap);
 
       const orderBadge = document.createElement("span");
       orderBadge.className = "slide-order-badge";
@@ -977,6 +1031,8 @@
       card.appendChild(body);
       els.existingGalleryGrid.appendChild(card);
     });
+
+    updateGallerySelectionUI();
   }
 
   async function saveExistingSlide(mediaId, extra = {}) {
@@ -1116,12 +1172,70 @@
     }
   }
 
+  function updateGallerySelectionUI() {
+    const total = state.galleryIds.length;
+    const count = state.selectedGalleryIds.size;
+    if (!els.selectAllGalleryBtn || !els.deleteSelectedGalleryBtn) return;
+
+    if (!total) {
+      els.selectAllGalleryBtn.hidden = true;
+      els.deleteSelectedGalleryBtn.hidden = true;
+      els.existingGalleryHeading.textContent = "Gallery Slides (0)";
+      return;
+    }
+
+    els.selectAllGalleryBtn.hidden = false;
+    els.selectAllGalleryBtn.textContent = count === total && total > 0 ? "Deselect All" : "Select All";
+
+    if (count > 0) {
+      els.deleteSelectedGalleryBtn.hidden = false;
+      els.deleteSelectedGalleryBtn.textContent = `Delete Selected (${count})`;
+      els.existingGalleryHeading.textContent = `Gallery Slides (${total}) · ${count} selected`;
+    } else {
+      els.deleteSelectedGalleryBtn.hidden = true;
+      els.existingGalleryHeading.textContent = `Gallery Slides (${total})`;
+    }
+  }
+
+  function openBulkSlideDeleteModal() {
+    const p = getSelectedProject();
+    const count = state.selectedGalleryIds.size;
+    if (!p || count === 0) return;
+
+    const selectedIds = Array.from(state.selectedGalleryIds);
+    state.pendingDeleteSlideIds = selectedIds;
+    state.pendingDeleteSlideId = null;
+
+    els.slideDeleteTitle.textContent = `Delete ${count} Slides`;
+    els.slideDeleteDesc.textContent = `${count} slides selected for permanent deletion`;
+    if (els.slideDeletePrompt) {
+      els.slideDeletePrompt.textContent = `Are you sure you want to permanently delete these ${count} slides? This action cannot be undone.`;
+    }
+
+    const includesCover = selectedIds.includes(p.coverId);
+    if (includesCover) {
+      els.slideDeleteCoverWarn.hidden = false;
+      els.slideDeleteCoverWarn.textContent =
+        "The project's Cover slide is included in the selection. Deleting it will automatically switch the Cover to the next remaining slide.";
+    } else {
+      els.slideDeleteCoverWarn.hidden = true;
+    }
+
+    els.deleteMediaPermanentBtn.textContent = `Delete ${count} Slides`;
+    els.slideDeleteModal.hidden = false;
+  }
+
   function openSlideDeleteModal(mediaId) {
     const p = getSelectedProject();
     const m = state.mediaById[mediaId];
     if (!p || !m) return;
     state.pendingDeleteSlideId = mediaId;
+    state.pendingDeleteSlideIds = [mediaId];
+    els.slideDeleteTitle.textContent = "Delete Slide";
     els.slideDeleteDesc.textContent = `Slide "${m.name}"`;
+    if (els.slideDeletePrompt) {
+      els.slideDeletePrompt.textContent = "Are you sure you want to delete this slide? This action cannot be undone.";
+    }
     if (p.coverId === mediaId) {
       els.slideDeleteCoverWarn.hidden = false;
       els.slideDeleteCoverWarn.textContent =
@@ -1129,13 +1243,14 @@
     } else {
       els.slideDeleteCoverWarn.hidden = true;
     }
+    els.deleteMediaPermanentBtn.textContent = "Delete Slide";
     els.slideDeleteModal.hidden = false;
   }
 
   async function executeSlideRemoval() {
     const p = getSelectedProject();
-    const mediaId = state.pendingDeleteSlideId;
-    if (!p || !mediaId) return;
+    const mediaIds = state.pendingDeleteSlideIds || (state.pendingDeleteSlideId ? [state.pendingDeleteSlideId] : []);
+    if (!p || !mediaIds.length) return;
 
     els.deleteMediaPermanentBtn.disabled = true;
     els.deleteMediaPermanentBtn.textContent = "Deleting…";
@@ -1147,15 +1262,18 @@
         body: JSON.stringify({
           action: "delete",
           projectId: p.id,
-          mediaId,
+          mediaIds,
           publishMode: els.publishMode.value,
           fieldMapOverride: state.fieldOverride,
         }),
       });
       els.slideDeleteModal.hidden = true;
       state.pendingDeleteSlideId = null;
+      state.pendingDeleteSlideIds = null;
+      state.selectedGalleryIds.clear();
       await loadBootstrap(p.id);
-      showBanner("Slide deleted successfully.", "ok");
+      const msg = mediaIds.length === 1 ? "Slide deleted successfully." : `${mediaIds.length} slides deleted successfully.`;
+      showBanner(msg, "ok");
     } catch (err) {
       showBanner(err.message, "err");
     } finally {
@@ -2961,6 +3079,19 @@
     state.galleryIds = p ? [...(p.galleryIds || [])] : [];
     renderExistingGallery();
   });
+  els.selectAllGalleryBtn.addEventListener("click", () => {
+    const total = state.galleryIds.length;
+    if (!total) return;
+    if (state.selectedGalleryIds.size === total) {
+      state.selectedGalleryIds.clear();
+    } else {
+      for (const id of state.galleryIds) state.selectedGalleryIds.add(id);
+    }
+    renderExistingGallery();
+  });
+  els.deleteSelectedGalleryBtn.addEventListener("click", () => {
+    openBulkSlideDeleteModal();
+  });
 
   // Batch Queue Listeners
   els.browseBtn.addEventListener("click", (e) => {
@@ -3335,6 +3466,7 @@
   // Slide Delete Modal Listeners
   const closeSlideDeleteModal = () => {
     state.pendingDeleteSlideId = null;
+    state.pendingDeleteSlideIds = null;
     els.slideDeleteModal.hidden = true;
   };
   els.closeSlideDeleteBtn.addEventListener("click", closeSlideDeleteModal);
@@ -3348,7 +3480,7 @@
     [els.focusModal, () => closeFocusModal(true)],
     [els.schemaModal, () => { els.schemaModal.hidden = true; }],
     [els.newProjectModal, () => { els.newProjectModal.hidden = true; }],
-    [els.slideDeleteModal, () => { state.pendingDeleteSlideId = null; els.slideDeleteModal.hidden = true; }],
+    [els.slideDeleteModal, closeSlideDeleteModal],
     [els.bunnyVideoModal, closeBunnyVideoModal],
     [els.confirmModal, closeConfirmModal],
     [els.bioLinkModal, closeBioLinkModal],

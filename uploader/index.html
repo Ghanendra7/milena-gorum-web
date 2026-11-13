@@ -257,6 +257,8 @@
               <span class="muted">Drag cards to reorder · Edit fields inline</span>
             </div>
             <div class="queue-toolbar-right">
+              <button id="selectAllGalleryBtn" type="button" class="btn btn-ghost btn-sm" hidden>Select All</button>
+              <button id="deleteSelectedGalleryBtn" type="button" class="btn btn-danger btn-sm" hidden>Delete Selected (0)</button>
               <button id="resetGalleryOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Reset Order</button>
               <button id="saveGalleryOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Gallery
                 Order</button>
@@ -448,7 +450,7 @@
         <button id="closeSlideDeleteBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
       </div>
       <div class="schema-body">
-        <p style="margin:0;">Are you sure you want to delete this slide? This action cannot be undone.</p>
+        <p id="slideDeletePrompt" style="margin:0;">Are you sure you want to delete this slide? This action cannot be undone.</p>
         <p id="slideDeleteCoverWarn" class="banner is-warn" hidden></p>
       </div>
       <div class="modal-footer">
