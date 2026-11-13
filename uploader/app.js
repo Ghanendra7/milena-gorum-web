@@ -76,8 +76,7 @@
     dirCatFilter: document.getElementById("dirCatFilter"),
     dirStatusFilter: document.getElementById("dirStatusFilter"),
     dirAutoSortGroup: document.getElementById("dirAutoSortGroup"),
-    sortAlphaBtn: document.getElementById("sortAlphaBtn"),
-    sortNewestBtn: document.getElementById("sortNewestBtn"),
+    dirSortSelect: document.getElementById("dirSortSelect"),
     clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
     dirOrderHint: document.getElementById("dirOrderHint"),
     projectOrderList: document.getElementById("projectOrderList"),
@@ -407,6 +406,7 @@
 
       populateDirectoryFilters();
       resetOrderDrafts();
+      if (els.dirSortSelect) els.dirSortSelect.value = "manual";
       syncInfoDraftFromBootstrap();
       updateModeCounts();
 
@@ -1764,11 +1764,20 @@
       els.dirAutoSortGroup.hidden = isHomeMode || filtersActive;
     }
 
+    const sortMode = els.dirSortSelect ? els.dirSortSelect.value : "manual";
+    const isManualSort = sortMode === "manual";
+
     if (filtersActive) {
       els.dirOrderHint.textContent = "Clear filters to drag-and-drop reorder Project Numbers.";
     } else if (isHomeMode) {
       els.dirOrderHint.textContent =
         "Drag rows or use ↑ / ↓ to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence.";
+    } else if (sortMode === "alpha") {
+      els.dirOrderHint.textContent =
+        "Sorted A to Z. Project numbers (#01–#41) have updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
+    } else if (sortMode === "newest") {
+      els.dirOrderHint.textContent =
+        "Sorted by Newest first. Project numbers (#01–#41) have updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
     } else {
       els.dirOrderHint.textContent =
         "Drag rows or use ↑ / ↓ to reorder Project Numbers, edit Title / Sub-title inline, or click any project to manage its gallery & upload media.";
@@ -1807,7 +1816,7 @@
       return;
     }
 
-    const canReorder = !filtersActive;
+    const canReorder = !filtersActive && (isHomeMode || isManualSort);
 
     visibleIds.forEach((id, visibleIdx) => {
       const p = byId.get(id);
@@ -1858,6 +1867,9 @@
           if (fromIdx !== -1 && toIdx !== -1) {
             const [moved] = arr.splice(fromIdx, 1);
             arr.splice(toIdx, 0, moved);
+            if (!isHomeMode && els.dirSortSelect) {
+              els.dirSortSelect.value = "manual";
+            }
             renderProjectOrderList();
           }
         });
@@ -1865,7 +1877,11 @@
 
       const handle = document.createElement("div");
       handle.className = "project-row-handle";
-      handle.title = canReorder ? "Drag to reorder" : "Clear filters to drag";
+      handle.title = canReorder
+        ? "Drag to reorder"
+        : !isManualSort
+          ? "Switch to Manual to drag and reorder"
+          : "Clear filters to drag";
       handle.textContent = canReorder ? "⋮⋮" : "·";
       row.appendChild(handle);
 
@@ -2058,6 +2074,9 @@
         const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
         const [m] = arr.splice(listIdx, 1);
         arr.splice(listIdx - 1, 0, m);
+        if (!isHomeMode && els.dirSortSelect) {
+          els.dirSortSelect.value = "manual";
+        }
         renderProjectOrderList();
       });
 
@@ -2070,6 +2089,9 @@
         const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
         const [m] = arr.splice(listIdx, 1);
         arr.splice(listIdx + 1, 0, m);
+        if (!isHomeMode && els.dirSortSelect) {
+          els.dirSortSelect.value = "manual";
+        }
         renderProjectOrderList();
       });
       moveBox.appendChild(upBtn);
@@ -2114,6 +2136,7 @@
       });
 
       await loadBootstrap();
+      if (els.dirSortSelect) els.dirSortSelect.value = "manual";
       showBanner(
         `Saved order for ${res.updatedCount} project(s)${res.publishedCount ? ` and published ${res.publishedCount} live` : " (staged)"}.`,
         "ok"
@@ -2890,18 +2913,13 @@
     el.addEventListener("input", renderProjectOrderList);
     el.addEventListener("change", renderProjectOrderList);
   });
-  if (els.sortAlphaBtn) {
-    els.sortAlphaBtn.addEventListener("click", () => {
-      applyDirSort("alpha");
+  if (els.dirSortSelect) {
+    els.dirSortSelect.addEventListener("change", () => {
+      const mode = els.dirSortSelect.value;
+      if (mode !== "manual") {
+        applyDirSort(mode);
+      }
       renderProjectOrderList();
-      showBanner("Project numbers re-sequenced A to Z. Review below and click 'Save Order' to publish live.", "ok");
-    });
-  }
-  if (els.sortNewestBtn) {
-    els.sortNewestBtn.addEventListener("click", () => {
-      applyDirSort("newest");
-      renderProjectOrderList();
-      showBanner("Project numbers re-sequenced by Newly added. Review below and click 'Save Order' to publish live.", "ok");
     });
   }
   els.clearDirFiltersBtn.addEventListener("click", () => {
@@ -2913,6 +2931,7 @@
   });
   els.resetOrderBtn.addEventListener("click", () => {
     resetOrderDrafts();
+    if (els.dirSortSelect) els.dirSortSelect.value = "manual";
     renderProjectOrderList();
   });
   els.saveOrderBtn.addEventListener("click", saveOrderChanges);

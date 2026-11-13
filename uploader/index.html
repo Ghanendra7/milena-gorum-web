@@ -95,12 +95,14 @@
           </div>
           <div class="dir-toolbar-footer">
             <p id="dirOrderHint" class="field-hint"></p>
-            <div id="dirAutoSortGroup" class="dir-auto-sort">
-              <span class="muted">Auto-sort:</span>
-              <button id="sortAlphaBtn" type="button" class="btn-link">A to Z</button>
-              <span class="muted">·</span>
-              <button id="sortNewestBtn" type="button" class="btn-link">Newly added</button>
-            </div>
+            <label id="dirAutoSortGroup" class="dir-auto-sort" for="dirSortSelect">
+              <span class="muted"># Order:</span>
+              <select id="dirSortSelect" aria-label="Project number order">
+                <option value="manual">Manual</option>
+                <option value="alpha">A to Z</option>
+                <option value="newest">Newest first</option>
+              </select>
+            </label>
           </div>
         </section>
 
