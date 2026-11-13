@@ -708,11 +708,19 @@
         img.loading = "lazy";
         thumbWrap.appendChild(img);
 
-        const dot = document.createElement("div");
-        dot.className = "slide-focus-dot";
-        dot.style.left = `${edit.focusX}%`;
-        dot.style.top = `${edit.focusY}%`;
-        thumbWrap.appendChild(dot);
+        const hasCustomFocus =
+          (Number(edit.focusX) !== 50 || Number(edit.focusY) !== 50) &&
+          edit.focusX !== undefined &&
+          edit.focusY !== undefined &&
+          edit.focusX !== "" &&
+          edit.focusY !== "";
+        if (hasCustomFocus) {
+          const dot = document.createElement("div");
+          dot.className = "slide-focus-dot";
+          dot.style.left = `${edit.focusX}%`;
+          dot.style.top = `${edit.focusY}%`;
+          thumbWrap.appendChild(dot);
+        }
       } else {
         const ph = document.createElement("div");
         ph.className = "video-placeholder";
@@ -738,23 +746,12 @@
               : "Live";
       thumbWrap.appendChild(statusBadge);
 
-      const coverBadge = document.createElement("button");
-      coverBadge.type = "button";
       if (isCover) {
-        coverBadge.className = "slide-cover-badge is-active";
-        coverBadge.textContent = "★ Cover";
-        coverBadge.title = "Current project cover slide";
-      } else {
-        coverBadge.className = "slide-cover-badge is-action";
-        coverBadge.textContent = "☆ Set Cover";
-        coverBadge.title = "Click to set as project cover";
-        coverBadge.disabled = edit.busy;
-        coverBadge.addEventListener("click", (e) => {
-          e.stopPropagation();
-          setProjectCover(mediaId);
-        });
+        const coverBadge = document.createElement("span");
+        coverBadge.className = "slide-cover-badge";
+        coverBadge.textContent = "Cover";
+        thumbWrap.appendChild(coverBadge);
       }
-      thumbWrap.appendChild(coverBadge);
 
       const body = document.createElement("div");
       body.className = "slide-body";
@@ -862,6 +859,17 @@
         syncThumbBtn.disabled = edit.busy;
         syncThumbBtn.addEventListener("click", () => saveExistingSlide(mediaId, { syncBunnyThumb: true }));
         toolsGroup.appendChild(syncThumbBtn);
+      }
+
+      if (!isCover) {
+        const coverBtn = document.createElement("button");
+        coverBtn.type = "button";
+        coverBtn.className = "icon-btn";
+        coverBtn.textContent = "Set Cover";
+        coverBtn.title = "Set as project cover slide";
+        coverBtn.disabled = edit.busy;
+        coverBtn.addEventListener("click", () => setProjectCover(mediaId));
+        toolsGroup.appendChild(coverBtn);
       }
       actions.appendChild(toolsGroup);
 
@@ -1305,7 +1313,13 @@
         thumbWrap.appendChild(img);
       }
 
-      if (item.kind === "image" || item.file) {
+      const hasCustomFocus =
+        (Number(item.focusX) !== 50 || Number(item.focusY) !== 50) &&
+        item.focusX !== undefined &&
+        item.focusY !== undefined &&
+        item.focusX !== "" &&
+        item.focusY !== "";
+      if ((item.kind === "image" || item.file) && hasCustomFocus) {
         const dot = document.createElement("div");
         dot.className = "slide-focus-dot";
         dot.style.left = `${item.focusX}%`;
