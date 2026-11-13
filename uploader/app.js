@@ -3072,7 +3072,7 @@
     } finally {
       els.infoPicInput.value = "";
       els.replaceInfoPicBtn.disabled = false;
-      els.replaceInfoPicBtn.textContent = "Replace Picture";
+      els.replaceInfoPicBtn.textContent = "Replace";
     }
   });
 
