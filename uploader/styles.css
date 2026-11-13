@@ -718,8 +718,8 @@ textarea:focus {
 }
 
 .project-row-thumb {
-  width: 56px;
-  height: 40px;
+  width: 65px;
+  height: 50px;
   border-radius: 4px;
   object-fit: cover;
   background: var(--surface-2);
