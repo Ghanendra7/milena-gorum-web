@@ -275,7 +275,10 @@
     }
   }
   if (els.passwordInput) {
-    els.passwordInput.addEventListener("input", updateAuthInputState);
+    els.passwordInput.addEventListener("input", () => {
+      updateAuthInputState();
+      if (!els.loginError.hidden) els.loginError.hidden = true;
+    });
   }
 
   function setAuthenticated(isAuthed) {
@@ -2779,11 +2782,6 @@
     } catch (err) {
       els.loginError.textContent = err.message || "Incorrect password";
       els.loginError.hidden = false;
-      if (authInputWrap) {
-        authInputWrap.classList.remove("is-shaking");
-        void authInputWrap.offsetWidth;
-        authInputWrap.classList.add("is-shaking");
-      }
       els.passwordInput.value = "";
       updateAuthInputState();
       els.passwordInput.focus();
