@@ -75,6 +75,7 @@
     dirTypeFilter: document.getElementById("dirTypeFilter"),
     dirCatFilter: document.getElementById("dirCatFilter"),
     dirStatusFilter: document.getElementById("dirStatusFilter"),
+    dirSortSelect: document.getElementById("dirSortSelect"),
     clearDirFiltersBtn: document.getElementById("clearDirFiltersBtn"),
     dirOrderHint: document.getElementById("dirOrderHint"),
     projectOrderList: document.getElementById("projectOrderList"),
@@ -404,6 +405,7 @@
 
       populateDirectoryFilters();
       resetOrderDrafts();
+      if (els.dirSortSelect) els.dirSortSelect.value = "manual";
       syncInfoDraftFromBootstrap();
       updateModeCounts();
 
@@ -1586,6 +1588,38 @@
     els.dirCatFilter.value = catVal;
   }
 
+  function getProjectTimestamp(p) {
+    if (!p) return 0;
+    const raw = p.createdOn || p.lastUpdated || p.lastPublished || null;
+    if (!raw) return 0;
+    const t = Date.parse(raw);
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  function applyDirSort(sortMode) {
+    if (sortMode === "manual" || state.orderMode !== "all") return;
+    const byId = new Map(state.projects.map((p) => [p.id, p]));
+
+    if (sortMode === "alpha") {
+      state.orderDraftAll.sort((idA, idB) => {
+        const pA = byId.get(idA);
+        const pB = byId.get(idB);
+        const nameA = (pA?.name || "").trim();
+        const nameB = (pB?.name || "").trim();
+        return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" });
+      });
+    } else if (sortMode === "newest") {
+      state.orderDraftAll.sort((idA, idB) => {
+        const pA = byId.get(idA);
+        const pB = byId.get(idB);
+        const timeA = getProjectTimestamp(pA);
+        const timeB = getProjectTimestamp(pB);
+        if (timeA !== timeB) return timeB - timeA;
+        return (pA?.sequenceSort || 0) - (pB?.sequenceSort || 0);
+      });
+    }
+  }
+
   function resetOrderDrafts() {
     state.orderDraftAll = state.projects.map((p) => p.id);
     state.orderDraftHome = state.projects
@@ -1725,11 +1759,25 @@
 
     const filtersActive = hasActiveDirFilters();
     els.clearDirFiltersBtn.hidden = !filtersActive;
-    els.dirOrderHint.textContent = filtersActive
-      ? "Clear filters to drag-and-drop reorder Project Numbers."
-      : isHomeMode
-        ? "Drag rows or use ↑ / ↓ to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence."
-        : "Drag rows to reorder Project Numbers, edit Title / Sub-title / Type inline, or click any project to manage its gallery & upload media.";
+
+    const sortMode = els.dirSortSelect ? els.dirSortSelect.value : "manual";
+    const isManualSort = sortMode === "manual";
+
+    if (filtersActive) {
+      els.dirOrderHint.textContent = "Clear filters to drag-and-drop reorder Project Numbers.";
+    } else if (isHomeMode) {
+      els.dirOrderHint.textContent =
+        "Drag rows or use ↑ / ↓ to reorder Homepage Featured projects. Homepage displays up to 12 items sorted by Featured sequence.";
+    } else if (sortMode === "alpha") {
+      els.dirOrderHint.textContent =
+        "Sorted A to Z. Project numbers (#01–#39) have been updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
+    } else if (sortMode === "newest") {
+      els.dirOrderHint.textContent =
+        "Sorted by Newly added. Project numbers (#01–#39) have been updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
+    } else {
+      els.dirOrderHint.textContent =
+        "Drag rows or use ↑ / ↓ to reorder Project Numbers, edit Title / Sub-title / Type inline, or click any project to manage its gallery & upload media.";
+    }
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
     const search = els.dirSearchInput.value.trim().toLowerCase();
@@ -1764,7 +1812,7 @@
       return;
     }
 
-    const canReorder = !filtersActive;
+    const canReorder = !filtersActive && (isHomeMode || isManualSort);
 
     visibleIds.forEach((id, visibleIdx) => {
       const p = byId.get(id);
@@ -1815,6 +1863,9 @@
           if (fromIdx !== -1 && toIdx !== -1) {
             const [moved] = arr.splice(fromIdx, 1);
             arr.splice(toIdx, 0, moved);
+            if (!isHomeMode && els.dirSortSelect) {
+              els.dirSortSelect.value = "manual";
+            }
             renderProjectOrderList();
           }
         });
@@ -1822,7 +1873,11 @@
 
       const handle = document.createElement("div");
       handle.className = "project-row-handle";
-      handle.title = canReorder ? "Drag to reorder" : "Clear filters to drag";
+      handle.title = canReorder
+        ? "Drag to reorder"
+        : !isManualSort
+          ? "Switch to Manual to drag and reorder"
+          : "Clear filters to drag";
       handle.textContent = canReorder ? "⋮⋮" : "·";
       row.appendChild(handle);
 
@@ -2015,6 +2070,9 @@
         const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
         const [m] = arr.splice(listIdx, 1);
         arr.splice(listIdx - 1, 0, m);
+        if (!isHomeMode && els.dirSortSelect) {
+          els.dirSortSelect.value = "manual";
+        }
         renderProjectOrderList();
       });
 
@@ -2027,6 +2085,9 @@
         const arr = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
         const [m] = arr.splice(listIdx, 1);
         arr.splice(listIdx + 1, 0, m);
+        if (!isHomeMode && els.dirSortSelect) {
+          els.dirSortSelect.value = "manual";
+        }
         renderProjectOrderList();
       });
       moveBox.appendChild(upBtn);
@@ -2071,6 +2132,7 @@
       });
 
       await loadBootstrap();
+      if (els.dirSortSelect) els.dirSortSelect.value = "manual";
       showBanner(
         `Saved order for ${res.updatedCount} project(s)${res.publishedCount ? ` and published ${res.publishedCount} live` : " (staged)"}.`,
         "ok"
@@ -2847,6 +2909,15 @@
     el.addEventListener("input", renderProjectOrderList);
     el.addEventListener("change", renderProjectOrderList);
   });
+  if (els.dirSortSelect) {
+    els.dirSortSelect.addEventListener("change", () => {
+      const mode = els.dirSortSelect.value;
+      if (mode !== "manual") {
+        applyDirSort(mode);
+      }
+      renderProjectOrderList();
+    });
+  }
   els.clearDirFiltersBtn.addEventListener("click", () => {
     els.dirSearchInput.value = "";
     els.dirTypeFilter.value = "";
@@ -2856,6 +2927,7 @@
   });
   els.resetOrderBtn.addEventListener("click", () => {
     resetOrderDrafts();
+    if (els.dirSortSelect) els.dirSortSelect.value = "manual";
     renderProjectOrderList();
   });
   els.saveOrderBtn.addEventListener("click", saveOrderChanges);

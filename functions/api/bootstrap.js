@@ -151,6 +151,7 @@ export async function onRequestGet({ request, env }) {
           name: fd.name || "(Untitled Project)",
           slug: fd.slug || "",
           isDraft: Boolean(p.isDraft),
+          createdOn: p.createdOn || p["created-on"] || fd.createdOn || fd["created-on"] || p.lastUpdated || null,
           lastPublished: p.lastPublished || null,
           sequence: seqRaw ?? "",
           sequenceSort: toSequenceNumber(seqRaw),
