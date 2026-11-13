@@ -738,18 +738,30 @@
               : "Live";
       thumbWrap.appendChild(statusBadge);
 
+      const coverBadge = document.createElement("button");
+      coverBadge.type = "button";
       if (isCover) {
-        const coverBadge = document.createElement("span");
-        coverBadge.className = "slide-cover-badge";
-        coverBadge.textContent = "Cover";
-        thumbWrap.appendChild(coverBadge);
+        coverBadge.className = "slide-cover-badge is-active";
+        coverBadge.textContent = "★ Cover";
+        coverBadge.title = "Current project cover slide";
+      } else {
+        coverBadge.className = "slide-cover-badge is-action";
+        coverBadge.textContent = "☆ Set Cover";
+        coverBadge.title = "Click to set as project cover";
+        coverBadge.disabled = edit.busy;
+        coverBadge.addEventListener("click", (e) => {
+          e.stopPropagation();
+          setProjectCover(mediaId);
+        });
       }
+      thumbWrap.appendChild(coverBadge);
 
       const body = document.createElement("div");
       body.className = "slide-body";
 
       const nameInput = document.createElement("input");
       nameInput.type = "text";
+      nameInput.className = "slide-name-input";
       nameInput.value = edit.name;
       nameInput.disabled = edit.busy;
       nameInput.placeholder = "Slide name";
@@ -757,8 +769,16 @@
         edit.name = nameInput.value;
         edit.dirty = true;
         saveSlideBtn.disabled = false;
+        saveSlideBtn.classList.add("is-dirty");
         statusBadge.textContent = "Edited";
-        statusBadge.className = "slide-state-badge";
+        statusBadge.className = "slide-state-badge is-dirty";
+      });
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          nameInput.blur();
+          if (edit.dirty && !edit.busy) saveExistingSlide(mediaId);
+        }
       });
       body.appendChild(nameInput);
 
@@ -772,8 +792,16 @@
         edit.videoId = videoInput.value.trim();
         edit.dirty = true;
         saveSlideBtn.disabled = false;
+        saveSlideBtn.classList.add("is-dirty");
         statusBadge.textContent = "Edited";
-        statusBadge.className = "slide-state-badge";
+        statusBadge.className = "slide-state-badge is-dirty";
+      });
+      videoInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          videoInput.blur();
+          if (edit.dirty && !edit.busy) saveExistingSlide(mediaId);
+        }
       });
       body.appendChild(videoInput);
 
@@ -784,8 +812,9 @@
           edit.fillDesktop = checked;
           edit.dirty = true;
           saveSlideBtn.disabled = false;
+          saveSlideBtn.classList.add("is-dirty");
           statusBadge.textContent = "Edited";
-          statusBadge.className = "slide-state-badge";
+          statusBadge.className = "slide-state-badge is-dirty";
         })
       );
       toggles.appendChild(
@@ -793,57 +822,36 @@
           edit.fillMobile = checked;
           edit.dirty = true;
           saveSlideBtn.disabled = false;
+          saveSlideBtn.classList.add("is-dirty");
           statusBadge.textContent = "Edited";
-          statusBadge.className = "slide-state-badge";
+          statusBadge.className = "slide-state-badge is-dirty";
         })
       );
       body.appendChild(toggles);
 
       const actions = document.createElement("div");
-      actions.className = "slide-actions slide-actions-wrap";
+      actions.className = "slide-actions";
 
-      const moveBtns = document.createElement("div");
-      moveBtns.className = "slide-move-btns";
-      const leftBtn = document.createElement("button");
-      leftBtn.type = "button";
-      leftBtn.className = "icon-btn";
-      leftBtn.textContent = "←";
-      leftBtn.disabled = edit.busy || idx === 0;
-      leftBtn.addEventListener("click", () => {
-        const [moved] = state.galleryIds.splice(idx, 1);
-        state.galleryIds.splice(idx - 1, 0, moved);
-        renderExistingGallery();
-      });
-
-      const rightBtn = document.createElement("button");
-      rightBtn.type = "button";
-      rightBtn.className = "icon-btn";
-      rightBtn.textContent = "→";
-      rightBtn.disabled = edit.busy || idx === state.galleryIds.length - 1;
-      rightBtn.addEventListener("click", () => {
-        const [moved] = state.galleryIds.splice(idx, 1);
-        state.galleryIds.splice(idx + 1, 0, moved);
-        renderExistingGallery();
-      });
-      moveBtns.appendChild(leftBtn);
-      moveBtns.appendChild(rightBtn);
-      actions.appendChild(moveBtns);
+      const toolsGroup = document.createElement("div");
+      toolsGroup.className = "slide-tools";
 
       const focusBtn = document.createElement("button");
       focusBtn.type = "button";
       focusBtn.className = "icon-btn";
-      focusBtn.textContent = `Focus ${edit.focusX}%/${edit.focusY}%`;
+      focusBtn.textContent = "Focus Point";
+      focusBtn.title = "Set cropping focus point";
       focusBtn.disabled = edit.busy || !thumbSrc;
       focusBtn.addEventListener("click", () => openFocusModal({ kind: "existing", id: mediaId }));
-      actions.appendChild(focusBtn);
+      toolsGroup.appendChild(focusBtn);
 
       const replaceBtn = document.createElement("button");
       replaceBtn.type = "button";
       replaceBtn.className = "icon-btn";
       replaceBtn.textContent = "Replace Img";
+      replaceBtn.title = "Replace image file";
       replaceBtn.disabled = edit.busy;
       replaceBtn.addEventListener("click", () => replaceExistingSlideImage(mediaId));
-      actions.appendChild(replaceBtn);
+      toolsGroup.appendChild(replaceBtn);
 
       if (edit.videoId) {
         const syncThumbBtn = document.createElement("button");
@@ -853,26 +861,20 @@
         syncThumbBtn.title = "Fetch thumbnail.jpg from Bunny Stream";
         syncThumbBtn.disabled = edit.busy;
         syncThumbBtn.addEventListener("click", () => saveExistingSlide(mediaId, { syncBunnyThumb: true }));
-        actions.appendChild(syncThumbBtn);
+        toolsGroup.appendChild(syncThumbBtn);
       }
+      actions.appendChild(toolsGroup);
 
-      if (!isCover) {
-        const coverBtn = document.createElement("button");
-        coverBtn.type = "button";
-        coverBtn.className = "icon-btn";
-        coverBtn.textContent = "Set Cover";
-        coverBtn.disabled = edit.busy;
-        coverBtn.addEventListener("click", () => setProjectCover(mediaId));
-        actions.appendChild(coverBtn);
-      }
+      const commitGroup = document.createElement("div");
+      commitGroup.className = "slide-commit";
 
       const saveSlideBtn = document.createElement("button");
       saveSlideBtn.type = "button";
-      saveSlideBtn.className = "icon-btn";
+      saveSlideBtn.className = `icon-btn slide-save-btn${edit.dirty ? " is-dirty" : ""}`;
       saveSlideBtn.textContent = "Save";
       saveSlideBtn.disabled = edit.busy || !edit.dirty;
       saveSlideBtn.addEventListener("click", () => saveExistingSlide(mediaId));
-      actions.appendChild(saveSlideBtn);
+      commitGroup.appendChild(saveSlideBtn);
 
       const delBtn = document.createElement("button");
       delBtn.type = "button";
@@ -881,7 +883,9 @@
       delBtn.title = "Remove or Delete Slide";
       delBtn.disabled = edit.busy;
       delBtn.addEventListener("click", () => openSlideDeleteModal(mediaId));
-      actions.appendChild(delBtn);
+      commitGroup.appendChild(delBtn);
+
+      actions.appendChild(commitGroup);
 
       body.appendChild(actions);
       card.appendChild(thumbWrap);
@@ -1357,26 +1361,10 @@
       }
 
       const actions = document.createElement("div");
-      actions.className = "slide-actions slide-actions-wrap";
+      actions.className = "slide-actions";
 
-      const moveBtns = document.createElement("div");
-      moveBtns.className = "slide-move-btns";
-      const leftBtn = document.createElement("button");
-      leftBtn.type = "button";
-      leftBtn.className = "icon-btn";
-      leftBtn.textContent = "←";
-      leftBtn.disabled = state.isUploading || idx === 0;
-      leftBtn.addEventListener("click", () => moveQueueItem(idx, idx - 1));
-
-      const rightBtn = document.createElement("button");
-      rightBtn.type = "button";
-      rightBtn.className = "icon-btn";
-      rightBtn.textContent = "→";
-      rightBtn.disabled = state.isUploading || idx === state.queue.length - 1;
-      rightBtn.addEventListener("click", () => moveQueueItem(idx, idx + 1));
-      moveBtns.appendChild(leftBtn);
-      moveBtns.appendChild(rightBtn);
-      actions.appendChild(moveBtns);
+      const toolsGroup = document.createElement("div");
+      toolsGroup.className = "slide-tools";
 
       if (item.kind === "video") {
         const posterBtn = document.createElement("button");
@@ -1411,18 +1399,23 @@
           });
           input.click();
         });
-        actions.appendChild(posterBtn);
+        toolsGroup.appendChild(posterBtn);
       }
 
       if (item.kind === "image" || item.file) {
         const focusBtn = document.createElement("button");
         focusBtn.type = "button";
         focusBtn.className = "icon-btn";
-        focusBtn.textContent = `Focus ${item.focusX}%/${item.focusY}%`;
+        focusBtn.textContent = "Focus Point";
+        focusBtn.title = "Set cropping focus point";
         focusBtn.disabled = state.isUploading;
         focusBtn.addEventListener("click", () => openFocusModal({ kind: "queue", id: item.id }));
-        actions.appendChild(focusBtn);
+        toolsGroup.appendChild(focusBtn);
       }
+      actions.appendChild(toolsGroup);
+
+      const commitGroup = document.createElement("div");
+      commitGroup.className = "slide-commit";
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
@@ -1430,7 +1423,9 @@
       removeBtn.textContent = "✕";
       removeBtn.disabled = state.isUploading;
       removeBtn.addEventListener("click", () => removeQueueItem(item.id));
-      actions.appendChild(removeBtn);
+      commitGroup.appendChild(removeBtn);
+
+      actions.appendChild(commitGroup);
 
       body.appendChild(actions);
       card.appendChild(thumbWrap);
