@@ -370,55 +370,80 @@ textarea:focus {
   grid-column: span 2;
 }
 
+.field-span-3 {
+  grid-column: 1 / -1;
+}
+
 .pill-checkbox-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 
 .pill-check {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  justify-content: center;
+  padding: 5px 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 12px;
+  font-weight: 500;
   background: var(--surface);
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
+  transition: all 0.15s ease;
+}
+
+.pill-check:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--bg);
 }
 
 .pill-check:has(input:checked) {
-  border-color: var(--text);
-  background: var(--text);
+  border-color: #0f0f0f;
+  background: #0f0f0f;
   color: #ffffff;
 }
 
 .pill-check input {
-  width: 13px;
-  height: 13px;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
   margin: 0;
+  pointer-events: none;
 }
 
 .feature-inline {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 36px;
 }
 
-.inline-check {
+.feature-inline .inline-check {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.feature-inline .inline-check input[type="checkbox"] {
+  accent-color: #0f0f0f;
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  margin: 0;
 }
 
 .input-compact {
-  max-width: 120px;
+  max-width: 90px;
 }
 
 /* Gallery Panel Cards */
@@ -694,8 +719,14 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
-.static-badge {
-  position: static;
+.static-badge,
+.slide-order-badge.static-badge {
+  position: static !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0;
 }
 
 .editor-hero-title {
@@ -1465,7 +1496,8 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
-  .field-span-2 {
+  .field-span-2,
+  .field-span-3 {
     grid-column: span 1;
   }
 

@@ -196,18 +196,13 @@
             </div>
 
             <div class="field">
-              <label for="editProjSlug">Slug *</label>
-              <input id="editProjSlug" type="text" placeholder="project-slug" />
-            </div>
-
-            <div class="field">
-              <label for="editProjSeq">Project Number</label>
-              <input id="editProjSeq" type="number" step="1" placeholder="e.g. 1" />
-            </div>
-
-            <div class="field">
               <label for="editProjSubtitle">Sub-title</label>
               <input id="editProjSubtitle" type="text" placeholder="Optional sub-title" />
+            </div>
+
+            <div class="field">
+              <label for="editProjSlug">Slug *</label>
+              <input id="editProjSlug" type="text" placeholder="project-slug" />
             </div>
 
             <div class="field">
@@ -216,18 +211,8 @@
             </div>
 
             <div class="field">
-              <label for="editProjCover">Cover Slide</label>
-              <select id="editProjCover"></select>
-            </div>
-
-            <div class="field field-span-2">
-              <label for="editProjDetails">Project Details (Credits / Description)</label>
-              <textarea id="editProjDetails" rows="2" placeholder="Credits or description (optional)"></textarea>
-            </div>
-
-            <div class="field">
-              <label>Category</label>
-              <div id="editProjCategories" class="pill-checkbox-list"></div>
+              <label for="editProjSeq">Project Number</label>
+              <input id="editProjSeq" type="number" step="1" placeholder="e.g. 1" />
             </div>
 
             <div class="field">
@@ -237,10 +222,23 @@
                   <input id="editProjFeatured" type="checkbox" />
                   <span>Feature in Home</span>
                 </label>
-                <input id="editProjFeaturedSeq" type="number" step="1" placeholder="Featured seq #"
+                <input id="editProjFeaturedSeq" type="number" step="1" placeholder="Seq #"
                   class="input-compact" />
               </div>
             </div>
+
+            <div class="field field-span-3">
+              <label>Category</label>
+              <div id="editProjCategories" class="pill-checkbox-list"></div>
+            </div>
+
+            <div class="field field-span-3">
+              <label for="editProjDetails">Description / Credits</label>
+              <textarea id="editProjDetails" rows="3" placeholder="Credits, description, or notes (optional)"></textarea>
+            </div>
+
+            <!-- Cover slide is managed directly from gallery slides -->
+            <select id="editProjCover" hidden aria-hidden="true"></select>
           </div>
         </details>
 
@@ -249,7 +247,7 @@
           <div class="queue-toolbar">
             <div class="queue-toolbar-left">
               <h2 id="existingGalleryHeading">Gallery Slides (0)</h2>
-              <span class="muted">Drag cards to reorder, edit fields inline, or set Cover.</span>
+              <span class="muted">Drag cards to reorder · Edit fields inline</span>
             </div>
             <div class="queue-toolbar-right">
               <button id="resetGalleryOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Reset Order</button>

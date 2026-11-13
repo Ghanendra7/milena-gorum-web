@@ -444,7 +444,7 @@
     els.projectStatusPill.className = `status-pill ${p.isDraft ? "" : "is-ok"}`;
     els.publishProjectBtn.textContent = p.isDraft ? "Publish Project & Media" : "Re-publish Project & Media";
     els.unpublishProjectBtn.disabled = p.isDraft;
-    els.projectMeta.textContent = `/projects/${p.slug} · ${p.existingSlideCount} slide(s) · Next new slide starts at #${p.nextOrder}`;
+    els.projectMeta.textContent = `/projects/${p.slug} · ${p.existingSlideCount} slide(s)`;
   }
 
   function renderCategoryPills(container, selectedIds, onToggle = null) {
@@ -512,6 +512,7 @@
     renderCategoryPills(els.editProjCategories, p.categoryIds, () => setProjectDirty(true));
     els.editProjFeatured.checked = Boolean(p.featured);
     els.editProjFeaturedSeq.value = p.featuredSequence === "" ? "" : String(p.featuredSequence);
+    els.editProjFeaturedSeq.disabled = !els.editProjFeatured.checked;
 
     populateCoverSelect(p);
     setProjectDirty(false);
@@ -2725,8 +2726,30 @@
     els.editProjFeatured,
     els.editProjFeaturedSeq,
   ].forEach((el) => {
+    if (!el) return;
     el.addEventListener("input", () => setProjectDirty(true));
     el.addEventListener("change", () => setProjectDirty(true));
+  });
+
+  els.editProjFeatured.addEventListener("change", () => {
+    els.editProjFeaturedSeq.disabled = !els.editProjFeatured.checked;
+  });
+
+  [
+    els.editProjName,
+    els.editProjSlug,
+    els.editProjSeq,
+    els.editProjSubtitle,
+    els.editProjFeaturedSeq,
+  ].forEach((el) => {
+    if (!el) return;
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        el.blur();
+        if (state.projectDirty) saveProjectDetails();
+      }
+    });
   });
 
   els.saveProjectDetailsBtn.addEventListener("click", (e) => {
