@@ -1062,6 +1062,10 @@ function initOsmoBoilerplate() {
             const isEnteringIndex = nextPath.includes("index");
 
             if (isComingFromDetail) {
+                if (isEnteringDetail) {
+                    // Navigating detail-to-detail: clear exact saved scroll so returning to projects centers the newly viewed project
+                    sessionStorage.removeItem("mg_projects_saved_scroll");
+                }
                 // Navigating back from project detail
                 sessionStorage.setItem("mg_restore_from_detail", "true");
                 sessionStorage.setItem("mg_index_restore_from_detail", "true");
@@ -1081,6 +1085,8 @@ function initOsmoBoilerplate() {
                     sessionStorage.removeItem("mg_restore_project_slug");
                     sessionStorage.removeItem("mg_restore_project_url");
                     sessionStorage.removeItem("mg_restore_project_num");
+                    sessionStorage.removeItem("mg_restore_filter_parent");
+                    sessionStorage.removeItem("mg_restore_filter_sub");
                 }
 
                 // ONLY clear index restoration data if we are NOT navigating from index to project detail!

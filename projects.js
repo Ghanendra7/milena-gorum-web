@@ -219,6 +219,8 @@
         let restoreUrl = "";
         let restoreNum = "";
         let savedScroll = null;
+        let restoredFilterParent = "";
+        let restoredFilterSub = "";
         try {
             isRestoreFromDetail = sessionStorage.getItem("mg_restore_from_detail") === "true";
             if (isRestoreFromDetail) {
@@ -226,8 +228,29 @@
                 restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
                 restoreNum = (sessionStorage.getItem("mg_restore_project_num") || "").trim();
                 savedScroll = sessionStorage.getItem("mg_projects_saved_scroll");
+                restoredFilterParent = sessionStorage.getItem("mg_restore_filter_parent") || "";
+                restoredFilterSub = sessionStorage.getItem("mg_restore_filter_sub") || "";
             }
         } catch (_) { }
+
+        const clearRestorationState = () => {
+            isRestoreFromDetail = false;
+            restoreSlug = "";
+            restoreUrl = "";
+            restoreNum = "";
+            savedScroll = null;
+            restoredFilterParent = "";
+            restoredFilterSub = "";
+            try {
+                sessionStorage.removeItem("mg_restore_from_detail");
+                sessionStorage.removeItem("mg_projects_saved_scroll");
+                sessionStorage.removeItem("mg_restore_project_slug");
+                sessionStorage.removeItem("mg_restore_project_url");
+                sessionStorage.removeItem("mg_restore_project_num");
+                sessionStorage.removeItem("mg_restore_filter_parent");
+                sessionStorage.removeItem("mg_restore_filter_sub");
+            } catch (_) { }
+        };
 
         const formatNum = (str) => {
             const clean = (str || "").trim();
@@ -499,9 +522,14 @@
                         (restoreNum && parseInt(numText, 10) === parseInt(restoreNum, 10))
                     );
                 });
-                if (matchIdx !== -1 && cachedCardMetrics[matchIdx]) {
-                    const m = cachedCardMetrics[matchIdx];
-                    return Math.max(0, m.left + m.width / 2 - window.innerWidth / 2);
+                if (matchIdx !== -1) {
+                    const targetIdx = isDesktopInfinite && activeFilteredCount > 0
+                        ? activeFilteredCount + (matchIdx % activeFilteredCount)
+                        : matchIdx;
+                    if (cachedCardMetrics[targetIdx]) {
+                        const m = cachedCardMetrics[targetIdx];
+                        return Math.max(0, m.left + m.width / 2 - window.innerWidth / 2);
+                    }
                 }
             }
             return null;
@@ -831,6 +859,8 @@
                         if (num) sessionStorage.setItem("mg_restore_project_num", num);
                         sessionStorage.setItem("mg_projects_saved_scroll", String(scrollPos));
                         sessionStorage.setItem("mg_restore_from_detail", "true");
+                        sessionStorage.setItem("mg_restore_filter_parent", activeParent);
+                        sessionStorage.setItem("mg_restore_filter_sub", activeSub);
                     } catch (_) { }
                 }, { signal });
             }
@@ -1135,11 +1165,12 @@
                     }
 
                     if (singleSetWidth > 0) {
-                        if (scrollPos >= singleSetWidth * 2) {
+                        while (scrollPos >= singleSetWidth * 2) {
                             scrollPos -= singleSetWidth;
                             targetPos -= singleSetWidth;
                             rawTargetPos -= singleSetWidth;
-                        } else if (scrollPos <= 0) {
+                        }
+                        while (scrollPos <= 0) {
                             scrollPos += singleSetWidth;
                             targetPos += singleSetWidth;
                             rawTargetPos += singleSetWidth;
@@ -1213,6 +1244,8 @@
                 if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
                 if (num) sessionStorage.setItem("mg_restore_project_num", num);
                 sessionStorage.setItem("mg_restore_from_detail", "true");
+                sessionStorage.setItem("mg_restore_filter_parent", activeParent);
+                sessionStorage.setItem("mg_restore_filter_sub", activeSub);
             } catch (_) { }
 
             if (typeof barba !== "undefined" && typeof barba.go === "function") {
@@ -1549,6 +1582,8 @@
                                 if (slug) sessionStorage.setItem("mg_restore_project_slug", slug);
                                 if (num) sessionStorage.setItem("mg_restore_project_num", num);
                                 sessionStorage.setItem("mg_restore_from_detail", "true");
+                                sessionStorage.setItem("mg_restore_filter_parent", activeParent);
+                                sessionStorage.setItem("mg_restore_filter_sub", activeSub);
                             } catch (_) { }
                         }, { signal });
                     }
@@ -1741,12 +1776,7 @@
                     mobileMainSwiper.update();
                 }
                 if (isRestoreFromDetail) {
-                    try {
-                        sessionStorage.removeItem("mg_restore_from_detail");
-                        sessionStorage.removeItem("mg_restore_project_slug");
-                        sessionStorage.removeItem("mg_restore_project_url");
-                        sessionStorage.removeItem("mg_restore_project_num");
-                    } catch (_) { }
+                    clearRestorationState();
                 }
                 if (isMobileLayout() && !section.classList.contains("is-marquee-paused")) {
                     syncMobileVideos();
@@ -1962,8 +1992,8 @@
         // Filter Logic
         const parentFilterBtns = scope.querySelectorAll(".filter-btn");
         const subFilterBtns = scope.querySelectorAll(".sub-btn");
-        let activeParent = "all";
-        let activeSub = "all";
+        let activeParent = restoredFilterParent ? canonicalizeType(restoredFilterParent) : "all";
+        let activeSub = restoredFilterSub ? normalize(restoredFilterSub) : "all";
 
         const syncSubFilterVisibility = () => {
             if (!subFilterList) return;
@@ -2051,6 +2081,8 @@
 
         parentFilterBtns.forEach((btn) => {
             btn.addEventListener("click", () => {
+                clearRestorationState();
+                userHasInteractedDesktop = false;
                 parentFilterBtns.forEach((b) => b.classList.remove("is-active"));
                 btn.classList.add("is-active");
 
@@ -2066,6 +2098,8 @@
 
         subFilterBtns.forEach((btn) => {
             btn.addEventListener("click", () => {
+                clearRestorationState();
+                userHasInteractedDesktop = false;
                 subFilterBtns.forEach((b) => b.classList.remove("is-active"));
                 btn.classList.add("is-active");
 
@@ -2075,7 +2109,19 @@
             }, { signal });
         });
 
+        if (activeParent !== "all" || activeSub !== "all") {
+            parentFilterBtns.forEach((b) => {
+                const rawFilter = b.getAttribute("data-filter") || b.textContent;
+                b.classList.toggle("is-active", canonicalizeType(rawFilter) === activeParent);
+            });
+            subFilterBtns.forEach((b) => {
+                const rawSub = b.getAttribute("data-sub") || b.textContent;
+                b.classList.toggle("is-active", normalize(rawSub) === activeSub);
+            });
+        }
+
         syncSubFilterVisibility();
+        updateAvailableSubFilterButtons();
         applyFilters();
         projectsRafId = requestAnimationFrame(animateGallery);
 
@@ -2093,20 +2139,18 @@
 
                     measureDesktopMetrics();
                     const restored = getRestoredScrollPos();
-                    const initPos = restored !== null ? restored : getInitialScrollPos();
-                    scrollPos = initPos;
-                    targetPos = initPos;
-                    rawTargetPos = initPos;
                     if (restored !== null) {
+                        scrollPos = restored;
+                        targetPos = restored;
+                        rawTargetPos = restored;
                         userHasInteractedDesktop = true;
-                        try {
-                            sessionStorage.removeItem("mg_restore_from_detail");
-                            sessionStorage.removeItem("mg_projects_saved_scroll");
-                            sessionStorage.removeItem("mg_restore_project_slug");
-                            sessionStorage.removeItem("mg_restore_project_url");
-                            sessionStorage.removeItem("mg_restore_project_num");
-                        } catch (_) { }
+                    } else if (!userHasInteractedDesktop) {
+                        const initPos = getInitialScrollPos();
+                        scrollPos = initPos;
+                        targetPos = initPos;
+                        rawTargetPos = initPos;
                     }
+                    clearRestorationState();
 
                     track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
                     checkHeaderCollisions();
