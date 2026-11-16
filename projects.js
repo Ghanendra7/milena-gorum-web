@@ -406,6 +406,11 @@
         };
 
         const measureDesktopMetrics = () => {
+            if (isMobileLayout()) {
+                singleSetWidth = 0;
+                cachedCardMetrics = [];
+                return;
+            }
             const total = trackCards.length;
             if (total === 0 || activeFilteredCount === 0) {
                 singleSetWidth = 0;
@@ -750,7 +755,7 @@
             isDesktopInfinite = count > MIN_LOOP_THRESHOLD;
             track.classList.toggle("is-no-loop", !isDesktopInfinite);
 
-            const setsNeeded = isDesktopInfinite ? Math.max(4, Math.ceil(40 / count) + 2) : 1;
+            const setsNeeded = isDesktopInfinite ? Math.max(3, Math.min(5, Math.ceil(30 / count) + 2)) : 1;
             const fragment = document.createDocumentFragment();
             let globalIdx = 0;
 
@@ -1188,6 +1193,11 @@
         };
 
         const measureMobileThumbMetrics = () => {
+            if (!isMobileLayout()) {
+                thumbSingleSetWidth = 0;
+                cachedThumbCenters = [];
+                return;
+            }
             const count = mobileFilteredTemplates.length;
             const total = mobileThumbItems.length;
             if (!mobileThumbTrack || total === 0 || count === 0) {
@@ -1202,16 +1212,33 @@
                 return;
             }
 
-            cachedThumbCenters = new Array(total);
-            for (let i = 0; i < total; i++) {
-                const item = mobileThumbItems[i];
-                cachedThumbCenters[i] = item.offsetLeft + item.offsetWidth / 2;
-            }
-
             if (isMobileInfinite && total > count) {
                 thumbSingleSetWidth = mobileThumbItems[count].offsetLeft - mobileThumbItems[0].offsetLeft;
             } else {
                 thumbSingleSetWidth = 0;
+            }
+
+            cachedThumbCenters = new Array(total);
+            const numSets = Math.floor(total / count);
+
+            if (thumbSingleSetWidth > 0 && numSets > 1) {
+                const baseCenters = new Float32Array(count);
+                for (let i = 0; i < count; i++) {
+                    const item = mobileThumbItems[i];
+                    baseCenters[i] = item.offsetLeft + item.offsetWidth / 2;
+                }
+                for (let s = 0; s < numSets; s++) {
+                    const setOffset = s * thumbSingleSetWidth;
+                    const baseIdx = s * count;
+                    for (let i = 0; i < count; i++) {
+                        cachedThumbCenters[baseIdx + i] = baseCenters[i] + setOffset;
+                    }
+                }
+            } else {
+                for (let i = 0; i < total; i++) {
+                    const item = mobileThumbItems[i];
+                    cachedThumbCenters[i] = item.offsetLeft + item.offsetWidth / 2;
+                }
             }
         };
 
@@ -1384,6 +1411,7 @@
             isMobileInfinite = count > MIN_LOOP_THRESHOLD;
             const mainRepeats = isMobileInfinite && count < 6 ? Math.ceil(6 / count) : 1;
 
+            const mainFragment = document.createDocumentFragment();
             for (let r = 0; r < mainRepeats; r++) {
                 filteredTemplates.forEach((tpl, idx) => {
                     const linkHref = tpl.querySelector(".project-link")?.getAttribute("href") || "#";
@@ -1430,9 +1458,10 @@
                     const slideImg = mainSlide.querySelector("img");
                     const mediaBox = mainSlide.querySelector(".mobile-media-box");
                     lockNaturalAspect(slideImg, mediaBox);
-                    mainWrapper.appendChild(mainSlide);
+                    mainFragment.appendChild(mainSlide);
                 });
             }
+            mainWrapper.appendChild(mainFragment);
 
             // 2. Initialize Swiper directly with targetProjIdx
             if (typeof Swiper !== "undefined") {
@@ -1495,9 +1524,26 @@
             }
 
             // 3. Build scrubber strip thumbnails
-            const thumbSetsNeeded = isMobileInfinite ? Math.max(8, Math.ceil(36 / count) + 4) : 1;
+            const thumbSetsNeeded = isMobileInfinite ? Math.max(3, Math.min(6, Math.ceil(24 / count) + 2)) : 1;
             const thumbFragment = document.createDocumentFragment();
             let cloneIdxCounter = 0;
+            const targetSet = Math.floor(thumbSetsNeeded / 2);
+
+            let debouncedThumbTimer = null;
+            const onThumbAspectReady = () => {
+                if (debouncedThumbTimer) return;
+                debouncedThumbTimer = setTimeout(() => {
+                    debouncedThumbTimer = null;
+                    measureMobileThumbMetrics();
+                    if (!isThumbTouching && !isThumbCoasting && activeThumbCloneIdx >= 0) {
+                        thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
+                        thumbScrollPos = thumbTargetPos;
+                        if (mobileThumbTrack) {
+                            mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
+                        }
+                    }
+                }, 60);
+            };
 
             for (let s = 0; s < thumbSetsNeeded; s++) {
                 filteredTemplates.forEach((tpl, idx) => {
@@ -1506,6 +1552,7 @@
                     const imgSrcset = imgEl?.getAttribute("srcset") || "";
                     const numText = formatNum(tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent || "");
 
+                    const isNearTarget = s === targetSet && Math.abs(idx - targetProjIdx) <= 5;
                     const item = document.createElement("div");
                     item.className = "mobile-thumb-item";
                     item.dataset.projectIdx = String(idx);
@@ -1513,7 +1560,7 @@
                     item.innerHTML = `
             <div class="mobile-thumb-num">${numText}</div>
             <div class="mobile-thumb-img-wrap">
-              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} decoding="async" alt="" draggable="false" />
+              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} loading="${isNearTarget ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
             </div>
           `;
 
@@ -1521,17 +1568,9 @@
                     const thumbWrap = item.querySelector(".mobile-thumb-img-wrap");
                     if (imgEl && imgEl.naturalWidth && imgEl.naturalHeight) {
                         thumbWrap.style.aspectRatio = `${imgEl.naturalWidth} / ${imgEl.naturalHeight}`;
+                    } else {
+                        lockNaturalAspect(thumbImg, thumbWrap, onThumbAspectReady);
                     }
-                    lockNaturalAspect(thumbImg, thumbWrap, () => {
-                        measureMobileThumbMetrics();
-                        if (!isThumbTouching && !isThumbCoasting && activeThumbCloneIdx >= 0) {
-                            thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
-                            thumbScrollPos = thumbTargetPos;
-                            if (mobileThumbTrack) {
-                                mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
-                            }
-                        }
-                    });
 
                     thumbFragment.appendChild(item);
                     mobileThumbItems.push(item);
@@ -1834,6 +1873,22 @@
             });
         };
 
+        let currentFiltered = [];
+        let isDesktopBuilt = false;
+        let isMobileBuilt = false;
+
+        const buildActiveLayout = (filtered) => {
+            if (isMobileLayout()) {
+                buildMobileGallery(filtered);
+                isMobileBuilt = true;
+                isDesktopBuilt = false;
+            } else {
+                buildDesktopLoop(filtered);
+                isDesktopBuilt = true;
+                isMobileBuilt = false;
+            }
+        };
+
         const applyFilters = () => {
             const filteredSeen = new Set();
             const filtered = masterCards.filter((card) => {
@@ -1852,9 +1907,9 @@
                 return false;
             });
 
+            currentFiltered = filtered;
             activeFilteredCount = filtered.length;
-            buildDesktopLoop(filtered);
-            buildMobileGallery(filtered);
+            buildActiveLayout(filtered);
             startMarqueeDelay();
         };
 
@@ -1891,97 +1946,130 @@
         const revealGalleryWhenReady = () => {
             const reveal = () => {
                 if (isGalleryRevealed) return;
-                trackCards.forEach((card) => {
-                    const img = card.querySelector(".project-img");
-                    const wrap = card.querySelector(".project-media-wrap");
-                    if (img && wrap && img.naturalWidth && img.naturalHeight) {
-                        wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                if (!isMobileLayout()) {
+                    trackCards.forEach((card) => {
+                        const img = card.querySelector(".project-img");
+                        const wrap = card.querySelector(".project-media-wrap");
+                        if (img && wrap && img.naturalWidth && img.naturalHeight) {
+                            wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                        }
+                    });
+
+                    measureDesktopMetrics();
+                    const restored = getRestoredScrollPos();
+                    const initPos = restored !== null ? restored : getInitialScrollPos();
+                    scrollPos = initPos;
+                    targetPos = initPos;
+                    rawTargetPos = initPos;
+                    if (restored !== null) {
+                        userHasInteractedDesktop = true;
+                        try {
+                            sessionStorage.removeItem("mg_restore_from_detail");
+                            sessionStorage.removeItem("mg_projects_saved_scroll");
+                            sessionStorage.removeItem("mg_restore_project_slug");
+                            sessionStorage.removeItem("mg_restore_project_url");
+                            sessionStorage.removeItem("mg_restore_project_num");
+                        } catch (_) { }
                     }
-                });
 
-                measureDesktopMetrics();
-                const restored = getRestoredScrollPos();
-                const initPos = restored !== null ? restored : getInitialScrollPos();
-                scrollPos = initPos;
-                targetPos = initPos;
-                rawTargetPos = initPos;
-                if (restored !== null) {
-                    userHasInteractedDesktop = true;
-                    try {
-                        sessionStorage.removeItem("mg_restore_from_detail");
-                        sessionStorage.removeItem("mg_projects_saved_scroll");
-                        sessionStorage.removeItem("mg_restore_project_slug");
-                        sessionStorage.removeItem("mg_restore_project_url");
-                        sessionStorage.removeItem("mg_restore_project_num");
-                    } catch (_) { }
+                    track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                    checkHeaderCollisions();
+                } else {
+                    measureMobileThumbMetrics();
+                    if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
+                        mobileMainSwiper.update();
+                    }
                 }
-
-                track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
-                checkHeaderCollisions();
-                measureMobileThumbMetrics();
 
                 isGalleryRevealed = true;
                 section.classList.add("is-ready");
                 section.classList.add("is-marquee-active");
-                if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
-                    mobileMainSwiper.update();
-                }
                 startMarqueeDelay();
             };
 
             // If section was already prepared by page transition, reveal immediately without Safari decode delay
             if (section.classList.contains("is-ready")) {
                 reveal();
-                trackCards.forEach((card) => {
-                    const img = card.querySelector(".project-img");
-                    if (img && !img.complete) {
-                        img.addEventListener("load", () => {
-                            const wrap = card.querySelector(".project-media-wrap");
-                            if (wrap && img.naturalWidth && img.naturalHeight) {
-                                wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
-                            }
+                if (!isMobileLayout()) {
+                    let desktopMeasureTimer = null;
+                    const triggerDebouncedDesktopMeasure = () => {
+                        if (desktopMeasureTimer) return;
+                        desktopMeasureTimer = setTimeout(() => {
+                            desktopMeasureTimer = null;
                             measureDesktopMetrics();
                             checkHeaderCollisions();
-                        }, { once: true });
-                    }
-                });
+                        }, 50);
+                    };
+
+                    trackCards.forEach((card) => {
+                        const img = card.querySelector(".project-img");
+                        if (img && !img.complete) {
+                            img.addEventListener("load", () => {
+                                const wrap = card.querySelector(".project-media-wrap");
+                                if (wrap && img.naturalWidth && img.naturalHeight) {
+                                    wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                                }
+                                triggerDebouncedDesktopMeasure();
+                            }, { once: true });
+                        }
+                    });
+                }
                 return;
             }
 
-            const initialSetCards = trackCards.filter((c) => c.getAttribute("data-initial-visible") === "true").slice(0, 4);
-            const decodeTasks = (initialSetCards.length ? initialSetCards : trackCards.slice(0, 4)).map((card) => {
-                const img = card.querySelector(".project-img");
-                if (!img) return Promise.resolve();
-                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-                if (typeof img.decode === "function") {
-                    const timeoutCap = new Promise((res) => setTimeout(res, 200));
-                    return Promise.race([img.decode(), timeoutCap]).catch(() => { });
-                }
-                return new Promise((res) => {
-                    const done = () => res();
-                    img.addEventListener("load", done, { once: true });
-                    img.addEventListener("error", done, { once: true });
-                    setTimeout(done, 200);
+            if (!isMobileLayout()) {
+                const initialSetCards = trackCards.filter((c) => c.getAttribute("data-initial-visible") === "true").slice(0, 4);
+                const decodeTasks = (initialSetCards.length ? initialSetCards : trackCards.slice(0, 4)).map((card) => {
+                    const img = card.querySelector(".project-img");
+                    if (!img) return Promise.resolve();
+                    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                    if (typeof img.decode === "function") {
+                        const timeoutCap = new Promise((res) => setTimeout(res, 200));
+                        return Promise.race([img.decode(), timeoutCap]).catch(() => { });
+                    }
+                    return new Promise((res) => {
+                        const done = () => res();
+                        img.addEventListener("load", done, { once: true });
+                        img.addEventListener("error", done, { once: true });
+                        setTimeout(done, 200);
+                    });
                 });
-            });
 
-            const safetyTimer = setTimeout(reveal, 400);
-            Promise.allSettled(decodeTasks).then(() => {
-                clearTimeout(safetyTimer);
+                const safetyTimer = setTimeout(reveal, 400);
+                Promise.allSettled(decodeTasks).then(() => {
+                    clearTimeout(safetyTimer);
+                    reveal();
+                });
+            } else {
                 reveal();
-            });
+            }
         };
 
         revealGalleryWhenReady();
 
+        let lastLayoutIsMobile = isMobileLayout();
         window.addEventListener("resize", () => {
-            measureDesktopMetrics();
-            checkHeaderCollisions();
-            if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
-                startHeaderMarquee(trackCards[hoveredCardIndex]);
+            const currentIsMobile = isMobileLayout();
+            if (currentIsMobile !== lastLayoutIsMobile) {
+                lastLayoutIsMobile = currentIsMobile;
+                const filteredToUse = currentFiltered.length ? currentFiltered : masterCards;
+                if (currentIsMobile && !isMobileBuilt) {
+                    buildMobileGallery(filteredToUse);
+                    isMobileBuilt = true;
+                } else if (!currentIsMobile && !isDesktopBuilt) {
+                    buildDesktopLoop(filteredToUse);
+                    isDesktopBuilt = true;
+                }
             }
-            measureMobileThumbMetrics();
-            if (isMobileLayout()) {
+
+            if (!currentIsMobile) {
+                measureDesktopMetrics();
+                checkHeaderCollisions();
+                if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
+                    startHeaderMarquee(trackCards[hoveredCardIndex]);
+                }
+            } else {
+                measureMobileThumbMetrics();
                 if (mobileMainSwiper && !mobileMainSwiper.destroyed) {
                     mobileMainSwiper.update();
                 }

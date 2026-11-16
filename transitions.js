@@ -433,6 +433,9 @@ function initOsmoBoilerplate() {
             // Immediately pause active videos on outgoing page
             current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
 
+            const isMobile = window.innerWidth <= 1024;
+            const transitionDuration = isMobile ? 0.95 : slideDuration;
+
             gsap.set(current, {
                 position: "fixed",
                 top: 0,
@@ -455,22 +458,22 @@ function initOsmoBoilerplate() {
             if (navHome) {
                 const navRect = navHome.getBoundingClientRect();
                 const targetY = 16 - navRect.top;
-                tl.to(navHome, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+                tl.to(navHome, { y: targetY, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
             }
 
             if (projectInfo) {
                 const infoRect = projectInfo.getBoundingClientRect();
                 const targetY = 16 - infoRect.top;
-                tl.to(projectInfo, { y: targetY, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+                tl.to(projectInfo, { y: targetY, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
             }
 
             if (galleryStage) {
-                tl.to(galleryStage, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+                tl.to(galleryStage, { yPercent: -80, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
             } else {
-                tl.to(current, { yPercent: -80, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+                tl.to(current, { yPercent: -80, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
             }
 
-            setTimeout(done, (slideDuration + 0.3) * 1000);
+            setTimeout(done, (transitionDuration + 0.3) * 1000);
         });
     }
 
@@ -478,6 +481,8 @@ function initOsmoBoilerplate() {
         return new Promise((resolve) => {
             const nextNs = next.getAttribute("data-barba-namespace") || "";
             const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 1025px)").matches : window.innerWidth > 1024;
+            const isMobile = !isDesktop;
+            const transitionDuration = isMobile ? 0.95 : slideDuration;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
             ensureNavbarInContainer(next, data?.next?.html);
@@ -507,11 +512,20 @@ function initOsmoBoilerplate() {
             if (section) {
                 section.classList.add("is-marquee-paused");
                 section.classList.add("is-ready");
-                const stage = section.querySelector(".desktop-gallery-stage");
-                if (stage) {
-                    stage.style.opacity = "1";
-                    stage.style.visibility = "visible";
-                    stage.style.transition = "none";
+                if (isDesktop) {
+                    const stage = section.querySelector(".desktop-gallery-stage");
+                    if (stage) {
+                        stage.style.opacity = "1";
+                        stage.style.visibility = "visible";
+                        stage.style.transition = "none";
+                    }
+                } else {
+                    const mobileStage = section.querySelector(".mobile-gallery-stage");
+                    if (mobileStage) {
+                        mobileStage.style.opacity = "1";
+                        mobileStage.style.visibility = "visible";
+                        mobileStage.style.transition = "none";
+                    }
                 }
             }
 
@@ -661,10 +675,10 @@ function initOsmoBoilerplate() {
 
             const tl = gsap.timeline({ onComplete: done });
 
-            tl.to(next, { yPercent: 0, duration: slideDuration, ease: "power2.inOut", force3D: true }, 0);
+            tl.to(next, { yPercent: 0, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
 
             // Stagger entrance plays as the page rises into the viewport
-            const cardsStart = 0.85;
+            const cardsStart = isMobile ? 0.45 : 0.85;
             if (visibleCards.length) {
                 tl.to(visibleCards, {
                     opacity: 1,
@@ -681,17 +695,17 @@ function initOsmoBoilerplate() {
                 tl.to(mobileStage, {
                     opacity: 1,
                     yPercent: 0,
-                    duration: 0.6,
+                    duration: 0.5,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
                         gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                     },
-                }, cardsStart + 0.08); // delays mobile float-in
+                }, cardsStart);
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
-            const marqueeReleaseTime = 1.60;
+            const marqueeReleaseTime = isMobile ? 1.05 : 1.60;
             tl.add("releaseMarquee", marqueeReleaseTime);
             tl.call(() => {
                 if (section) {
@@ -700,8 +714,8 @@ function initOsmoBoilerplate() {
                 }
             }, null, "releaseMarquee");
 
-            const hitTopLead = 0.3;
-            const hitTopTime = Math.max(0, slideDuration - hitTopLead);
+            const hitTopLead = isMobile ? 0.2 : 0.3;
+            const hitTopTime = Math.max(0, transitionDuration - hitTopLead);
 
             if (navTop) {
                 tl.to(navTop, { opacity: 1, duration: 0.4, ease: "power2.out" }, hitTopTime);
@@ -802,6 +816,9 @@ function initOsmoBoilerplate() {
 
             ensureNavbarInContainer(current);
 
+            const isMobile = window.innerWidth <= 1024;
+            const transitionDuration = isMobile ? 0.95 : slideDuration;
+
             const scrollY = window.scrollY || window.pageYOffset || 0;
             // Outgoing page stays on top (zIndex: 2) as it slides down out of view
             gsap.set(current, {
@@ -842,7 +859,7 @@ function initOsmoBoilerplate() {
             // 1. Projects container slides downward off-screen
             tl.to(current, {
                 yPercent: 100,
-                duration: slideDuration,
+                duration: transitionDuration,
                 ease: "power2.inOut",
                 force3D: true,
             }, 0);
@@ -851,7 +868,7 @@ function initOsmoBoilerplate() {
             if (galleryStage) {
                 tl.to(galleryStage, {
                     yPercent: 15,
-                    duration: slideDuration,
+                    duration: transitionDuration,
                     ease: "power2.inOut",
                     force3D: true,
                 }, 0);
@@ -886,7 +903,7 @@ function initOsmoBoilerplate() {
             }
 
             // Guaranteed resolution fallback for Safari
-            setTimeout(done, (slideDuration + 0.3) * 1000);
+            setTimeout(done, (transitionDuration + 0.3) * 1000);
         });
     }
 
@@ -920,6 +937,9 @@ function initOsmoBoilerplate() {
             const galleryStage = next.querySelector(".home-gallery-stage");
             const navHome = next.querySelector(".navbar-home");
             const projectInfo = next.querySelector(".home-project-info");
+
+            const isMobile = window.innerWidth <= 1024;
+            const transitionDuration = isMobile ? 0.95 : slideDuration;
 
             let resolved = false;
             const done = () => {
@@ -971,14 +991,14 @@ function initOsmoBoilerplate() {
             if (galleryStage) {
                 tl.to(galleryStage, {
                     yPercent: 0,
-                    duration: slideDuration,
+                    duration: transitionDuration,
                     ease: "power2.inOut",
                     force3D: true,
                 }, 0);
             } else {
                 tl.to(next, {
                     yPercent: 0,
-                    duration: slideDuration,
+                    duration: transitionDuration,
                     ease: "power2.inOut",
                     force3D: true,
                 }, 0);
@@ -987,7 +1007,7 @@ function initOsmoBoilerplate() {
             if (navHome) {
                 tl.to(navHome, {
                     y: 0,
-                    duration: slideDuration,
+                    duration: transitionDuration,
                     ease: "power2.inOut",
                     force3D: true,
                 }, 0);
@@ -996,14 +1016,14 @@ function initOsmoBoilerplate() {
             if (projectInfo) {
                 tl.to(projectInfo, {
                     y: 0,
-                    duration: slideDuration,
+                    duration: transitionDuration,
                     ease: "power2.inOut",
                     force3D: true,
                 }, 0);
             }
 
             // Guaranteed resolution fallback for Safari
-            setTimeout(done, (slideDuration + 0.6) * 1000);
+            setTimeout(done, (transitionDuration + 0.6) * 1000);
         });
     }
 
