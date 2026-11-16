@@ -88,6 +88,103 @@
         const MARQUEE_START_DELAY = 1500;
         let isMarqueeDelayed = true;
 
+        const KNOWN_PROJECT_ASPECTS = {
+            "adela": "1080 / 1080",
+            "adidas-training": "2540 / 1200",
+            "adidas-x-thug-club": "1920 / 1080",
+            "aldo-x-hype-beast": "1422 / 800",
+            "angel-du-t": "1276 / 720",
+            "armani": "1280 / 720",
+            "armani-2": "750 / 1000",
+            "autre-magazine": "750 / 1000",
+            "away": "750 / 500",
+            "bella-hadid": "1280 / 720",
+            "blanc": "874 / 1080",
+            "blank-st-coffee": "750 / 497",
+            "blank-street": "1440 / 1800",
+            "blank-street-coffee": "750 / 500",
+            "blank-street-coffee-af6f6": "640 / 800",
+            "cero-magazine": "750 / 912",
+            "charli-xcx": "1000 / 750",
+            "charli-xcx-x-converse": "4096 / 2304",
+            "conan-gray": "720 / 404",
+            "cosmopolitan-magazine": "1800 / 2400",
+            "cr-fashion-book": "750 / 938",
+            "cr-fashion-book-d897c": "1500 / 1875",
+            "danile-guizio": "800 / 1000",
+            "demi-lovato": "1572 / 1080",
+            "denim-tears": "760 / 1000",
+            "domina-journal": "1206 / 1781",
+            "elle-usa": "940 / 940",
+            "emcee-studios": "750 / 951",
+            "emcee-studios-ottolinger": "750 / 951",
+            "famille-du-vin": "750 / 500",
+            "fry-powers": "1010 / 1200",
+            "glamour-magazine": "960 / 1200",
+            "grailed": "750 / 500",
+            "grazia-china": "900 / 1200",
+            "hardpack-magazine": "2400 / 1947",
+            "highsnobiety": "1080 / 1350",
+            "highsnobiety-6ee11": "750 / 1004",
+            "hube-magazine": "1440 / 1172",
+            "id-magazine": "1080 / 1350",
+            "invasive-modification": "1920 / 2400",
+            "jins": "727 / 800",
+            "king-kong-magazine": "1440 / 1070",
+            "kith-winter-25": "1080 / 1440",
+            "l-officiel": "766 / 1000",
+            "last-american-pastoral-photography-by-chris-glickman-published-by-friend-editions": "1080 / 720",
+            "le-monde-gourmet": "1920 / 2400",
+            "lexa-gates": "2560 / 1700",
+            "louis-vuitton": "1080 / 1350",
+            "louis-vuitton-cruise-27": "1080 / 1350",
+            "macallan": "1200 / 800",
+            "netflix-earle-meets-world": "645 / 475",
+            "new-balance": "1080 / 756",
+            "nike-us-national-team": "750 / 935",
+            "nike-us-national-team-5333c": "750 / 1121",
+            "numero-netherlands": "925 / 1200",
+            "numero-netherlands-6ac8d": "920 / 1200",
+            "numero-russia": "761 / 1000",
+            "ocean-drive-magazine": "1440 / 1722",
+            "odda-magazine": "1500 / 1875",
+            "office-magazine": "750 / 937",
+            "olivia-rodrigo": "1496 / 1000",
+            "open-spaces": "750 / 904",
+            "open-spaces-magazine-1ee2f": "750 / 938",
+            "paper-magazine-jt": "1440 / 1800",
+            "paper-magazine-rose": "750 / 938",
+            "present-space-magazine": "1840 / 2400",
+            "prototype-magazine": "2400 / 1576",
+            "reale-actives": "1080 / 1440",
+            "regime-des-fleurs": "1920 / 2400",
+            "revolve": "1280 / 1600",
+            "role-model": "2400 / 1783",
+            "rowing-blazers-x-fila": "975 / 1200",
+            "sandy-liang": "750 / 497",
+            "sandy-liang-a9cc0": "1920 / 2400",
+            "sandy-liang-c8bd2": "750 / 977",
+            "sandy-liang-holiday": "1500 / 1115",
+            "shadowplay-magazine": "1840 / 2400",
+            "snuff-magazine": "750 / 487",
+            "tame-impala": "750 / 538",
+            "thom-browne-met-gala-24": "750 / 938",
+            "tropic-of-c-x-victorias-secret-havana-drop": "1440 / 1769",
+            "tropic-of-c-x-victorias-secret-malibu": "1000 / 1250",
+            "tropic-of-c-x-victorias-secret-swim-drop": "1440 / 1920",
+            "twin-magazine": "750 / 526",
+            "urban-outfitters-nye": "1208 / 800",
+            "vanity-fair": "804 / 1000",
+            "velveeta-liquid-gold": "2048 / 1463",
+            "vogue-china": "750 / 935",
+            "vogue-japan": "1080 / 1350",
+            "vogue-phillipines": "750 / 1000",
+            "vuori": "3000 / 3677",
+            "who-what-wear": "912 / 1200",
+            "wsj": "750 / 930",
+            "wsj-sydney-sweeney": "750 / 930",
+        };
+
         const startMarqueeDelay = () => {
             if (projectsMarqueeDelayTimer) clearTimeout(projectsMarqueeDelayTimer);
             isMarqueeDelayed = true;
@@ -254,6 +351,11 @@
 
             const img = card.querySelector(".project-img") || card.querySelector("img");
             const mediaWrap = card.querySelector(".project-media-wrap");
+            const link = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+            const slug = link.split("/").filter(Boolean).pop() || "";
+            if (mediaWrap && KNOWN_PROJECT_ASPECTS[slug]) {
+                mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+            }
             if (img) {
                 img.classList.add("project-img");
                 img.setAttribute("draggable", "false");
@@ -639,6 +741,11 @@
         const bindDesktopCard = (card, cardIdx) => {
             const img = card.querySelector(".project-img");
             const mediaWrap = card.querySelector(".project-media-wrap");
+            const linkHref = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+            const slug = linkHref.split("/").filter(Boolean).pop() || "";
+            if (mediaWrap && KNOWN_PROJECT_ASPECTS[slug]) {
+                mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+            }
             if (img && mediaWrap) {
                 lockNaturalAspect(img, mediaWrap, scheduleMetricsRecalc);
             }
@@ -1529,37 +1636,43 @@
                     measureMobileThumbMetrics();
                     if (!isThumbTouching && !isThumbCoasting && activeThumbCloneIdx >= 0) {
                         thumbTargetPos = getScrollPosForThumbIdx(activeThumbCloneIdx);
-                        thumbScrollPos = thumbTargetPos;
-                        if (mobileThumbTrack) {
-                            mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
-                        }
                     }
-                }, 40);
+                }, 100);
             };
 
-            const syncProjectAspectRatio = (projIdx, img) => {
+            const syncProjectAspectRatio = (projIdx, slug, img) => {
                 if (!img || !img.naturalWidth || !img.naturalHeight) return;
                 const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                if (slug) KNOWN_PROJECT_ASPECTS[slug] = aspect;
+                let changed = false;
                 for (let c = 0; c < thumbSetsNeeded; c++) {
                     const cloneItem = mobileThumbItems[c * count + projIdx];
                     if (cloneItem) {
                         const wrap = cloneItem.querySelector(".mobile-thumb-img-wrap");
                         if (wrap && wrap.style.aspectRatio !== aspect) {
                             wrap.style.aspectRatio = aspect;
+                            changed = true;
                         }
                     }
                 }
-                onThumbAspectReady();
+                if (changed) {
+                    onThumbAspectReady();
+                }
             };
 
             for (let s = 0; s < thumbSetsNeeded; s++) {
                 filteredTemplates.forEach((tpl, idx) => {
+                    const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    const tplSlug = link.split("/").filter(Boolean).pop() || "";
                     const imgEl = tpl.querySelector(".project-img") || tpl.querySelector("img");
                     const imgSrc = imgEl?.getAttribute("src") || "";
                     const imgSrcset = imgEl?.getAttribute("srcset") || "";
                     const numText = formatNum(tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent || "");
 
-                    const isEager = s === targetSet ||
+                    const knownAspect = KNOWN_PROJECT_ASPECTS[tplSlug] ||
+                        (imgEl && imgEl.naturalWidth && imgEl.naturalHeight ? `${imgEl.naturalWidth} / ${imgEl.naturalHeight}` : null);
+
+                    const isNearTarget = (s === targetSet && Math.abs(idx - targetProjIdx) <= 6) ||
                         (targetProjIdx <= 3 && s === targetSet - 1 && idx >= count - 6) ||
                         (targetProjIdx >= count - 4 && s === targetSet + 1 && idx <= 5);
                     const item = document.createElement("div");
@@ -1568,17 +1681,19 @@
                     item.dataset.cloneIdx = String(cloneIdxCounter);
                     item.innerHTML = `
             <div class="mobile-thumb-num">${numText}</div>
-            <div class="mobile-thumb-img-wrap">
-              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} loading="${isEager ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
+            <div class="mobile-thumb-img-wrap"${knownAspect ? ` style="aspect-ratio: ${knownAspect};"` : ""}>
+              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} loading="${isNearTarget ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
             </div>
           `;
 
                     const thumbImg = item.querySelector("img");
                     const thumbWrap = item.querySelector(".mobile-thumb-img-wrap");
-                    if (imgEl && imgEl.naturalWidth && imgEl.naturalHeight) {
+                    if (knownAspect) {
+                        thumbWrap.style.aspectRatio = knownAspect;
+                    } else if (imgEl && imgEl.naturalWidth && imgEl.naturalHeight) {
                         thumbWrap.style.aspectRatio = `${imgEl.naturalWidth} / ${imgEl.naturalHeight}`;
                     } else {
-                        lockNaturalAspect(thumbImg, thumbWrap, () => syncProjectAspectRatio(idx, thumbImg));
+                        lockNaturalAspect(thumbImg, thumbWrap, () => syncProjectAspectRatio(idx, tplSlug, thumbImg));
                     }
 
                     thumbFragment.appendChild(item);
