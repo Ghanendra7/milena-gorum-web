@@ -434,7 +434,7 @@ function initOsmoBoilerplate() {
             current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
 
             const isMobile = window.innerWidth <= 1024;
-            const transitionDuration = isMobile ? 0.95 : slideDuration;
+            const transitionDuration = isMobile ? 1.1 : slideDuration;
 
             gsap.set(current, {
                 position: "fixed",
@@ -482,7 +482,7 @@ function initOsmoBoilerplate() {
             const nextNs = next.getAttribute("data-barba-namespace") || "";
             const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 1025px)").matches : window.innerWidth > 1024;
             const isMobile = !isDesktop;
-            const transitionDuration = isMobile ? 0.95 : slideDuration;
+            const transitionDuration = isMobile ? 1.1 : slideDuration;
             const section = next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section");
 
             ensureNavbarInContainer(next, data?.next?.html);
@@ -678,7 +678,7 @@ function initOsmoBoilerplate() {
             tl.to(next, { yPercent: 0, duration: transitionDuration, ease: "power2.inOut", force3D: true }, 0);
 
             // Stagger entrance plays as the page rises into the viewport
-            const cardsStart = isMobile ? 0.45 : 0.85;
+            const cardsStart = isMobile ? 0.55 : 0.85;
             if (visibleCards.length) {
                 tl.to(visibleCards, {
                     opacity: 1,
@@ -705,7 +705,7 @@ function initOsmoBoilerplate() {
             }
 
             // Release marquee movement right as cards arrive into place (no awkward static pause)
-            const marqueeReleaseTime = isMobile ? 1.05 : 1.60;
+            const marqueeReleaseTime = isMobile ? 1.20 : 1.60;
             tl.add("releaseMarquee", marqueeReleaseTime);
             tl.call(() => {
                 if (section) {
@@ -714,7 +714,7 @@ function initOsmoBoilerplate() {
                 }
             }, null, "releaseMarquee");
 
-            const hitTopLead = isMobile ? 0.2 : 0.3;
+            const hitTopLead = isMobile ? 0.25 : 0.3;
             const hitTopTime = Math.max(0, transitionDuration - hitTopLead);
 
             if (navTop) {
@@ -817,7 +817,7 @@ function initOsmoBoilerplate() {
             ensureNavbarInContainer(current);
 
             const isMobile = window.innerWidth <= 1024;
-            const transitionDuration = isMobile ? 0.95 : slideDuration;
+            const transitionDuration = isMobile ? 1.1 : slideDuration;
 
             const scrollY = window.scrollY || window.pageYOffset || 0;
             // Outgoing page stays on top (zIndex: 2) as it slides down out of view
@@ -939,7 +939,7 @@ function initOsmoBoilerplate() {
             const projectInfo = next.querySelector(".home-project-info");
 
             const isMobile = window.innerWidth <= 1024;
-            const transitionDuration = isMobile ? 0.95 : slideDuration;
+            const transitionDuration = isMobile ? 1.1 : slideDuration;
 
             let resolved = false;
             const done = () => {

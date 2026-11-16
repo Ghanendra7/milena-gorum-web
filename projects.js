@@ -1423,7 +1423,9 @@
                     const rawVidId = validVid?.getAttribute("data-video-id") || "";
                     const previewSrc = rawVidId ? getBunnyPreviewUrl(rawVidId) : "";
 
-                    const isTargetSlide = idx === targetProjIdx;
+                    const isTargetSlide = idx === targetProjIdx ||
+                        idx === (targetProjIdx + 1) % count ||
+                        idx === (targetProjIdx - 1 + count) % count;
                     const mainSlide = document.createElement("div");
                     mainSlide.className = "swiper-slide";
                     mainSlide.setAttribute("data-project-idx", String(idx));
@@ -1524,7 +1526,8 @@
             }
 
             // 3. Build scrubber strip thumbnails
-            const thumbSetsNeeded = isMobileInfinite ? Math.max(3, Math.min(6, Math.ceil(24 / count) + 2)) : 1;
+            let thumbSetsNeeded = isMobileInfinite ? Math.max(5, Math.ceil(36 / count) + 2) : 1;
+            if (isMobileInfinite && thumbSetsNeeded % 2 === 0) thumbSetsNeeded += 1;
             const thumbFragment = document.createDocumentFragment();
             let cloneIdxCounter = 0;
             const targetSet = Math.floor(thumbSetsNeeded / 2);
@@ -1552,7 +1555,9 @@
                     const imgSrcset = imgEl?.getAttribute("srcset") || "";
                     const numText = formatNum(tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent || "");
 
-                    const isNearTarget = s === targetSet && Math.abs(idx - targetProjIdx) <= 5;
+                    const isNearTarget = (s === targetSet && Math.abs(idx - targetProjIdx) <= 6) ||
+                        (targetProjIdx <= 3 && s === targetSet - 1 && idx >= count - 6) ||
+                        (targetProjIdx >= count - 4 && s === targetSet + 1 && idx <= 5);
                     const item = document.createElement("div");
                     item.className = "mobile-thumb-item";
                     item.dataset.projectIdx = String(idx);
@@ -1802,18 +1807,28 @@
                 }
 
                 if (isMobileInfinite && thumbSingleSetWidth > 0) {
-                    const minBound = thumbSingleSetWidth * 2;
-                    const maxBound = thumbSingleSetWidth * 5;
-                    if (thumbScrollPos > maxBound) {
-                        thumbScrollPos -= thumbSingleSetWidth;
-                        thumbTargetPos -= thumbSingleSetWidth;
-                        const centerIdx = findCenterThumbIdx();
-                        if (centerIdx !== -1) setActiveThumbByIdx(centerIdx, false);
-                    } else if (thumbScrollPos < minBound) {
-                        thumbScrollPos += thumbSingleSetWidth;
-                        thumbTargetPos += thumbSingleSetWidth;
-                        const centerIdx = findCenterThumbIdx();
-                        if (centerIdx !== -1) setActiveThumbByIdx(centerIdx, false);
+                    const count = mobileFilteredTemplates.length;
+                    const numSets = count > 0 ? Math.floor(mobileThumbItems.length / count) : 0;
+                    if (numSets >= 3) {
+                        const centerSet = Math.floor(numSets / 2);
+                        const minBound = thumbSingleSetWidth * (centerSet - 0.5);
+                        const maxBound = thumbSingleSetWidth * (centerSet + 1.5);
+                        let wrapped = false;
+                        if (thumbScrollPos > maxBound) {
+                            const setsToShift = Math.ceil((thumbScrollPos - maxBound) / thumbSingleSetWidth);
+                            thumbScrollPos -= setsToShift * thumbSingleSetWidth;
+                            thumbTargetPos -= setsToShift * thumbSingleSetWidth;
+                            wrapped = true;
+                        } else if (thumbScrollPos < minBound) {
+                            const setsToShift = Math.ceil((minBound - thumbScrollPos) / thumbSingleSetWidth);
+                            thumbScrollPos += setsToShift * thumbSingleSetWidth;
+                            thumbTargetPos += setsToShift * thumbSingleSetWidth;
+                            wrapped = true;
+                        }
+                        if (wrapped) {
+                            const centerIdx = findCenterThumbIdx();
+                            if (centerIdx !== -1) setActiveThumbByIdx(centerIdx, false);
+                        }
                     }
                 }
 
