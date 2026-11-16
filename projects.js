@@ -1212,33 +1212,22 @@
                 return;
             }
 
-            if (isMobileInfinite && total > count) {
-                thumbSingleSetWidth = mobileThumbItems[count].offsetLeft - mobileThumbItems[0].offsetLeft;
-            } else {
-                thumbSingleSetWidth = 0;
+            cachedThumbCenters = new Array(total);
+            for (let i = 0; i < total; i++) {
+                const item = mobileThumbItems[i];
+                cachedThumbCenters[i] = item.offsetLeft + item.offsetWidth / 2;
             }
 
-            cachedThumbCenters = new Array(total);
-            const numSets = Math.floor(total / count);
-
-            if (thumbSingleSetWidth > 0 && numSets > 1) {
-                const baseCenters = new Float32Array(count);
-                for (let i = 0; i < count; i++) {
-                    const item = mobileThumbItems[i];
-                    baseCenters[i] = item.offsetLeft + item.offsetWidth / 2;
-                }
-                for (let s = 0; s < numSets; s++) {
-                    const setOffset = s * thumbSingleSetWidth;
-                    const baseIdx = s * count;
-                    for (let i = 0; i < count; i++) {
-                        cachedThumbCenters[baseIdx + i] = baseCenters[i] + setOffset;
-                    }
+            if (isMobileInfinite && total > count) {
+                const numSets = Math.floor(total / count);
+                const centerSet = Math.floor(numSets / 2);
+                if (centerSet + 1 < numSets && mobileThumbItems[(centerSet + 1) * count] && mobileThumbItems[centerSet * count]) {
+                    thumbSingleSetWidth = mobileThumbItems[(centerSet + 1) * count].offsetLeft - mobileThumbItems[centerSet * count].offsetLeft;
+                } else {
+                    thumbSingleSetWidth = mobileThumbItems[count].offsetLeft - mobileThumbItems[0].offsetLeft;
                 }
             } else {
-                for (let i = 0; i < total; i++) {
-                    const item = mobileThumbItems[i];
-                    cachedThumbCenters[i] = item.offsetLeft + item.offsetWidth / 2;
-                }
+                thumbSingleSetWidth = 0;
             }
         };
 
@@ -1545,7 +1534,22 @@
                             mobileThumbTrack.style.transform = `translate3d(${-thumbScrollPos}px, 0, 0)`;
                         }
                     }
-                }, 60);
+                }, 40);
+            };
+
+            const syncProjectAspectRatio = (projIdx, img) => {
+                if (!img || !img.naturalWidth || !img.naturalHeight) return;
+                const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                for (let c = 0; c < thumbSetsNeeded; c++) {
+                    const cloneItem = mobileThumbItems[c * count + projIdx];
+                    if (cloneItem) {
+                        const wrap = cloneItem.querySelector(".mobile-thumb-img-wrap");
+                        if (wrap && wrap.style.aspectRatio !== aspect) {
+                            wrap.style.aspectRatio = aspect;
+                        }
+                    }
+                }
+                onThumbAspectReady();
             };
 
             for (let s = 0; s < thumbSetsNeeded; s++) {
@@ -1555,7 +1559,7 @@
                     const imgSrcset = imgEl?.getAttribute("srcset") || "";
                     const numText = formatNum(tpl.querySelector(".project-number-text, .project-num, .project-number")?.textContent || "");
 
-                    const isNearTarget = (s === targetSet && Math.abs(idx - targetProjIdx) <= 6) ||
+                    const isEager = s === targetSet ||
                         (targetProjIdx <= 3 && s === targetSet - 1 && idx >= count - 6) ||
                         (targetProjIdx >= count - 4 && s === targetSet + 1 && idx <= 5);
                     const item = document.createElement("div");
@@ -1565,7 +1569,7 @@
                     item.innerHTML = `
             <div class="mobile-thumb-num">${numText}</div>
             <div class="mobile-thumb-img-wrap">
-              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} loading="${isNearTarget ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
+              <img src="${imgSrc}" ${imgSrcset ? `srcset="${imgSrcset}" sizes="160px"` : ""} loading="${isEager ? "eager" : "lazy"}" decoding="async" alt="" draggable="false" />
             </div>
           `;
 
@@ -1574,7 +1578,7 @@
                     if (imgEl && imgEl.naturalWidth && imgEl.naturalHeight) {
                         thumbWrap.style.aspectRatio = `${imgEl.naturalWidth} / ${imgEl.naturalHeight}`;
                     } else {
-                        lockNaturalAspect(thumbImg, thumbWrap, onThumbAspectReady);
+                        lockNaturalAspect(thumbImg, thumbWrap, () => syncProjectAspectRatio(idx, thumbImg));
                     }
 
                     thumbFragment.appendChild(item);
@@ -1811,8 +1815,10 @@
                     const numSets = count > 0 ? Math.floor(mobileThumbItems.length / count) : 0;
                     if (numSets >= 3) {
                         const centerSet = Math.floor(numSets / 2);
-                        const minBound = thumbSingleSetWidth * (centerSet - 0.5);
-                        const maxBound = thumbSingleSetWidth * (centerSet + 1.5);
+                        const containerW = mobileThumbEl?.clientWidth || window.innerWidth;
+                        const setCenterStart = mobileThumbItems[centerSet * count]?.offsetLeft || (centerSet * thumbSingleSetWidth);
+                        const minBound = setCenterStart - thumbSingleSetWidth * 0.5 - containerW / 2;
+                        const maxBound = setCenterStart + thumbSingleSetWidth * 1.5 - containerW / 2;
                         let wrapped = false;
                         if (thumbScrollPos > maxBound) {
                             const setsToShift = Math.ceil((thumbScrollPos - maxBound) / thumbSingleSetWidth);
