@@ -66,7 +66,6 @@ function initOsmoBoilerplate() {
     let staggerDefault = 0.12;
     let durationDefault = 0.8;
     let slideDuration = 1.35;
-    let pushDuration = 1.2;
 
     CustomEase.create("smooth", "M0,0 C0.38,0.005 0.215,1 1,1");
     CustomEase.create("osmo", "0.625, 0.05, 0, 1");
@@ -217,10 +216,32 @@ function initOsmoBoilerplate() {
                 return;
             }
 
-            const tl = gsap.timeline({ onComplete: done });
-            tl.to(current, { autoAlpha: 0, duration: 0.4, ease: "power2.out" });
+            // Immediately pause active videos on outgoing page
+            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
 
-            setTimeout(done, 700);
+            // Pause marquee if leaving projects overview
+            const section = current.classList?.contains("projects-section")
+                ? current
+                : current.querySelector(".projects-section");
+            if (section) {
+                section.classList.add("is-marquee-paused");
+            }
+
+            // Save visual track position of current page before leaving (projects overview only)
+            try {
+                const prjTrack = current.querySelector(".projects-track");
+                if (prjTrack && prjTrack.style.transform) {
+                    const match = prjTrack.style.transform.match(/translate3d\((-?[\d.]+)px/);
+                    if (match && match[1]) {
+                        sessionStorage.setItem("mg_projects_saved_scroll", String(Math.abs(parseFloat(match[1]))));
+                    }
+                }
+            } catch (_) { }
+
+            const tl = gsap.timeline({ onComplete: done });
+            tl.to(current, { autoAlpha: 0, duration: 0.35, ease: "power2.out" });
+
+            setTimeout(done, 600);
         });
     }
 
@@ -244,9 +265,9 @@ function initOsmoBoilerplate() {
             }
 
             const tl = gsap.timeline({ onComplete: done });
-            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 0.15);
+            tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power2.out" }, 0.08);
 
-            setTimeout(done, 1000);
+            setTimeout(done, 800);
         });
     }
 
@@ -937,306 +958,7 @@ function initOsmoBoilerplate() {
         });
     }
 
-    // -----------------------------------------
-    // HOME/PROJECTS -> PROJECT DETAILS TRANSITION
-    // -----------------------------------------
-    function runToProjectDetailLeave(current, next) {
-        return new Promise((resolve) => {
-            let resolved = false;
-            const done = () => {
-                if (resolved) return;
-                resolved = true;
-                unmountPage(current);
-                cleanupMediaInContainer(current);
-                current.remove();
-                resolve();
-            };
 
-            if (reducedMotion) {
-                gsap.set(current, { autoAlpha: 0 });
-                done();
-                return;
-            }
-
-            // Immediately pause active videos on outgoing page
-            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
-
-            gsap.set(current, {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 1,
-                overflow: "hidden",
-                force3D: true,
-            });
-
-            // Pause marquee if leaving projects overview
-            const section = current.classList?.contains("projects-section")
-                ? current
-                : current.querySelector(".projects-section");
-            if (section) {
-                section.classList.add("is-marquee-paused");
-            }
-
-            // Save visual track position of current page before leaving (projects overview only)
-            try {
-                const prjTrack = current.querySelector(".projects-track");
-                if (prjTrack && prjTrack.style.transform) {
-                    const match = prjTrack.style.transform.match(/translate3d\((-?[\d.]+)px/);
-                    if (match && match[1]) {
-                        sessionStorage.setItem("mg_projects_saved_scroll", String(Math.abs(parseFloat(match[1]))));
-                    }
-                }
-            } catch (_) { }
-
-            const tl = gsap.timeline({ onComplete: done });
-
-            // Push current page smoothly towards left with parallax (-80%)
-            tl.to(current, {
-                xPercent: -80,
-                duration: pushDuration,
-                ease: "power2.inOut",
-                force3D: true,
-            }, 0);
-
-            setTimeout(done, (pushDuration + 0.5) * 1000);
-        });
-    }
-
-    function runToProjectDetailEnter(next) {
-        return new Promise((resolve) => {
-            // Position project details off-screen to the right
-            gsap.set(next, {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "#ffffff",
-                zIndex: 2,
-                autoAlpha: 1,
-                xPercent: 100,
-                overflow: "hidden",
-                force3D: true,
-            });
-
-            // Mount project details engine so Swiper and media are initialized
-            mountPage(next);
-
-            let resolved = false;
-            const done = () => {
-                if (resolved) return;
-                resolved = true;
-                resetPage(next);
-
-                // Calibrate Swiper dimensions after container resets to normal layout
-                const mainEl = next.querySelector(".main-swiper");
-                if (mainEl && mainEl.swiper) {
-                    try { mainEl.swiper.update(); } catch (e) { }
-                }
-                const thumbEl = next.querySelector(".thumb-swiper");
-                if (thumbEl && thumbEl.swiper) {
-                    try { thumbEl.swiper.update(); } catch (e) { }
-                }
-                window.dispatchEvent(new Event("resize"));
-                notifyTransitionComplete("project-detail");
-
-                resolve();
-            };
-
-            if (reducedMotion) {
-                gsap.set(next, { autoAlpha: 1, xPercent: 0 });
-                done();
-                return;
-            }
-
-            const tl = gsap.timeline({ onComplete: done });
-
-            // Smooth appear from right to left
-            tl.to(next, {
-                xPercent: 0,
-                duration: pushDuration,
-                ease: "power2.inOut",
-                force3D: true,
-            }, 0);
-
-            setTimeout(done, (pushDuration + 0.5) * 1000);
-        });
-    }
-
-    // -----------------------------------------
-    // PROJECT DETAILS -> HOME/PROJECTS (REVERSE PUSH)
-    // -----------------------------------------
-    function runFromProjectDetailLeave(current, next) {
-        return new Promise((resolve) => {
-            let resolved = false;
-            const done = () => {
-                if (resolved) return;
-                resolved = true;
-                unmountPage(current);
-                cleanupMediaInContainer(current);
-                current.remove();
-                resolve();
-            };
-
-            if (reducedMotion) {
-                gsap.set(current, { autoAlpha: 0 });
-                done();
-                return;
-            }
-
-            // Immediately pause active videos on outgoing page
-            current.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { } });
-
-            gsap.set(current, {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "#ffffff",
-                zIndex: 2,
-                overflow: "hidden",
-                force3D: true,
-            });
-
-            const tl = gsap.timeline({ onComplete: done });
-
-            // Slide project details out towards right
-            tl.to(current, {
-                xPercent: 100,
-                duration: pushDuration,
-                ease: "power2.inOut",
-                force3D: true,
-            }, 0);
-
-            setTimeout(done, (pushDuration + 0.5) * 1000);
-        });
-    }
-
-    function runFromProjectDetailEnter(next) {
-        return new Promise((resolve) => {
-            const nextNs = next.getAttribute("data-barba-namespace") || "";
-            const isProjects = nextNs === "projects";
-            const isHome = nextNs === "home";
-
-            // If entering home, remove editorial curtain overlay
-            if (isHome) {
-                const curtain = next.querySelector(".home-curtain");
-                if (curtain) {
-                    curtain.classList.add("is-revealed");
-                    curtain.style.display = "none";
-                }
-            }
-
-            const projectsSection = isProjects
-                ? (next.classList?.contains("projects-section") ? next : next.querySelector(".projects-section"))
-                : null;
-
-            if (projectsSection) {
-                projectsSection.classList.add("is-marquee-paused");
-                projectsSection.classList.add("is-ready");
-                const stage = projectsSection.querySelector(".desktop-gallery-stage");
-                if (stage) {
-                    stage.style.opacity = "1";
-                    stage.style.visibility = "visible";
-                    stage.style.transition = "none";
-                }
-                const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
-                if (mobileStage) {
-                    mobileStage.style.opacity = "1";
-                    mobileStage.style.visibility = "visible";
-                    mobileStage.style.transition = "none";
-                }
-            }
-
-            // Position next container off-screen to the left with parallax (-80%)
-            gsap.set(next, {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "#ffffff",
-                zIndex: 1,
-                autoAlpha: 1,
-                xPercent: -80,
-                overflow: "hidden",
-                force3D: true,
-            });
-
-            if (nextNs === "index") {
-                try {
-                    const isRestore = sessionStorage.getItem("mg_index_restore_from_detail") === "true";
-                    if (isRestore) {
-                        const savedScroll = sessionStorage.getItem("mg_index_restore_scroll");
-                        if (savedScroll !== null) {
-                            const sY = parseFloat(savedScroll);
-                            if (!isNaN(sY) && sY > 0) {
-                                next.scrollTop = sY;
-                            }
-                        }
-                    }
-                } catch (_) { }
-            }
-
-            mountPage(next);
-
-            let resolved = false;
-            const done = () => {
-                if (resolved) return;
-                resolved = true;
-                if (projectsSection) {
-                    projectsSection.classList.remove("is-marquee-paused");
-                    projectsSection.classList.add("is-marquee-active");
-                    const stage = projectsSection.querySelector(".desktop-gallery-stage");
-                    if (stage) stage.style.transition = "";
-                    const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
-                    if (mobileStage) mobileStage.style.transition = "";
-                }
-                resetPage(next);
-                window.dispatchEvent(new Event("resize"));
-                notifyTransitionComplete(nextNs);
-                resolve();
-            };
-
-            if (reducedMotion) {
-                if (projectsSection) {
-                    projectsSection.classList.remove("is-marquee-paused");
-                    projectsSection.classList.add("is-marquee-active");
-                    const stage = projectsSection.querySelector(".desktop-gallery-stage");
-                    if (stage) stage.style.transition = "";
-                    const mobileStage = projectsSection.querySelector(".mobile-gallery-stage");
-                    if (mobileStage) mobileStage.style.transition = "";
-                }
-                gsap.set(next, { autoAlpha: 1, xPercent: 0 });
-                done();
-                return;
-            }
-
-            const tl = gsap.timeline({ onComplete: done });
-
-            // Slide previous page back into view from left to center
-            tl.to(next, {
-                xPercent: 0,
-                duration: pushDuration,
-                ease: "power2.inOut",
-                force3D: true,
-            }, 0);
-
-            setTimeout(done, (pushDuration + 0.5) * 1000);
-        });
-    }
 
     // -----------------------------------------
     // BARBA HOOKS & INIT
@@ -1385,15 +1107,11 @@ function initOsmoBoilerplate() {
             force3D: true,
         };
 
-        if (nextNs === "project-detail") {
-            initialProps.xPercent = 100;
-        } else if (
+        if (
             (nextNs === "projects" || nextNs === "index" || nextNs === "information" || nextNs === "info") &&
             currentNs === "home"
         ) {
             initialProps.yPercent = 100;
-        } else if (currentNs === "project-detail" && (nextNs === "projects" || nextNs === "home" || nextNs === "index")) {
-            initialProps.xPercent = -80;
         }
 
         gsap.set(data.next.container, initialProps);
@@ -1499,30 +1217,6 @@ function initOsmoBoilerplate() {
                 },
             },
             {
-                name: "to-project-detail",
-                sync: true,
-                from: { namespace: ["home", "projects", "index"] },
-                to: { namespace: ["project-detail"] },
-                async leave(data) {
-                    return runToProjectDetailLeave(data.current.container, data.next.container);
-                },
-                async enter(data) {
-                    return runToProjectDetailEnter(data.next.container);
-                },
-            },
-            {
-                name: "from-project-detail",
-                sync: true,
-                from: { namespace: ["project-detail"] },
-                to: { namespace: ["home", "projects", "index"] },
-                async leave(data) {
-                    return runFromProjectDetailLeave(data.current.container, data.next.container);
-                },
-                async enter(data) {
-                    return runFromProjectDetailEnter(data.next.container);
-                },
-            },
-            {
                 name: "inner-pages",
                 sync: true,
                 from: { namespace: ["projects", "index", "information", "info"] },
@@ -1615,6 +1309,33 @@ function initOsmoBoilerplate() {
             window.scrollTo(0, sY);
             if (window.lenis && typeof window.lenis.scrollTo === "function") {
                 try { window.lenis.scrollTo(sY, { immediate: true }); } catch (_) { }
+            }
+        }
+
+        if (ns === "project-detail") {
+            const mainEl = container?.querySelector(".main-swiper");
+            if (mainEl && mainEl.swiper) {
+                try { mainEl.swiper.update(); } catch (e) { }
+            }
+            const thumbEl = container?.querySelector(".thumb-swiper");
+            if (thumbEl && thumbEl.swiper) {
+                try { thumbEl.swiper.update(); } catch (e) { }
+            }
+            window.dispatchEvent(new Event("resize"));
+        } else if (ns === "projects") {
+            const projectsSection = container?.classList?.contains("projects-section")
+                ? container
+                : container?.querySelector(".projects-section");
+            if (projectsSection) {
+                projectsSection.classList.remove("is-marquee-paused");
+                projectsSection.classList.add("is-marquee-active");
+            }
+            window.dispatchEvent(new Event("resize"));
+        } else if (ns === "home") {
+            const curtain = container?.querySelector(".home-curtain");
+            if (curtain) {
+                curtain.classList.add("is-revealed");
+                curtain.style.display = "none";
             }
         }
     }
