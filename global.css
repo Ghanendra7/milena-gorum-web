@@ -1327,9 +1327,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: max-content !important;
     max-width: none !important;
     will-change: transform;
-    line-height: normal !important;
-    padding-bottom: 4px !important;
-    margin-bottom: -4px !important;
+
 }
 
 .index-col-title {
@@ -1341,9 +1339,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: max-content !important;
     max-width: none !important;
     will-change: transform;
-    line-height: normal !important;
-    padding-bottom: 4px !important;
-    margin-bottom: -4px !important;
+
 }
 
 /* Desktop Horizontal Media Numbers */
