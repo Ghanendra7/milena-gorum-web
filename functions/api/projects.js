@@ -252,8 +252,13 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (action === "delete") {
-      const projectId = String(body?.projectId || "").trim();
-      if (!projectId) return jsonError("projectId is required.", 400);
+      const rawProjectIds = Array.isArray(body?.projectIds)
+        ? body.projectIds
+        : (body?.projectId ? [body.projectId] : []);
+      const projectIds = rawProjectIds.map((id) => String(id || "").trim()).filter(Boolean);
+      if (!projectIds.length) return jsonError("projectId or projectIds is required.", 400);
+
+      const deleteProjectIdSet = new Set(projectIds);
 
       const mFields = fieldMap.media;
       const toRefId = (v) => (typeof v === "string" ? v : v?.id || "");
@@ -276,12 +281,17 @@ export async function onRequestPost({ request, env }) {
       const allProjects = await listAllCollectionItems(env, projectsCollection.id);
       const allMedia = mediaCollection?.id ? await listAllCollectionItems(env, mediaCollection.id) : [];
 
-      const targetProject = allProjects.find((p) => p.id === projectId);
-      const candidateMediaIds = targetProject ? collectProjectMediaIds(targetProject) : new Set();
+      const targetProjects = allProjects.filter((p) => deleteProjectIdSet.has(p.id));
+      const candidateMediaIds = new Set();
+      for (const p of targetProjects) {
+        for (const id of collectProjectMediaIds(p)) {
+          candidateMediaIds.add(id);
+        }
+      }
 
       const sharedMediaIds = new Set();
       for (const proj of allProjects) {
-        if (proj.id === projectId) continue;
+        if (deleteProjectIdSet.has(proj.id)) continue;
         for (const id of collectProjectMediaIds(proj)) {
           sharedMediaIds.add(id);
         }
@@ -290,7 +300,7 @@ export async function onRequestPost({ request, env }) {
       if (mFields?.parent) {
         for (const item of allMedia) {
           const parentId = toRefId(item?.fieldData?.[mFields.parent]);
-          if (parentId === projectId) {
+          if (deleteProjectIdSet.has(parentId)) {
             candidateMediaIds.add(item.id);
           } else if (parentId && allProjects.some((p) => p.id === parentId)) {
             sharedMediaIds.add(item.id);
@@ -301,13 +311,23 @@ export async function onRequestPost({ request, env }) {
       const mediaIdsToDelete = Array.from(candidateMediaIds).filter((id) => !sharedMediaIds.has(id));
       const preservedMediaCount = candidateMediaIds.size - mediaIdsToDelete.length;
 
-      // Delete the project first so Webflow clears its Media references before deleting those Media items.
-      await unpublishCollectionItem(env, projectsCollection.id, projectId);
-      await webflowRequest(
-        env,
-        `/collections/${projectsCollection.id}/items/${projectId}`,
-        { method: "DELETE" }
-      );
+      // Delete the projects first so Webflow clears its Media references before deleting those Media items.
+      for (const projectId of deleteProjectIdSet) {
+        try {
+          await unpublishCollectionItem(env, projectsCollection.id, projectId);
+        } catch {}
+        try {
+          await webflowRequest(
+            env,
+            `/collections/${projectsCollection.id}/items/${projectId}`,
+            { method: "DELETE" }
+          );
+        } catch (delErr) {
+          if (!(delErr instanceof WebflowApiError) || delErr.status !== 404) {
+            throw delErr;
+          }
+        }
+      }
 
       let deletedMediaCount = 0;
       let deletedAssetCount = 0;
@@ -323,7 +343,9 @@ export async function onRequestPost({ request, env }) {
 
       return jsonResponse({
         action: "delete",
-        projectId,
+        projectIds: Array.from(deleteProjectIdSet),
+        projectId: projectIds[0] || null,
+        deletedProjectCount: deleteProjectIdSet.size,
         deletedMediaCount,
         deletedAssetCount,
         preservedMediaCount,

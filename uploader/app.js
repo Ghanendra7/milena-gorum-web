@@ -36,6 +36,9 @@
     selectedGalleryIds: new Set(),
     lastSelectedGalleryId: null,
     orderMode: "all", // "all" | "home" | "info"
+    projectSelectMode: false,
+    selectedProjectIds: new Set(),
+    lastSelectedProjectId: null,
     orderDraftAll: [],
     orderDraftHome: [],
     dragOrderProjectId: null,
@@ -75,6 +78,9 @@
     orderDirtyCount: document.getElementById("orderDirtyCount"),
     resetOrderBtn: document.getElementById("resetOrderBtn"),
     saveOrderBtn: document.getElementById("saveOrderBtn"),
+    projectSelectModeBtn: document.getElementById("projectSelectModeBtn"),
+    selectAllProjectsBtn: document.getElementById("selectAllProjectsBtn"),
+    deleteSelectedProjectsBtn: document.getElementById("deleteSelectedProjectsBtn"),
     dirFilterRow: document.getElementById("dirFilterRow"),
     dirSearchInput: document.getElementById("dirSearchInput"),
     dirTypeFilter: document.getElementById("dirTypeFilter"),
@@ -440,6 +446,9 @@
     state.selectedProjectId = target.id;
     state.selectedGalleryIds.clear();
     state.lastSelectedGalleryId = null;
+    state.projectSelectMode = false;
+    state.selectedProjectIds.clear();
+    state.lastSelectedProjectId = null;
     state.activeView = "editor";
     els.projectsView.hidden = true;
     els.editorView.hidden = false;
@@ -1916,12 +1925,83 @@
     }
   }
 
+  function getVisibleOrderProjectIds() {
+    const byId = new Map(state.projects.map((p) => [p.id, p]));
+    const isHomeMode = state.orderMode === "home";
+    const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
+    const search = (els.dirSearchInput ? els.dirSearchInput.value : "").trim().toLowerCase();
+    const typeFilter = els.dirTypeFilter ? els.dirTypeFilter.value : "";
+    const catFilter = els.dirCatFilter ? els.dirCatFilter.value : "";
+    const statusFilter = els.dirStatusFilter ? els.dirStatusFilter.value : "";
+
+    return sourceIds.filter((id) => {
+      const p = byId.get(id);
+      if (!p) return false;
+      if (isHomeMode) return true;
+      if (search && !`${p.sequence} ${p.name} ${p.subtitle} ${p.slug}`.toLowerCase().includes(search)) {
+        return false;
+      }
+      if (typeFilter && p.projectType !== typeFilter) return false;
+      if (catFilter && !p.categoryIds.includes(catFilter)) return false;
+      if (statusFilter === "published" && p.isDraft) return false;
+      if (statusFilter === "draft" && !p.isDraft) return false;
+      if (statusFilter === "featured" && !p.featured) return false;
+      return true;
+    });
+  }
+
+  function updateProjectSelectionUI(visibleIds) {
+    if (!els.projectSelectModeBtn || !els.selectAllProjectsBtn || !els.deleteSelectedProjectsBtn) return;
+    if (state.orderMode !== "all") {
+      els.projectSelectModeBtn.hidden = true;
+      els.selectAllProjectsBtn.hidden = true;
+      els.deleteSelectedProjectsBtn.hidden = true;
+      return;
+    }
+
+    els.projectSelectModeBtn.hidden = false;
+    els.projectSelectModeBtn.textContent = state.projectSelectMode ? "Done" : "Select";
+    els.projectSelectModeBtn.className = `btn btn-sm ${state.projectSelectMode ? "btn-secondary" : "btn-ghost"}`;
+
+    if (!state.projectSelectMode) {
+      els.selectAllProjectsBtn.hidden = true;
+      els.deleteSelectedProjectsBtn.hidden = true;
+      return;
+    }
+
+    const vIds = visibleIds || getVisibleOrderProjectIds();
+    const total = vIds.length;
+    const count = state.selectedProjectIds.size;
+
+    els.selectAllProjectsBtn.hidden = total === 0;
+    const allSelected = total > 0 && vIds.every((id) => state.selectedProjectIds.has(id));
+    els.selectAllProjectsBtn.textContent = allSelected ? "Deselect All" : "Select All";
+
+    if (count > 0) {
+      els.deleteSelectedProjectsBtn.hidden = false;
+      els.deleteSelectedProjectsBtn.textContent = `Delete Selected (${count})`;
+    } else {
+      els.deleteSelectedProjectsBtn.hidden = true;
+    }
+  }
+
   function renderProjectOrderList() {
     const byId = new Map(state.projects.map((p) => [p.id, p]));
     const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
 
     const isHomeMode = state.orderMode === "home";
     const isInfoMode = state.orderMode === "info";
+
+    if (isInfoMode || isHomeMode) {
+      state.projectSelectMode = false;
+      state.selectedProjectIds.clear();
+      state.lastSelectedProjectId = null;
+    }
+
+    // Prune stale selected ids
+    for (const id of state.selectedProjectIds) {
+      if (!byId.has(id)) state.selectedProjectIds.delete(id);
+    }
 
     els.orderModeAllBtn.classList.toggle("is-active", state.orderMode === "all");
     els.orderModeAllBtn.setAttribute("aria-selected", state.orderMode === "all" ? "true" : "false");
@@ -1939,6 +2019,7 @@
     els.dirFilterRow.hidden = isHomeMode || isInfoMode;
 
     if (isInfoMode) {
+      updateProjectSelectionUI([]);
       els.projectOrderList.hidden = true;
       els.infoEditorSection.hidden = false;
       els.saveOrderBtn.hidden = true;
@@ -1992,25 +2073,9 @@
     }
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
-    const search = els.dirSearchInput.value.trim().toLowerCase();
-    const typeFilter = els.dirTypeFilter.value;
-    const catFilter = els.dirCatFilter.value;
-    const statusFilter = els.dirStatusFilter.value;
+    const visibleIds = getVisibleOrderProjectIds();
 
-    const visibleIds = sourceIds.filter((id) => {
-      const p = byId.get(id);
-      if (!p) return false;
-      if (isHomeMode) return true;
-      if (search && !`${p.sequence} ${p.name} ${p.subtitle} ${p.slug}`.toLowerCase().includes(search)) {
-        return false;
-      }
-      if (typeFilter && p.projectType !== typeFilter) return false;
-      if (catFilter && !p.categoryIds.includes(catFilter)) return false;
-      if (statusFilter === "published" && p.isDraft) return false;
-      if (statusFilter === "draft" && !p.isDraft) return false;
-      if (statusFilter === "featured" && !p.featured) return false;
-      return true;
-    });
+    updateProjectSelectionUI(visibleIds);
 
     els.projectOrderList.innerHTML = "";
 
@@ -2024,7 +2089,7 @@
       return;
     }
 
-    const canReorder = !filtersActive && (isHomeMode || isManualSort);
+    const canReorder = !state.projectSelectMode && !filtersActive && (isHomeMode || isManualSort);
 
     visibleIds.forEach((id) => {
       const p = byId.get(id);
@@ -2032,9 +2097,10 @@
       const targetNum = listIdx + 1;
       const oldNum = isHomeMode ? p.featuredSequence : p.sequence;
       const numChanged = Number(oldNum) !== targetNum;
+      const isSelected = state.selectedProjectIds.has(id);
 
       const row = document.createElement("div");
-      row.className = `project-row${canReorder ? " is-draggable" : ""}`;
+      row.className = `project-row${canReorder ? " is-draggable" : ""}${state.projectSelectMode ? " is-select-mode" : ""}${isSelected ? " is-selected" : ""}`;
       row.draggable = canReorder;
 
       row.addEventListener("focusin", (e) => {
@@ -2083,15 +2149,89 @@
         });
       }
 
-      const handle = document.createElement("div");
-      handle.className = "project-row-handle";
-      handle.title = canReorder
-        ? "Drag to reorder"
-        : !isManualSort
-          ? "Switch to Manual to drag and reorder"
-          : "Clear filters to drag";
-      handle.textContent = canReorder ? "⋮⋮" : "·";
-      row.appendChild(handle);
+      if (state.projectSelectMode) {
+        const selectWrap = document.createElement("label");
+        selectWrap.className = "project-row-select-wrap";
+        selectWrap.title = "Select project";
+
+        const selectCb = document.createElement("input");
+        selectCb.type = "checkbox";
+        selectCb.className = "project-row-select-cb";
+        selectCb.checked = isSelected;
+        selectCb.addEventListener("click", (e) => e.stopPropagation());
+        selectCb.addEventListener("change", (e) => {
+          e.stopPropagation();
+          const checked = selectCb.checked;
+          if (e.shiftKey && state.lastSelectedProjectId && state.lastSelectedProjectId !== id) {
+            const fromIdx = visibleIds.indexOf(state.lastSelectedProjectId);
+            const toIdx = visibleIds.indexOf(id);
+            if (fromIdx !== -1 && toIdx !== -1) {
+              const start = Math.min(fromIdx, toIdx);
+              const end = Math.max(fromIdx, toIdx);
+              for (let i = start; i <= end; i++) {
+                const vid = visibleIds[i];
+                if (checked) state.selectedProjectIds.add(vid);
+                else state.selectedProjectIds.delete(vid);
+              }
+              renderProjectOrderList();
+              return;
+            }
+          }
+          state.lastSelectedProjectId = id;
+          if (checked) {
+            state.selectedProjectIds.add(id);
+            row.classList.add("is-selected");
+          } else {
+            state.selectedProjectIds.delete(id);
+            row.classList.remove("is-selected");
+          }
+          updateProjectSelectionUI(visibleIds);
+        });
+        selectWrap.appendChild(selectCb);
+        row.appendChild(selectWrap);
+
+        row.addEventListener("click", (e) => {
+          if (!state.projectSelectMode) return;
+          if (e.target.closest("input, select, textarea, button, a, label")) return;
+          const nextChecked = !state.selectedProjectIds.has(id);
+          if (e.shiftKey && state.lastSelectedProjectId && state.lastSelectedProjectId !== id) {
+            const fromIdx = visibleIds.indexOf(state.lastSelectedProjectId);
+            const toIdx = visibleIds.indexOf(id);
+            if (fromIdx !== -1 && toIdx !== -1) {
+              const start = Math.min(fromIdx, toIdx);
+              const end = Math.max(fromIdx, toIdx);
+              for (let i = start; i <= end; i++) {
+                const vid = visibleIds[i];
+                if (nextChecked) state.selectedProjectIds.add(vid);
+                else state.selectedProjectIds.delete(vid);
+              }
+              renderProjectOrderList();
+              return;
+            }
+          }
+          state.lastSelectedProjectId = id;
+          if (nextChecked) {
+            state.selectedProjectIds.add(id);
+            row.classList.add("is-selected");
+            selectCb.checked = true;
+          } else {
+            state.selectedProjectIds.delete(id);
+            row.classList.remove("is-selected");
+            selectCb.checked = false;
+          }
+          updateProjectSelectionUI(visibleIds);
+        });
+      } else {
+        const handle = document.createElement("div");
+        handle.className = "project-row-handle";
+        handle.title = canReorder
+          ? "Drag to reorder"
+          : !isManualSort
+            ? "Switch to Manual to drag and reorder"
+            : "Clear filters to drag";
+        handle.textContent = canReorder ? "⋮⋮" : "·";
+        row.appendChild(handle);
+      }
 
       const numCell = document.createElement("div");
       numCell.className = "project-row-num";
@@ -2295,6 +2435,7 @@
 
       els.projectOrderList.appendChild(row);
     });
+    updateProjectSelectionUI(visibleIds);
   }
 
   async function saveOrderChanges() {
@@ -3202,12 +3343,94 @@
   });
   els.orderModeHomeBtn.addEventListener("click", () => {
     state.orderMode = "home";
+    state.projectSelectMode = false;
+    state.selectedProjectIds.clear();
+    state.lastSelectedProjectId = null;
     renderProjectOrderList();
   });
   els.orderModeInfoBtn.addEventListener("click", () => {
     state.orderMode = "info";
+    state.projectSelectMode = false;
+    state.selectedProjectIds.clear();
+    state.lastSelectedProjectId = null;
     renderProjectOrderList();
   });
+
+  if (els.projectSelectModeBtn) {
+    els.projectSelectModeBtn.addEventListener("click", () => {
+      state.projectSelectMode = !state.projectSelectMode;
+      if (!state.projectSelectMode) {
+        state.selectedProjectIds.clear();
+        state.lastSelectedProjectId = null;
+      }
+      renderProjectOrderList();
+    });
+  }
+
+  if (els.selectAllProjectsBtn) {
+    els.selectAllProjectsBtn.addEventListener("click", () => {
+      const visibleIds = getVisibleOrderProjectIds();
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => state.selectedProjectIds.has(id));
+      if (allSelected) {
+        visibleIds.forEach((id) => state.selectedProjectIds.delete(id));
+      } else {
+        visibleIds.forEach((id) => state.selectedProjectIds.add(id));
+      }
+      renderProjectOrderList();
+    });
+  }
+
+  if (els.deleteSelectedProjectsBtn) {
+    els.deleteSelectedProjectsBtn.addEventListener("click", async () => {
+      const count = state.selectedProjectIds.size;
+      if (count === 0) return;
+
+      const selectedIds = Array.from(state.selectedProjectIds);
+      const byId = new Map(state.projects.map((p) => [p.id, p]));
+      const names = selectedIds.map((id) => byId.get(id)?.name).filter(Boolean);
+      const previewList = names.slice(0, 3).map((n) => `"${n}"`).join(", ");
+      const moreText = names.length > 3 ? ` and ${names.length - 3} more` : "";
+
+      const confirmed = await showConfirmModal({
+        title: `Delete ${count} Project${count > 1 ? "s" : ""}`,
+        message: `Permanently delete ${count} selected project${count > 1 ? "s" : ""} (${previewList}${moreText}) along with their unshared Media items and image files from Webflow? This action cannot be undone.`,
+        confirmText: `Delete ${count} Project${count > 1 ? "s" : ""}`,
+        isDanger: true,
+      });
+      if (!confirmed) return;
+
+      els.deleteSelectedProjectsBtn.disabled = true;
+      els.deleteSelectedProjectsBtn.textContent = "Deleting…";
+
+      try {
+        const res = await apiJson("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "delete",
+            projectIds: selectedIds,
+            fieldMapOverride: state.fieldOverride,
+          }),
+        });
+
+        state.selectedProjectIds.clear();
+        state.lastSelectedProjectId = null;
+        state.projectSelectMode = false;
+        await loadBootstrap();
+        syncUrlHash();
+
+        const mediaNote = res.deletedMediaCount
+          ? ` along with ${res.deletedMediaCount} media item(s) and ${res.deletedAssetCount || 0} asset file(s)`
+          : "";
+        showBanner(`Successfully deleted ${res.deletedProjectCount || count} project(s)${mediaNote}.`, "ok");
+      } catch (err) {
+        showBanner(err.message, "err");
+      } finally {
+        els.deleteSelectedProjectsBtn.disabled = false;
+        updateProjectSelectionUI();
+      }
+    });
+  }
   [els.dirSearchInput, els.dirTypeFilter, els.dirCatFilter, els.dirStatusFilter].forEach((el) => {
     el.addEventListener("input", renderProjectOrderList);
     el.addEventListener("change", renderProjectOrderList);

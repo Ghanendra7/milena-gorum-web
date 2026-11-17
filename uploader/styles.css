@@ -855,6 +855,41 @@ textarea:focus {
   box-shadow: 0 0 0 1px var(--text);
 }
 
+.project-row.is-selected {
+  border-color: #0f0f0f;
+  box-shadow: 0 0 0 1px #0f0f0f;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.project-row.is-select-mode {
+  cursor: pointer;
+}
+
+.project-row.is-select-mode input,
+.project-row.is-select-mode select,
+.project-row.is-select-mode button {
+  cursor: auto;
+}
+
+.project-row-select-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.project-row-select-cb {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #0f0f0f;
+  border-radius: 4px;
+}
+
 .project-row-handle {
   color: var(--muted);
   font-size: 14px;
