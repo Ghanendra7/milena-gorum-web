@@ -547,6 +547,10 @@
 
                 if (idx === activeDomIndex) {
                     ensureVideoReady(video);
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        const isPortrait = video.videoWidth < video.videoHeight;
+                        slide.classList.toggle("is-portrait-video", isPortrait);
+                    }
                     video.muted = true;
                     const playPromise = video.play();
                     if (playPromise !== undefined) playPromise.catch(() => { });
@@ -621,6 +625,51 @@
             const seekFill = (slide || wrapper).querySelector(".seek-fill");
 
             ensureVideoReady(video);
+
+            // Automatically detect portrait orientation (width < height)
+            const setOrientation = (isPortrait) => {
+                if (slide) slide.classList.toggle("is-portrait-video", isPortrait);
+                if (wrapper) wrapper.classList.toggle("is-portrait-video", isPortrait);
+
+                // Also sync cloned duplicate slides for loop mode
+                const slideIdx = slide?.getAttribute("data-swiper-slide-index");
+                if (slideIdx !== null && slideIdx !== undefined && mainEl) {
+                    mainEl.querySelectorAll(`.swiper-slide[data-swiper-slide-index="${slideIdx}"]`).forEach((s) => {
+                        s.classList.toggle("is-portrait-video", isPortrait);
+                        const w = s.querySelector(".video-wrapper") || s.querySelector(".video-container");
+                        if (w) w.classList.toggle("is-portrait-video", isPortrait);
+                    });
+                }
+            };
+
+            const updatePortraitOrientation = () => {
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    setOrientation(video.videoWidth < video.videoHeight);
+                } else {
+                    const posterSrc = video.getAttribute("poster") || video.poster;
+                    if (posterSrc) {
+                        const img = new Image();
+                        img.src = posterSrc;
+                        if (img.complete && img.naturalWidth > 0) {
+                            if (video.videoWidth === 0) {
+                                setOrientation(img.naturalWidth < img.naturalHeight);
+                            }
+                        } else {
+                            img.onload = () => {
+                                if (video.videoWidth === 0 && img.naturalWidth > 0) {
+                                    setOrientation(img.naturalWidth < img.naturalHeight);
+                                }
+                            };
+                        }
+                    }
+                }
+            };
+
+            updatePortraitOrientation();
+            video.addEventListener("loadedmetadata", updatePortraitOrientation, { signal });
+            video.addEventListener("loadeddata", updatePortraitOrientation, { signal });
+            video.addEventListener("canplay", updatePortraitOrientation, { signal });
+            video.addEventListener("playing", updatePortraitOrientation, { signal });
 
             let isDragging = false;
             let seekRafId = null;

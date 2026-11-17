@@ -1038,20 +1038,32 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 .video-container:fullscreen .controls-container,
-.video-container:-webkit-full-screen .controls-container {
+.video-container:-webkit-full-screen .controls-container,
+.swiper-slide.is-portrait-video .video-container:fullscreen .controls-container,
+.swiper-slide.is-portrait-video .video-container:-webkit-full-screen .controls-container {
     position: absolute !important;
+    inset: auto !important;
     bottom: 20px !important;
     right: 24px !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
     z-index: 10 !important;
 }
 
 .video-container:fullscreen .seek-container,
-.video-container:-webkit-full-screen .seek-container {
+.video-container:-webkit-full-screen .seek-container,
+.swiper-slide.is-portrait-video .video-container:fullscreen .seek-container,
+.swiper-slide.is-portrait-video .video-container:-webkit-full-screen .seek-container {
     position: absolute !important;
+    inset: auto !important;
     bottom: 16px !important;
     left: 24px !important;
     right: auto !important;
+    top: auto !important;
+    transform: none !important;
     width: calc(100% - 240px) !important;
+    max-width: none !important;
     z-index: 10 !important;
 }
 
@@ -1061,6 +1073,56 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .btn-sound {
     touch-action: manipulation;
     cursor: pointer;
+}
+
+/* ========================================================
+   Portrait Video Player Layout (Desktop & Mobile, All Modes)
+   Positions seek bar in center and controls at bottom-right
+   ======================================================== */
+.swiper-slide.is-portrait-video .seek-container {
+    position: fixed !important;
+    inset: auto !important;
+    left: 50% !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: 220px !important;
+    max-width: 50vw !important;
+    height: 20px !important;
+    z-index: 25 !important;
+    mix-blend-mode: difference !important;
+}
+
+.swiper-slide.is-portrait-video .controls-container {
+    position: fixed !important;
+    inset: auto !important;
+    right: var(--padding, 16px) !important;
+    bottom: var(--padding, 16px) !important;
+    left: auto !important;
+    top: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    z-index: 25 !important;
+    transform: none !important;
+    mix-blend-mode: difference !important;
+    color: #ffffff !important;
+}
+
+.swiper-slide.is-portrait-video .controls-container,
+.swiper-slide.is-portrait-video .controls-container * {
+    color: #ffffff !important;
+}
+
+/* Ensure only the active slide's fixed controls are visible */
+.swiper-slide:not(.swiper-slide-active).is-portrait-video .seek-container,
+.swiper-slide:not(.swiper-slide-active).is-portrait-video .controls-container,
+.swiper-slide:not(.swiper-slide-active).is-fill-slide .seek-container,
+.swiper-slide:not(.swiper-slide-active).is-fill-slide .controls-container {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
 }
 
 /* Project Details: Mobile & Tablet (<= 1024px) */
@@ -1102,16 +1164,16 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
     /* ----------------------------------------------------
        Mobile Video Controls & Seek Positioning
-       Mode A: Non-Fill (Fill Screen = OFF, Contained Video)
+       Mode A: Non-Fill (Fill Screen = OFF, Contained Landscape Video)
        Mode B: Fill Screen = ON (Full-Bleed Stage)
        ---------------------------------------------------- */
 
-    /* Mode A: Non-Fill (Contained Video Layout) */
-    .swiper-slide:not(.is-fill-slide) .video-wrapper {
+    /* Mode A: Non-Fill (Contained Landscape Video Layout) */
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .video-wrapper {
         position: relative;
     }
 
-    .swiper-slide:not(.is-fill-slide) .seek-container {
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .seek-container {
         position: absolute !important;
         left: 36px !important;
         right: auto !important;
@@ -1124,7 +1186,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         z-index: 10 !important;
     }
 
-    .swiper-slide:not(.is-fill-slide) .controls-container {
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .controls-container {
         position: absolute !important;
         right: 36px !important;
         left: auto !important;
