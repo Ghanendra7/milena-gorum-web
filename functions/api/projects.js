@@ -330,6 +330,90 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
+    if (action === "migrate-category") {
+      const fromCategoryId = String(body?.fromCategoryId || "").trim();
+      const toCategoryId = String(body?.toCategoryId || "").trim();
+      const deleteSource = body?.deleteSource !== false;
+      const publishMode = body?.publishMode || "live";
+
+      if (!fromCategoryId || !toCategoryId) {
+        return jsonError("fromCategoryId and toCategoryId are required.", 400);
+      }
+      if (fromCategoryId === toCategoryId) {
+        return jsonError("fromCategoryId and toCategoryId cannot be identical.", 400);
+      }
+
+      const allProjects = await listAllCollectionItems(env, projectsCollection.id);
+      const catSlug = pFields.category;
+      if (!catSlug) return jsonError("Category field is not mapped.", 400);
+
+      const touchedProjects = [];
+      const touchedProjectIdsToPublish = [];
+
+      for (const proj of allProjects) {
+        const fd = proj.fieldData || {};
+        const catVal = fd[catSlug];
+        const currentCatIds = Array.isArray(catVal)
+          ? catVal.map((c) => (typeof c === "string" ? c : c?.id)).filter(Boolean)
+          : (catVal ? [typeof catVal === "string" ? catVal : catVal?.id].filter(Boolean) : []);
+
+        if (!currentCatIds.includes(fromCategoryId)) continue;
+
+        const nextCatIds = Array.from(
+          new Set(currentCatIds.map((id) => (id === fromCategoryId ? toCategoryId : id)).filter(Boolean))
+        );
+
+        const fieldData = buildProjectFieldData({ categoryIds: nextCatIds }, pFields, projectFieldBySlug);
+        await webflowRequest(
+          env,
+          `/collections/${projectsCollection.id}/items/${proj.id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ fieldData }),
+          }
+        );
+
+        touchedProjects.push({ id: proj.id, name: fd.name || proj.id });
+        if (!proj.isDraft) {
+          touchedProjectIdsToPublish.push(proj.id);
+        }
+      }
+
+      if (publishMode === "live" && touchedProjectIdsToPublish.length > 0) {
+        await publishCollectionItems(env, projectsCollection.id, touchedProjectIdsToPublish);
+      }
+
+      let deletedSource = false;
+      let deleteError = null;
+      if (deleteSource && resolved.categoryCollection?.id) {
+        try {
+          await unpublishCollectionItem(env, resolved.categoryCollection.id, fromCategoryId);
+        } catch (unpubErr) {
+          console.warn("Unpublish category warning:", unpubErr);
+        }
+        try {
+          await webflowRequest(env, `/collections/${resolved.categoryCollection.id}/items/${fromCategoryId}`, {
+            method: "DELETE",
+          });
+          deletedSource = true;
+        } catch (delErr) {
+          deleteError = delErr?.message || String(delErr);
+          console.error("Failed to delete category item:", delErr);
+        }
+      }
+
+      return jsonResponse({
+        success: true,
+        updatedProjectCount: touchedProjects.length,
+        updatedProjects: touchedProjects,
+        fromCategoryId,
+        toCategoryId,
+        deletedSource,
+        deleteError,
+        publishedProjectsCount: touchedProjectIdsToPublish.length,
+      });
+    }
+
     return jsonError(`Unsupported action: ${action}`, 400);
   } catch (err) {
     if (err instanceof WebflowApiError) {
