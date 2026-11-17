@@ -1035,8 +1035,14 @@
                 let isOpen = false;
                 let activeCloseTween = null;
 
-                const getMainImageContainers = () => {
-                    return scope.querySelectorAll(".main-stage .image-container, .main-swiper .image-container, .image-container:not(.thumb-swiper *)");
+                const getNonFillMediaElements = () => {
+                    const root = mainEl || scope.querySelector(".main-stage") || scope;
+                    return root.querySelectorAll(".swiper-slide:not(.is-fill-slide) .image-wrapper, .swiper-slide:not(.is-fill-slide) .video-parallax-container");
+                };
+
+                const getAllMediaWrappers = () => {
+                    const root = mainEl || scope.querySelector(".main-stage") || scope;
+                    return root.querySelectorAll(".image-wrapper, .video-parallax-container");
                 };
 
                 const openDrawer = () => {
@@ -1047,12 +1053,12 @@
                     isOpen = true;
                     trigger.setAttribute("aria-expanded", "true");
 
-                    const mainImageContainers = getMainImageContainers();
+                    const allMediaWrappers = getAllMediaWrappers();
 
                     // Kill any active tweens on drawer and its children for rock-solid stability
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
-                    if (mainImageContainers.length) {
-                        gsap.killTweensOf(mainImageContainers);
+                    if (allMediaWrappers.length) {
+                        gsap.killTweensOf(allMediaWrappers);
                     }
 
                     // Position thumbnail strip BEFORE starting drawer expansion so active thumb is already centered
@@ -1124,14 +1130,17 @@
                         detailsMarqueeTimeline.restart();
                     }
 
-                    // 6. On mobile, add padding-top: 40px to .image-container in the main stage along with open animation
-                    if (!isDesktop && mainImageContainers.length) {
-                        gsap.to(mainImageContainers, {
-                            paddingTop: 40,
-                            duration: 0.85,
-                            ease: "power2.inOut",
-                            overwrite: "auto"
-                        });
+                    // 6. On mobile, add padding-top: 40px to non-fill .image-wrapper and .video-parallax-container along with open animation
+                    if (!isDesktop) {
+                        const nonFillMedia = getNonFillMediaElements();
+                        if (nonFillMedia.length) {
+                            gsap.to(nonFillMedia, {
+                                paddingTop: 40,
+                                duration: 0.85,
+                                ease: "power2.inOut",
+                                overwrite: "auto"
+                            });
+                        }
                     }
                 };
 
@@ -1144,12 +1153,12 @@
                         detailsMarqueeTimeline.pause();
                     }
 
-                    const mainImageContainers = getMainImageContainers();
+                    const allMediaWrappers = getAllMediaWrappers();
 
                     // Kill any active opening tweens
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
-                    if (mainImageContainers.length) {
-                        gsap.killTweensOf(mainImageContainers);
+                    if (allMediaWrappers.length) {
+                        gsap.killTweensOf(allMediaWrappers);
                     }
 
                     // 1. Plus icon rotates back quickly
@@ -1178,16 +1187,16 @@
                             if (detailsText) {
                                 gsap.set(detailsText, { x: 0 });
                             }
-                            if (mainImageContainers.length) {
-                                gsap.set(mainImageContainers, { paddingTop: 0 });
+                            if (allMediaWrappers.length) {
+                                gsap.set(allMediaWrappers, { paddingTop: 0 });
                             }
                             activeCloseTween = null;
                         }
                     });
 
-                    // 3. Reset image-container padding-top back to zero as bottom stage collapses
-                    if (mainImageContainers.length) {
-                        gsap.to(mainImageContainers, {
+                    // 3. Reset media wrappers padding-top back to zero as bottom stage collapses
+                    if (allMediaWrappers.length) {
+                        gsap.to(allMediaWrappers, {
                             paddingTop: 0,
                             duration: 0.65,
                             ease: "power2.inOut",
@@ -1234,11 +1243,16 @@
                         detailsMarqueeTimeline.kill();
                         detailsMarqueeTimeline = null;
                     }
-                    const mainImageContainers = getMainImageContainers();
+                    const allMediaWrappers = getAllMediaWrappers();
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides, detailsText]);
-                    if (mainImageContainers.length) {
-                        gsap.killTweensOf(mainImageContainers);
-                        gsap.set(mainImageContainers, { clearProps: "paddingTop" });
+                    if (allMediaWrappers.length) {
+                        gsap.killTweensOf(allMediaWrappers);
+                        gsap.set(allMediaWrappers, { clearProps: "paddingTop" });
+                    }
+                    const residualImageContainers = (mainEl || scope).querySelectorAll(".image-container");
+                    if (residualImageContainers.length) {
+                        gsap.killTweensOf(residualImageContainers);
+                        gsap.set(residualImageContainers, { clearProps: "paddingTop" });
                     }
                     gsap.set(drawer, { height: 0 });
                     if (icon) gsap.set(icon, { rotation: 0 });
