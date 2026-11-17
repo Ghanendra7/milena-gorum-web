@@ -230,6 +230,9 @@ function initOsmoBoilerplate() {
 
     function runInstantEnter(next) {
         return new Promise((resolve) => {
+            if (next && window.__mgEnteringFromDetail) {
+                next._isFromProjectDetail = true;
+            }
             mountPage(next);
             resetPage(next);
             notifyTransitionComplete(next?.getAttribute("data-barba-namespace") || "");
@@ -1328,7 +1331,15 @@ function initOsmoBoilerplate() {
                     return runInstantLeave(data.current.container, data.next.container);
                 },
                 async enter(data) {
-                    return runInstantEnter(data.next.container);
+                    if (data.next?.container) {
+                        data.next.container._isFromProjectDetail = true;
+                    }
+                    window.__mgEnteringFromDetail = true;
+                    try {
+                        return await runInstantEnter(data.next.container);
+                    } finally {
+                        window.__mgEnteringFromDetail = false;
+                    }
                 },
             },
             {

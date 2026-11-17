@@ -1304,8 +1304,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
-    padding-bottom: 4px !important;
-    margin-bottom: -4px !important;
+
 }
 
 .index-title-wrap {
@@ -1315,8 +1314,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
-    padding-bottom: 4px !important;
-    margin-bottom: -4px !important;
+
 }
 
 .index-col-client {

@@ -350,12 +350,24 @@
             }
         } catch (_) { }
 
-        const isRestoring = Boolean(isRestoreFromDetail && (restoreSlug || (restoreScroll !== null && restoreScroll > 0)));
+        const isComingFromDetail = Boolean(
+            scope?._isFromProjectDetail ||
+            window.__mgEnteringFromDetail ||
+            isRestoreFromDetail ||
+            sessionStorage.getItem("mg_restore_from_detail") === "true"
+        );
+        const isRestoring = isComingFromDetail;
 
         // Subtle GSAP appear animation for columns: numbers -> client name -> subtitle
-        if (!scope._deferAppear && !window.__mgEnteringFromHome && !isRestoring) {
+        // When coming from Project Details, appear instantly without any floating animation
+        if (!scope._deferAppear && !window.__mgEnteringFromHome && !isComingFromDetail) {
             playAppearAnimation(list);
-        } else if (isRestoring) {
+        } else if (isComingFromDetail) {
+            if (appearTimeline) {
+                appearTimeline.kill();
+                appearTimeline = null;
+            }
+            isAppearAnimating = false;
             const allTargets = list.querySelectorAll(".index-col-num, .index-client-wrap, .index-title-wrap, .index-col-client, .index-col-title");
             if (typeof gsap !== "undefined" && allTargets.length) {
                 gsap.set(allTargets, { opacity: 1, y: 0, clearProps: "transform,opacity" });
