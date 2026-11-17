@@ -1108,6 +1108,19 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     color: #ffffff !important;
 }
 
+.swiper-slide.is-portrait-video .slide-video,
+.swiper-slide.is-portrait-video .main-media-img,
+.swiper-slide.is-portrait-video .video-embed,
+.swiper-slide.is-portrait-video .video-wrapper {
+    width: fit-content !important;
+    min-width: fit-content !important;
+}
+
+.swiper-slide.is-portrait-video .main-media-img {
+    padding-right: 0px;
+    padding-left: 0px;
+}
+
 .swiper-slide.is-portrait-video .controls-container,
 .swiper-slide.is-portrait-video .controls-container * {
     color: #ffffff !important;
