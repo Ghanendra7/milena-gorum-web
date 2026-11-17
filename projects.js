@@ -356,6 +356,9 @@
 
             card.dataset.normalizedTypes = parseCardTypes(card.getAttribute("data-type")).join("|");
 
+            // Strip nested raw CMS subcategory list so it never renders or leaks into layout
+            card.querySelectorAll(".card-sub-list, .card-sub-tag").forEach((el) => el.remove());
+
             const img = card.querySelector(".project-img") || card.querySelector("img");
             const mediaWrap = card.querySelector(".project-media-wrap");
             const link = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();

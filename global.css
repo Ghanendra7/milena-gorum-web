@@ -448,6 +448,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     pointer-events: none;
 }
 
+/* Hide nested raw Webflow CMS subcategory list inside cards */
+.card-sub-list,
+.card-sub-tag {
+    display: none !important;
+}
+
 /* Indent first project header on desktop at the beginning or in bounded layout */
 @media (min-width: 1025px) {
 
