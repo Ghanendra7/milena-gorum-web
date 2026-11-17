@@ -1203,11 +1203,19 @@
                 p.style.display = "none";
             });
 
+            const resolveUrl = (urlStr) => {
+                try {
+                    return new URL(urlStr, window.location.href).href;
+                } catch (_) {
+                    return urlStr;
+                }
+            };
+
             let nextLink = scope.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
             if (!nextLink) return;
 
-            let nextPageUrl = nextLink.getAttribute("href");
-            const visitedUrls = new Set([window.location.href, window.location.pathname]);
+            let nextPageUrl = resolveUrl(nextLink.getAttribute("href") || "");
+            const visitedUrls = new Set([window.location.href, window.location.origin + window.location.pathname]);
 
             while (nextPageUrl && !visitedUrls.has(nextPageUrl)) {
                 visitedUrls.add(nextPageUrl);
@@ -1216,7 +1224,7 @@
                     if (!resp.ok) break;
                     const html = await resp.text();
                     const doc = new DOMParser().parseFromString(html, "text/html");
-                    const newRows = Array.from(doc.querySelectorAll(".index-list-wrapper .index-row, .index-list .index-row"));
+                    const newRows = Array.from(doc.querySelectorAll(".index-list-wrapper .index-row, .index-list .index-row, .index-row"));
                     let addedCount = 0;
 
                     newRows.forEach((row) => {
@@ -1236,7 +1244,7 @@
                     }
 
                     const nextInDoc = doc.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
-                    nextPageUrl = nextInDoc ? nextInDoc.getAttribute("href") : null;
+                    nextPageUrl = nextInDoc ? resolveUrl(nextInDoc.getAttribute("href") || "") : null;
                 } catch (err) {
                     if (err?.name === "AbortError") break;
                     console.warn("[Index] Pagination fetch error:", err);
