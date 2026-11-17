@@ -1217,7 +1217,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         position: absolute !important;
         left: 32px !important;
         right: auto !important;
-        bottom: 11px !important;
+        bottom: 9px !important;
         top: auto !important;
         width: calc(100% - 240px) !important;
         max-width: none !important;
@@ -1230,7 +1230,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         position: absolute !important;
         right: 32px !important;
         left: auto !important;
-        bottom: 14px !important;
+        bottom: 12px !important;
         top: auto !important;
         display: flex !important;
         align-items: center !important;
