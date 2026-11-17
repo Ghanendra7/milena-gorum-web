@@ -1718,3 +1718,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-section .w-pagination-wrapper {
     display: none !important;
 }
+
+/* Hide Webflow native pagination bars in SPA galleries */
+.projects-section .w-pagination-wrapper,
+.index-section .w-pagination-wrapper {
+    display: none !important;
+}
