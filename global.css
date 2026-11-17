@@ -1712,3 +1712,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .info-link-list a:hover {
     color: #000000;
 }
+
+/* Hide Webflow native pagination bars in SPA galleries */
+.projects-section .w-pagination-wrapper,
+.index-section .w-pagination-wrapper {
+    display: none !important;
+}

@@ -318,23 +318,7 @@
             }
         };
 
-        const seenProjectKeys = new Set();
-        const rawCards = Array.from(track.children).filter((el) => {
-            if (!el.classList.contains("project-card") && !el.classList.contains("w-dyn-item")) return false;
-            if (el.getAttribute("aria-hidden") === "true") return false;
-
-            const linkHref = el.querySelector(".project-link")?.getAttribute("href") || "";
-            const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
-            const clientText = el.querySelector(".project-client")?.textContent?.trim() || "";
-            const uniqueKey = `${linkHref}|${numText}|${clientText}`;
-
-            if (seenProjectKeys.has(uniqueKey)) return false;
-            seenProjectKeys.add(uniqueKey);
-            el.dataset.uniqueKey = uniqueKey;
-            return true;
-        });
-
-        rawCards.forEach((card) => {
+        const prepareCard = (card) => {
             card.classList.add("project-card");
             const numEl = card.querySelector(".project-number-text, .project-num, .project-number");
             if (numEl) numEl.textContent = formatNum(numEl.textContent);
@@ -397,7 +381,49 @@
                 const sourceEl = video.querySelector("source");
                 if (sourceEl) sourceEl.remove();
             }
+        };
+
+        const getCardKey = (el) => {
+            const linkHref = el.querySelector(".project-link")?.getAttribute("href") || "";
+            const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
+            const clientText = el.querySelector(".project-client")?.textContent?.trim() || "";
+            return `${linkHref}|${numText}|${clientText}`;
+        };
+
+        const getCardSequence = (el) => {
+            const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "0";
+            const parsed = parseInt(numText, 10);
+            return !isNaN(parsed) ? parsed : 999999;
+        };
+
+        const seenProjectKeys = new Set();
+
+        // Multi-Collection-List support: check if designer added multiple .projects-track-wrapper elements
+        const allTrackWrappers = Array.from(scope.querySelectorAll(".projects-track-wrapper"));
+        if (allTrackWrappers.length > 1) {
+            allTrackWrappers.slice(1).forEach((w) => {
+                w.style.display = "none";
+            });
+        }
+
+        const candidateCards = allTrackWrappers.length > 0
+            ? allTrackWrappers.flatMap((w) => Array.from(w.querySelectorAll(".project-card, .w-dyn-item")))
+            : Array.from(track.children);
+
+        const rawCards = candidateCards.filter((el) => {
+            if (!el.classList.contains("project-card") && !el.classList.contains("w-dyn-item")) return false;
+            if (el.getAttribute("aria-hidden") === "true") return false;
+
+            const key = getCardKey(el);
+            if (seenProjectKeys.has(key)) return false;
+            seenProjectKeys.add(key);
+            el.dataset.uniqueKey = key;
+            return true;
         });
+
+        rawCards.forEach(prepareCard);
+
+        rawCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
 
         const masterCards = rawCards.map((card) => card.cloneNode(true));
         let activeFilteredCount = masterCards.length;
@@ -873,6 +899,8 @@
             hoveredCardIndex = -1;
             warmVideoPool.length = 0;
             singleSetWidth = 0;
+            const wasInteracted = userHasInteractedDesktop;
+            const prevScroll = scrollPos;
             userHasInteractedDesktop = false;
 
             const count = filteredTemplates.length;
@@ -926,16 +954,24 @@
             measureDesktopMetrics();
             initialFirstCardIndex = isDesktopInfinite ? activeFilteredCount : 0;
 
-            const restored = getRestoredScrollPos();
-            const initPos = restored !== null ? restored : getInitialScrollPos();
-            scrollPos = initPos;
-            targetPos = initPos;
-            rawTargetPos = initPos;
-            if (restored !== null) {
+            if (wasInteracted) {
                 userHasInteractedDesktop = true;
+                scrollPos = prevScroll;
+                targetPos = prevScroll;
+                rawTargetPos = prevScroll;
                 track.classList.remove("is-at-start");
             } else {
-                track.classList.add("is-at-start");
+                const restored = getRestoredScrollPos();
+                const initPos = restored !== null ? restored : getInitialScrollPos();
+                scrollPos = initPos;
+                targetPos = initPos;
+                rawTargetPos = initPos;
+                if (restored !== null) {
+                    userHasInteractedDesktop = true;
+                    track.classList.remove("is-at-start");
+                } else {
+                    track.classList.add("is-at-start");
+                }
             }
             if (!isDesktopInfinite) {
                 currentMarqueeSpeed = 0;
@@ -1520,7 +1556,9 @@
 
             // 1. Determine targetProjIdx BEFORE building slides & Swiper so it starts immediately on the target project!
             let targetProjIdx = 0;
-            if (isRestoreFromDetail && (restoreSlug || restoreUrl || restoreNum)) {
+            if (activeMobileProjectIdx > 0 && activeMobileProjectIdx < count) {
+                targetProjIdx = activeMobileProjectIdx;
+            } else if (isRestoreFromDetail && (restoreSlug || restoreUrl || restoreNum)) {
                 const foundIdx = filteredTemplates.findIndex((tpl) => {
                     const link = (tpl.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
                     const tplSlug = link.split("/").filter(Boolean).pop() || "";
@@ -2124,6 +2162,74 @@
         updateAvailableSubFilterButtons();
         applyFilters();
         projectsRafId = requestAnimationFrame(animateGallery);
+
+        const fetchRemainingPages = async () => {
+            scope.querySelectorAll(".w-pagination-wrapper").forEach((p) => {
+                p.style.display = "none";
+            });
+
+            let nextLink = scope.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
+            if (!nextLink) return;
+
+            let nextPageUrl = nextLink.getAttribute("href");
+            const visitedUrls = new Set([window.location.href, window.location.pathname]);
+
+            while (nextPageUrl && !visitedUrls.has(nextPageUrl)) {
+                visitedUrls.add(nextPageUrl);
+                try {
+                    const resp = await fetch(nextPageUrl, { signal });
+                    if (!resp.ok) break;
+                    const html = await resp.text();
+                    const doc = new DOMParser().parseFromString(html, "text/html");
+                    const newCandidateCards = Array.from(
+                        doc.querySelectorAll(".projects-track-wrapper .project-card, .projects-track .project-card, .projects-track .w-dyn-item, .projects-track-wrapper .w-dyn-item")
+                    );
+                    let addedCount = 0;
+
+                    newCandidateCards.forEach((card) => {
+                        if (!card.classList.contains("project-card") && !card.classList.contains("w-dyn-item")) return;
+                        if (card.getAttribute("aria-hidden") === "true") return;
+
+                        const key = getCardKey(card);
+                        if (seenProjectKeys.has(key)) return;
+                        seenProjectKeys.add(key);
+                        card.dataset.uniqueKey = key;
+
+                        prepareCard(card);
+                        masterCards.push(card.cloneNode(true));
+                        addedCount++;
+                    });
+
+                    if (addedCount > 0) {
+                        masterCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
+                        activeFilteredCount = masterCards.length;
+                        isDesktopInfinite = activeFilteredCount > MIN_LOOP_THRESHOLD;
+
+                        updateAvailableSubFilterButtons();
+
+                        const wasInteracted = userHasInteractedDesktop;
+                        const prevScroll = scrollPos;
+                        applyFilters();
+
+                        if (wasInteracted) {
+                            userHasInteractedDesktop = true;
+                            scrollPos = prevScroll;
+                            targetPos = prevScroll;
+                            rawTargetPos = prevScroll;
+                        }
+                    }
+
+                    const nextInDoc = doc.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
+                    nextPageUrl = nextInDoc ? nextInDoc.getAttribute("href") : null;
+                } catch (err) {
+                    if (err?.name === "AbortError") break;
+                    console.warn("[Projects] Pagination fetch error:", err);
+                    break;
+                }
+            }
+        };
+
+        fetchRemainingPages();
 
         const revealGalleryWhenReady = () => {
             const reveal = () => {

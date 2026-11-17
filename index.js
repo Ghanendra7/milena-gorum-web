@@ -473,6 +473,16 @@
         indexAbortController = new AbortController();
         const { signal } = indexAbortController;
 
+        // Support Multi-Collection-List if additional index-list-wrappers are added in Webflow Designer
+        const allIndexWrappers = Array.from(scope.querySelectorAll(".index-list-wrapper"));
+        if (allIndexWrappers.length > 1) {
+            allIndexWrappers.slice(1).forEach((w) => {
+                const extraRows = Array.from(w.querySelectorAll(".index-row"));
+                extraRows.forEach((r) => list.appendChild(r));
+                w.style.display = "none";
+            });
+        }
+
         const rows = Array.from(list.querySelectorAll(".index-row"));
         if (!rows.length) return;
 
@@ -1061,7 +1071,7 @@
         // ----------------------------------------------------
         // BUILD ROW DOM & INTERACTION BINDINGS
         // ----------------------------------------------------
-        rows.forEach((row, rowIndex) => {
+        const bindRow = (row, rowIndex) => {
             // Project Sequence
             const colNum = row.querySelector(".index-col-num");
             const rawNum = row.getAttribute("data-project-num") || (colNum ? colNum.textContent.trim() : "");
@@ -1181,7 +1191,61 @@
             if (projectSlug) {
                 hydrateProjectMedia(row, projectSlug, projectNum);
             }
-        });
+        };
+
+        rows.forEach((row, rowIndex) => bindRow(row, rowIndex));
+
+        // ----------------------------------------------------
+        // WEBFLOW NATIVE PAGINATION SUPPORT FOR INDEX
+        // ----------------------------------------------------
+        const fetchRemainingIndexPages = async () => {
+            scope.querySelectorAll(".w-pagination-wrapper").forEach((p) => {
+                p.style.display = "none";
+            });
+
+            let nextLink = scope.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
+            if (!nextLink) return;
+
+            let nextPageUrl = nextLink.getAttribute("href");
+            const visitedUrls = new Set([window.location.href, window.location.pathname]);
+
+            while (nextPageUrl && !visitedUrls.has(nextPageUrl)) {
+                visitedUrls.add(nextPageUrl);
+                try {
+                    const resp = await fetch(nextPageUrl, { signal });
+                    if (!resp.ok) break;
+                    const html = await resp.text();
+                    const doc = new DOMParser().parseFromString(html, "text/html");
+                    const newRows = Array.from(doc.querySelectorAll(".index-list-wrapper .index-row, .index-list .index-row"));
+                    let addedCount = 0;
+
+                    newRows.forEach((row) => {
+                        const slug = row.dataset.slug || "";
+                        const num = row.dataset.projectNum || "";
+                        if (slug && list.querySelector(`.index-row[data-slug="${slug}"]`)) return;
+                        if (num && list.querySelector(`.index-row[data-project-num="${num}"]`)) return;
+
+                        list.appendChild(row);
+                        bindRow(row, rows.length);
+                        rows.push(row);
+                        addedCount++;
+                    });
+
+                    if (addedCount > 0) {
+                        setupIndexMarquees(list);
+                    }
+
+                    const nextInDoc = doc.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
+                    nextPageUrl = nextInDoc ? nextInDoc.getAttribute("href") : null;
+                } catch (err) {
+                    if (err?.name === "AbortError") break;
+                    console.warn("[Index] Pagination fetch error:", err);
+                    break;
+                }
+            }
+        };
+
+        fetchRemainingIndexPages();
 
         // ----------------------------------------------------
         // RESTORE SAVED STATE (MOBILE ACCORDION & SCROLL)
