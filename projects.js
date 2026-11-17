@@ -1698,7 +1698,7 @@
             }
 
             // 3. Build scrubber strip thumbnails
-            let thumbSetsNeeded = isMobileInfinite ? Math.max(5, Math.ceil(36 / count) + 2) : 1;
+            let thumbSetsNeeded = isMobileInfinite ? (count >= 25 ? 3 : Math.max(5, Math.ceil(36 / count) + 2)) : 1;
             if (isMobileInfinite && thumbSetsNeeded % 2 === 0) thumbSetsNeeded += 1;
             const thumbFragment = document.createDocumentFragment();
             let cloneIdxCounter = 0;
