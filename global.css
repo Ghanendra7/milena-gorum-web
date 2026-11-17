@@ -973,9 +973,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 /* Guarantee Fill Screen = ON media covers 100% so Focus Coordinates work */
 .image-parallax-container.is-fill,
 .image-wrapper.is-fill,
-.video-parallax-container.is-fill,
-.video-wrapper.is-fill,
-.video-embed.is-fill {
+.video-parallax-container.is-fill:not(.is-portrait-video),
+.video-wrapper.is-fill:not(.is-portrait-video),
+.video-embed.is-fill:not(.is-portrait-video) {
     width: 100% !important;
     height: 100% !important;
 }
@@ -1111,9 +1111,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .swiper-slide.is-portrait-video .slide-video,
 .swiper-slide.is-portrait-video .main-media-img,
 .swiper-slide.is-portrait-video .video-embed,
-.swiper-slide.is-portrait-video .video-wrapper {
-    width: fit-content !important;
-    min-width: fit-content !important;
+.swiper-slide.is-portrait-video .video-wrapper,
+.video-wrapper.is-portrait-video,
+.video-wrapper.is-portrait-video .video-embed,
+.video-wrapper.is-portrait-video .slide-video {
+    width: fit-content;
 }
 
 .swiper-slide.is-portrait-video .main-media-img {
@@ -1148,9 +1150,9 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         justify-content: center !important;
     }
 
-    .swiper-slide:not(.is-fill-slide) .video-parallax-container,
-    .swiper-slide:not(.is-fill-slide) .video-wrapper,
-    .swiper-slide:not(.is-fill-slide) .video-embed,
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .video-parallax-container,
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .video-wrapper:not(.is-portrait-video),
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .video-embed,
     .swiper-slide:not(.is-fill-slide) .image-parallax-container,
     .swiper-slide:not(.is-fill-slide) .image-wrapper {
         width: 100% !important;
@@ -1162,7 +1164,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         position: relative !important;
     }
 
-    .swiper-slide:not(.is-fill-slide) .slide-video,
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .slide-video,
     .swiper-slide:not(.is-fill-slide) .main-media-img {
         width: 100% !important;
         min-width: 100% !important;
@@ -1171,6 +1173,15 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         object-fit: contain !important;
         object-position: center center !important;
         display: block !important;
+    }
+
+    .swiper-slide.is-portrait-video .video-wrapper,
+    .swiper-slide.is-portrait-video .video-embed,
+    .swiper-slide.is-portrait-video .slide-video,
+    .video-wrapper.is-portrait-video,
+    .video-wrapper.is-portrait-video .video-embed,
+    .video-wrapper.is-portrait-video .slide-video {
+        width: fit-content;
     }
 
     /* ----------------------------------------------------
