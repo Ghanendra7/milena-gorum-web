@@ -550,12 +550,6 @@
                     if (video.videoWidth > 0 && video.videoHeight > 0) {
                         const isPortrait = video.videoWidth < video.videoHeight;
                         slide.classList.toggle("is-portrait-video", isPortrait);
-                        slide.classList.toggle("is-portrait", isPortrait);
-                        const wrap = video.closest(".video-wrapper") || video.closest(".video-container");
-                        if (wrap) {
-                            wrap.classList.toggle("is-portrait-video", isPortrait);
-                            wrap.classList.toggle("is-portrait", isPortrait);
-                        }
                     }
                     video.muted = true;
                     const playPromise = video.play();
@@ -634,26 +628,16 @@
 
             // Automatically detect portrait orientation (width < height)
             const setOrientation = (isPortrait) => {
-                if (slide) {
-                    slide.classList.toggle("is-portrait-video", isPortrait);
-                    slide.classList.toggle("is-portrait", isPortrait);
-                }
-                if (wrapper) {
-                    wrapper.classList.toggle("is-portrait-video", isPortrait);
-                    wrapper.classList.toggle("is-portrait", isPortrait);
-                }
+                if (slide) slide.classList.toggle("is-portrait-video", isPortrait);
+                if (wrapper) wrapper.classList.toggle("is-portrait-video", isPortrait);
 
                 // Also sync cloned duplicate slides for loop mode
                 const slideIdx = slide?.getAttribute("data-swiper-slide-index");
                 if (slideIdx !== null && slideIdx !== undefined && mainEl) {
                     mainEl.querySelectorAll(`.swiper-slide[data-swiper-slide-index="${slideIdx}"]`).forEach((s) => {
                         s.classList.toggle("is-portrait-video", isPortrait);
-                        s.classList.toggle("is-portrait", isPortrait);
                         const w = s.querySelector(".video-wrapper") || s.querySelector(".video-container");
-                        if (w) {
-                            w.classList.toggle("is-portrait-video", isPortrait);
-                            w.classList.toggle("is-portrait", isPortrait);
-                        }
+                        if (w) w.classList.toggle("is-portrait-video", isPortrait);
                     });
                 }
             };
