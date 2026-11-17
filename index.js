@@ -1241,6 +1241,7 @@
 
                     if (addedCount > 0) {
                         setupIndexMarquees(list);
+                        restoreStateIfAvailable();
                     }
 
                     const nextInDoc = doc.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
@@ -1253,67 +1254,71 @@
             }
         };
 
-        fetchRemainingIndexPages();
-
         // ----------------------------------------------------
         // RESTORE SAVED STATE (MOBILE ACCORDION & SCROLL)
         // ----------------------------------------------------
-        if (isRestoring && isMobileLayout() && restoreSlug) {
-            const targetRow = rows.find((r) => getProjectSlug(r) === restoreSlug);
-            if (targetRow) {
-                activeMobileRow = targetRow;
-                targetRow.classList.add("is-expanded");
-                list.classList.add("has-active-mobile");
-                startRowMarquee(targetRow);
+        const restoreStateIfAvailable = () => {
+            if (!isRestoring) return;
+            if (isMobileLayout() && restoreSlug && !activeMobileRow) {
+                const targetRow = rows.find((r) => getProjectSlug(r) === restoreSlug);
+                if (targetRow) {
+                    activeMobileRow = targetRow;
+                    targetRow.classList.add("is-expanded");
+                    list.classList.add("has-active-mobile");
+                    startRowMarquee(targetRow);
 
-                const drawer = targetRow.querySelector(".index-row-drawer");
-                if (drawer) {
-                    drawer.style.height = "auto";
-                    drawer.style.opacity = "1";
-                    drawer.style.pointerEvents = "auto";
-                }
+                    const drawer = targetRow.querySelector(".index-row-drawer");
+                    if (drawer) {
+                        drawer.style.height = "auto";
+                        drawer.style.opacity = "1";
+                        drawer.style.pointerEvents = "auto";
+                    }
 
-                const cached = projectMediaCache.get(restoreSlug);
-                if (cached && cached.length) {
-                    targetRow._mediaItems = cached;
-                    buildMediaButtons(targetRow, cached, signal);
-                }
+                    const cached = projectMediaCache.get(restoreSlug);
+                    if (cached && cached.length) {
+                        targetRow._mediaItems = cached;
+                        buildMediaButtons(targetRow, cached, signal);
+                    }
 
-                const rowMedia = targetRow._mediaItems || [];
-                const safeSlide = (restoreSlide >= 0 && restoreSlide < rowMedia.length) ? restoreSlide : 0;
-                if (rowMedia.length) {
-                    selectMobileMedia(targetRow, rowMedia[safeSlide] || rowMedia[0]);
+                    const rowMedia = targetRow._mediaItems || [];
+                    const safeSlide = (restoreSlide >= 0 && restoreSlide < rowMedia.length) ? restoreSlide : 0;
+                    if (rowMedia.length) {
+                        selectMobileMedia(targetRow, rowMedia[safeSlide] || rowMedia[0]);
+                    }
                 }
             }
-        }
 
-        if (isRestoring && restoreScroll !== null && !isNaN(restoreScroll) && restoreScroll > 0) {
-            if (scope && scope.style.position === "fixed") {
-                scope.scrollTop = restoreScroll;
-            }
-            window.scrollTo(0, restoreScroll);
-            if (window.lenis && typeof window.lenis.scrollTo === "function") {
-                try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
-            }
-            requestAnimationFrame(() => {
+            if (restoreScroll !== null && !isNaN(restoreScroll) && restoreScroll > 0) {
+                if (scope && scope.style.position === "fixed") {
+                    scope.scrollTop = restoreScroll;
+                }
                 window.scrollTo(0, restoreScroll);
                 if (window.lenis && typeof window.lenis.scrollTo === "function") {
                     try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
                 }
-            });
-            setTimeout(() => {
-                window.scrollTo(0, restoreScroll);
-                if (window.lenis && typeof window.lenis.scrollTo === "function") {
-                    try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
-                }
-            }, 50);
-            setTimeout(() => {
-                window.scrollTo(0, restoreScroll);
-                if (window.lenis && typeof window.lenis.scrollTo === "function") {
-                    try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
-                }
-            }, 200);
-        }
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, restoreScroll);
+                    if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                        try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
+                    }
+                });
+                setTimeout(() => {
+                    window.scrollTo(0, restoreScroll);
+                    if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                        try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
+                    }
+                }, 50);
+                setTimeout(() => {
+                    window.scrollTo(0, restoreScroll);
+                    if (window.lenis && typeof window.lenis.scrollTo === "function") {
+                        try { window.lenis.scrollTo(restoreScroll, { immediate: true }); } catch (_) { }
+                    }
+                }, 200);
+            }
+        };
+
+        restoreStateIfAvailable();
+        fetchRemainingIndexPages();
 
         // Window resize handler: collapse mobile drawer if transitioning to desktop, or clean desktop hover if transitioning to mobile
         let resizeMarqueeTimer = null;

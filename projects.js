@@ -98,28 +98,40 @@
             "armani-2": "750 / 1000",
             "autre-magazine": "750 / 1000",
             "away": "750 / 500",
+            "away-luggage": "1920 / 1080",
             "bella-hadid": "1280 / 720",
+            "benito-skinner": "1080 / 1920",
             "blanc": "874 / 1080",
             "blank-st-coffee": "750 / 497",
             "blank-street": "1440 / 1800",
             "blank-street-coffee": "750 / 500",
             "blank-street-coffee-af6f6": "640 / 800",
+            "blonder-promo": "796 / 1200",
             "cero-magazine": "750 / 912",
             "charli-xcx": "1000 / 750",
+            "charli-xcx-0f8d4": "1918 / 1080",
             "charli-xcx-x-converse": "4096 / 2304",
+            "chubb": "1040 / 720",
             "conan-gray": "720 / 404",
+            "conan-gray-disaster": "720 / 404",
             "cosmopolitan-magazine": "1800 / 2400",
             "cr-fashion-book": "750 / 938",
             "cr-fashion-book-d897c": "1500 / 1875",
+            "crocs": "2560 / 1440",
             "danile-guizio": "800 / 1000",
+            "del-water-gap-promo": "960 / 1200",
             "demi-lovato": "1572 / 1080",
+            "demi-lovato-7ca5f": "1572 / 1080",
+            "demi-lovato-d997d": "1080 / 1350",
             "denim-tears": "760 / 1000",
             "domina-journal": "1206 / 1781",
             "elle-usa": "940 / 940",
             "emcee-studios": "750 / 951",
             "emcee-studios-ottolinger": "750 / 951",
+            "eqt": "1280 / 720",
             "famille-du-vin": "750 / 500",
             "fry-powers": "1010 / 1200",
+            "gant": "1920 / 1080",
             "glamour-magazine": "960 / 1200",
             "grailed": "750 / 500",
             "grazia-china": "900 / 1200",
@@ -127,9 +139,12 @@
             "highsnobiety": "1080 / 1350",
             "highsnobiety-6ee11": "750 / 1004",
             "hube-magazine": "1440 / 1172",
+            "hydro-flask-x-role-model": "1920 / 1080",
             "id-magazine": "1080 / 1350",
             "invasive-modification": "1920 / 2400",
             "jins": "727 / 800",
+            "katseye": "1650 / 1254",
+            "khloe-xo": "1280 / 720",
             "king-kong-magazine": "1440 / 1070",
             "kith-winter-25": "1080 / 1440",
             "l-officiel": "766 / 1000",
@@ -139,6 +154,7 @@
             "louis-vuitton": "1080 / 1350",
             "louis-vuitton-cruise-27": "1080 / 1350",
             "macallan": "1200 / 800",
+            "mother-denim": "1920 / 1080",
             "netflix-earle-meets-world": "645 / 475",
             "new-balance": "1080 / 756",
             "nike-us-national-team": "750 / 935",
@@ -150,38 +166,59 @@
             "odda-magazine": "1500 / 1875",
             "office-magazine": "750 / 937",
             "olivia-rodrigo": "1496 / 1000",
+            "olivia-rodrigo-d3c4e": "1080 / 608",
             "open-spaces": "750 / 904",
             "open-spaces-magazine-1ee2f": "750 / 938",
             "paper-magazine-jt": "1440 / 1800",
             "paper-magazine-rose": "750 / 938",
             "present-space-magazine": "1840 / 2400",
+            "present-space-x-tiffany-co": "1276 / 718",
             "prototype-magazine": "2400 / 1576",
             "reale-actives": "1080 / 1440",
+            "reale-actives-a9646": "1920 / 1080",
+            "redone-denim": "1276 / 720",
             "regime-des-fleurs": "1920 / 2400",
             "revolve": "1280 / 1600",
             "role-model": "2400 / 1783",
+            "role-model-e1bd4": "2400 / 1769",
+            "ros": "2880 / 2160",
             "rowing-blazers-x-fila": "975 / 1200",
+            "royel-otis-aa5b9": "1500 / 995",
+            "salt-stone": "1920 / 1080",
             "sandy-liang": "750 / 497",
+            "sandy-liang-5c590": "1280 / 720",
             "sandy-liang-a9cc0": "1920 / 2400",
             "sandy-liang-c8bd2": "750 / 977",
             "sandy-liang-holiday": "1500 / 1115",
             "shadowplay-magazine": "1840 / 2400",
             "snuff-magazine": "750 / 487",
             "tame-impala": "750 / 538",
+            "tame-impala-4175d": "750 / 750",
+            "thom-browne": "1916 / 1080",
+            "thom-browne-76cb8": "960 / 540",
             "thom-browne-met-gala-24": "750 / 938",
             "tropic-of-c-x-victorias-secret-havana-drop": "1440 / 1769",
             "tropic-of-c-x-victorias-secret-malibu": "1000 / 1250",
             "tropic-of-c-x-victorias-secret-swim-drop": "1440 / 1920",
             "twin-magazine": "750 / 526",
+            "unove": "1920 / 1080",
             "urban-outfitters-nye": "1208 / 800",
             "vanity-fair": "804 / 1000",
             "velveeta-liquid-gold": "2048 / 1463",
+            "velvet": "1920 / 1080",
             "vogue-china": "750 / 935",
+            "vogue-china-58890": "720 / 878",
             "vogue-japan": "1080 / 1350",
             "vogue-phillipines": "750 / 1000",
+            "vogue-x-google": "960 / 720",
+            "vogue-x-meta": "1276 / 718",
+            "vogue-x-sabrina-carpenter": "1920 / 1080",
             "vuori": "3000 / 3677",
+            "vuori-aabca": "1920 / 1080",
+            "what-goes-around-comes-around": "4096 / 3072",
             "who-what-wear": "912 / 1200",
             "wsj": "750 / 930",
+            "wsj-0b9ca": "1280 / 720",
             "wsj-sydney-sweeney": "750 / 930",
         };
 
@@ -1532,6 +1569,10 @@
         const buildMobileGallery = (filteredTemplates) => {
             if (!mobileMainEl || !mobileThumbEl || !mobileThumbTrack) return;
 
+            isThumbTouching = false;
+            isThumbCoasting = false;
+            thumbVelocity = 0;
+
             mobileFilteredTemplates = filteredTemplates;
             mobileThumbItems = [];
             cachedThumbCenters = [];
@@ -1559,6 +1600,7 @@
 
             // 1. Determine targetProjIdx BEFORE building slides & Swiper so it starts immediately on the target project!
             let targetProjIdx = 0;
+            let didFindRestored = false;
             if (activeMobileProjectIdx > 0 && activeMobileProjectIdx < count) {
                 targetProjIdx = activeMobileProjectIdx;
             } else if (isRestoreFromDetail && (restoreSlug || restoreUrl || restoreNum)) {
@@ -1572,7 +1614,10 @@
                         (restoreNum && parseInt(numText, 10) === parseInt(restoreNum, 10))
                     );
                 });
-                if (foundIdx !== -1) targetProjIdx = foundIdx;
+                if (foundIdx !== -1) {
+                    targetProjIdx = foundIdx;
+                    didFindRestored = true;
+                }
             }
 
             activeMobileProjectIdx = targetProjIdx;
@@ -1816,7 +1861,7 @@
                     }
                     mobileMainSwiper.update();
                 }
-                if (isRestoreFromDetail) {
+                if (isRestoreFromDetail && (didFindRestored || !scope.querySelector(".w-pagination-next, a[href*='_page=']"))) {
                     clearRestorationState();
                 }
                 if (isMobileLayout() && !section.classList.contains("is-marquee-paused")) {
