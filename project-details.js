@@ -1130,8 +1130,14 @@
                         detailsMarqueeTimeline.restart();
                     }
 
-                    // 6. On mobile, add padding-top: 40px to non-fill .image-wrapper and .video-parallax-container along with open animation
+                    // 6. On mobile, add padding-top: 40px to non-fill .image-wrapper and .video-parallax-container, and reduce max-height to 58dvh
                     if (!isDesktop) {
+                        document.body.classList.add("is-details-open");
+                        const gallerySection = scope.querySelector(".gallery-section") || (scope.classList ? scope : null);
+                        if (gallerySection && gallerySection.classList) {
+                            gallerySection.classList.add("is-details-open");
+                        }
+
                         const nonFillMedia = getNonFillMediaElements();
                         if (nonFillMedia.length) {
                             gsap.to(nonFillMedia, {
@@ -1147,6 +1153,11 @@
                 const closeDrawer = () => {
                     isOpen = false;
                     trigger.setAttribute("aria-expanded", "false");
+                    document.body.classList.remove("is-details-open");
+                    const gallerySection = scope.querySelector(".gallery-section") || (scope.classList ? scope : null);
+                    if (gallerySection && gallerySection.classList) {
+                        gallerySection.classList.remove("is-details-open");
+                    }
 
                     // Pause marquee in place while drawer is closing (do NOT snap to x:0 on screen)
                     if (detailsMarqueeTimeline) {
@@ -1238,6 +1249,11 @@
 
                 return () => {
                     trigger.removeEventListener("click", handleToggle);
+                    document.body.classList.remove("is-details-open");
+                    const gallerySection = scope.querySelector(".gallery-section") || (scope.classList ? scope : null);
+                    if (gallerySection && gallerySection.classList) {
+                        gallerySection.classList.remove("is-details-open");
+                    }
                     if (activeCloseTween) activeCloseTween.kill();
                     if (detailsMarqueeTimeline) {
                         detailsMarqueeTimeline.kill();

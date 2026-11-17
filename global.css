@@ -1173,6 +1173,24 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         object-fit: contain !important;
         object-position: center center !important;
         display: block !important;
+        transition: max-height 0.65s cubic-bezier(0.45, 0, 0.55, 1);
+    }
+
+    .swiper-slide:not(.is-fill-slide).is-portrait-video .slide-video,
+    .swiper-slide:not(.is-fill-slide) .video-wrapper.is-portrait-video .slide-video {
+        max-height: 65dvh !important;
+        height: auto !important;
+        object-fit: contain !important;
+        display: block !important;
+        transition: max-height 0.65s cubic-bezier(0.45, 0, 0.55, 1);
+    }
+
+    body.is-details-open .swiper-slide:not(.is-fill-slide) .slide-video,
+    body.is-details-open .swiper-slide:not(.is-fill-slide) .main-media-img,
+    .gallery-section.is-details-open .swiper-slide:not(.is-fill-slide) .slide-video,
+    .gallery-section.is-details-open .swiper-slide:not(.is-fill-slide) .main-media-img {
+        max-height: 58dvh !important;
+        transition: max-height 0.85s cubic-bezier(0.45, 0, 0.55, 1);
     }
 
     .swiper-slide.is-portrait-video .video-wrapper,
