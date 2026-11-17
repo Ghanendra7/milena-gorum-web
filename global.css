@@ -1144,6 +1144,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     visibility: hidden !important;
 }
 
+
+
 /* Project Details: Mobile & Tablet (<= 1024px) */
 @media screen and (max-width: 1024px) {
 
@@ -1225,7 +1227,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         right: auto !important;
         bottom: 9px !important;
         top: auto !important;
-        width: calc(100% - 220px) !important;
+        width: calc(100% - 300px) !important;
         max-width: none !important;
         height: 20px !important;
         transform: none !important;
@@ -1270,6 +1272,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         transform: none !important;
         /* mix-blend-mode: difference !important;
         color: #ffffff !important; */
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .swiper-slide:not(.is-fill-slide):not(.is-portrait-video) .seek-container {
+        width: calc(100% - 220px) !important;
     }
 }
 
