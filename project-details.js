@@ -1035,6 +1035,10 @@
                 let isOpen = false;
                 let activeCloseTween = null;
 
+                const getMainImageContainers = () => {
+                    return scope.querySelectorAll(".main-stage .image-container, .main-swiper .image-container, .image-container:not(.thumb-swiper *)");
+                };
+
                 const openDrawer = () => {
                     if (activeCloseTween) {
                         activeCloseTween.kill();
@@ -1043,8 +1047,13 @@
                     isOpen = true;
                     trigger.setAttribute("aria-expanded", "true");
 
+                    const mainImageContainers = getMainImageContainers();
+
                     // Kill any active tweens on drawer and its children for rock-solid stability
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
+                    if (mainImageContainers.length) {
+                        gsap.killTweensOf(mainImageContainers);
+                    }
 
                     // Position thumbnail strip BEFORE starting drawer expansion so active thumb is already centered
                     if (thumbSlides.length) {
@@ -1114,6 +1123,16 @@
                     if (detailsMarqueeTimeline) {
                         detailsMarqueeTimeline.restart();
                     }
+
+                    // 6. On mobile, add padding-top: 40px to .image-container in the main stage along with open animation
+                    if (!isDesktop && mainImageContainers.length) {
+                        gsap.to(mainImageContainers, {
+                            paddingTop: 40,
+                            duration: 0.85,
+                            ease: "power2.inOut",
+                            overwrite: "auto"
+                        });
+                    }
                 };
 
                 const closeDrawer = () => {
@@ -1125,8 +1144,13 @@
                         detailsMarqueeTimeline.pause();
                     }
 
+                    const mainImageContainers = getMainImageContainers();
+
                     // Kill any active opening tweens
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides]);
+                    if (mainImageContainers.length) {
+                        gsap.killTweensOf(mainImageContainers);
+                    }
 
                     // 1. Plus icon rotates back quickly
                     if (icon) {
@@ -1154,9 +1178,22 @@
                             if (detailsText) {
                                 gsap.set(detailsText, { x: 0 });
                             }
+                            if (mainImageContainers.length) {
+                                gsap.set(mainImageContainers, { paddingTop: 0 });
+                            }
                             activeCloseTween = null;
                         }
                     });
+
+                    // 3. Reset image-container padding-top back to zero as bottom stage collapses
+                    if (mainImageContainers.length) {
+                        gsap.to(mainImageContainers, {
+                            paddingTop: 0,
+                            duration: 0.65,
+                            ease: "power2.inOut",
+                            overwrite: "auto"
+                        });
+                    }
                 };
 
                 drawerTimeline = {
@@ -1197,7 +1234,12 @@
                         detailsMarqueeTimeline.kill();
                         detailsMarqueeTimeline = null;
                     }
+                    const mainImageContainers = getMainImageContainers();
                     gsap.killTweensOf([drawer, icon, detailsContainer, thumbSlides, detailsText]);
+                    if (mainImageContainers.length) {
+                        gsap.killTweensOf(mainImageContainers);
+                        gsap.set(mainImageContainers, { clearProps: "paddingTop" });
+                    }
                     gsap.set(drawer, { height: 0 });
                     if (icon) gsap.set(icon, { rotation: 0 });
                     if (detailsContainer) gsap.set(detailsContainer, { autoAlpha: 1 });
