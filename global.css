@@ -1225,7 +1225,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         right: auto !important;
         bottom: 9px !important;
         top: auto !important;
-        width: calc(100% - 240px) !important;
+        width: calc(100% - 300px) !important;
         max-width: none !important;
         height: 20px !important;
         transform: none !important;
