@@ -1304,7 +1304,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
-
 }
 
 .index-title-wrap {
@@ -1314,7 +1313,37 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
+}
 
+/* Subtle End-Fade Gradient on Overflowing Client Name and Sub-title */
+.index-client-wrap.is-overflowing::after,
+.index-title-wrap.is-overflowing::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none !important;
+    opacity: 1;
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: 2;
+}
+
+/* Hover on Desktop or Expand on Mobile: Fade disappears gracefully */
+.index-row.is-hovered .index-client-wrap::after,
+.index-row.is-hovered .index-title-wrap::after,
+.index-row.is-expanded .index-client-wrap::after,
+.index-row.is-expanded .index-title-wrap::after {
+    opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .index-row:hover .index-client-wrap::after,
+    .index-row:hover .index-title-wrap::after {
+        opacity: 0;
+    }
 }
 
 .index-col-client {

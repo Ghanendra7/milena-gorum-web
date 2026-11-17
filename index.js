@@ -12,49 +12,136 @@
     let appearTimeline = null;
     const indexMarqueeTimelines = [];
 
+    const TABLET_PORTRAIT_BREAKPOINT = 1024;
+    const isMobileLayout = () => {
+        return window.matchMedia ? window.matchMedia("(max-width: 1024px)").matches : window.innerWidth <= TABLET_PORTRAIT_BREAKPOINT;
+    };
+
+    // ----------------------------------------------------
+    // INDEX PING-PONG MARQUEE & OVERFLOW FADE ENGINE
+    // ----------------------------------------------------
     const killIndexMarquees = () => {
         indexMarqueeTimelines.forEach((tl) => {
             try { tl.kill(); } catch (_) { }
         });
         indexMarqueeTimelines.length = 0;
+
+        if (indexScope) {
+            const wraps = indexScope.querySelectorAll(".index-client-wrap, .index-title-wrap");
+            wraps.forEach((wrap) => {
+                wrap._marqueeTl = null;
+                const textEl = wrap._textEl || wrap.querySelector(".index-col-client, .index-col-title");
+                if (textEl && typeof gsap !== "undefined") {
+                    try {
+                        gsap.killTweensOf(textEl);
+                        gsap.set(textEl, { x: 0 });
+                    } catch (_) { }
+                }
+            });
+        }
     };
 
-    const createIndexMarquee = (wrap, textEl) => {
-        if (!wrap || !textEl || typeof gsap === "undefined") return;
+    const startRowMarquee = (row) => {
+        if (!row || typeof gsap === "undefined") return;
+        const wraps = row.querySelectorAll(".index-client-wrap.is-overflowing, .index-title-wrap.is-overflowing");
+        if (!wraps.length) return;
 
-        gsap.killTweensOf(textEl);
-        gsap.set(textEl, { clearProps: "transform,x" });
+        wraps.forEach((wrap) => {
+            const textEl = wrap._textEl || wrap.querySelector(".index-col-client, .index-col-title");
+            const overflowDistance = wrap._overflowDistance;
+            if (!textEl || !overflowDistance || overflowDistance <= 4) return;
 
-        const containerWidth = wrap.clientWidth;
-        const textWidth = Math.ceil(textEl.scrollWidth || textEl.getBoundingClientRect().width);
-        const overflowDistance = textWidth - containerWidth;
+            if (wrap._marqueeTl) {
+                wrap._marqueeTl.kill();
+                wrap._marqueeTl = null;
+            }
+            gsap.killTweensOf(textEl);
 
-        if (overflowDistance > 4) {
-            wrap.classList.add("is-overflowing");
+            const duration = wrap._duration || Math.max(3.0, overflowDistance / 26);
 
-            // Subtle reading speed: ~26px per second, minimum 3.0s duration
-            const duration = Math.max(3.0, overflowDistance / 26);
-
-            const tl = gsap.timeline({
-                repeat: -1
-            });
-
+            // Ping-pong rolling:
+            // 0.6s initial pause (while fade disappears gracefully)
+            // Roll to -overflowDistance
+            // Pause 1.2s at end
+            // Roll back to 0
+            // Pause 1.2s at start
+            const tl = gsap.timeline({ repeat: -1 });
             tl.to(textEl, {
                 x: -overflowDistance,
                 duration: duration,
                 ease: "sine.inOut",
                 force3D: true
-            }, "+=1.8")
+            }, "+=0.6")
             .to(textEl, {
                 x: 0,
                 duration: duration,
                 ease: "sine.inOut",
                 force3D: true
-            }, "+=1.8");
+            }, "+=1.2");
 
+            wrap._marqueeTl = tl;
             indexMarqueeTimelines.push(tl);
+        });
+    };
+
+    const stopRowMarquee = (row, immediate = false) => {
+        if (!row || typeof gsap === "undefined") return;
+        const wraps = row.querySelectorAll(".index-client-wrap, .index-title-wrap");
+        wraps.forEach((wrap) => {
+            if (wrap._marqueeTl) {
+                wrap._marqueeTl.kill();
+                wrap._marqueeTl = null;
+            }
+            const textEl = wrap._textEl || wrap.querySelector(".index-col-client, .index-col-title");
+            if (textEl) {
+                gsap.killTweensOf(textEl);
+                if (immediate) {
+                    gsap.set(textEl, { x: 0 });
+                } else {
+                    const currentX = gsap.getProperty(textEl, "x") || 0;
+                    if (Math.abs(currentX) > 0.5) {
+                        gsap.to(textEl, {
+                            x: 0,
+                            duration: 0.35,
+                            ease: "power2.out",
+                            force3D: true,
+                            overwrite: true
+                        });
+                    } else {
+                        gsap.set(textEl, { x: 0 });
+                    }
+                }
+            }
+        });
+    };
+
+    const measureWrapOverflow = (wrap, textEl) => {
+        if (!wrap || !textEl || typeof gsap === "undefined") return;
+
+        // Reset to initial x=0 before measuring
+        if (!wrap._marqueeTl) {
+            gsap.killTweensOf(textEl);
+            gsap.set(textEl, { x: 0 });
+        }
+
+        const containerWidth = wrap.clientWidth;
+        const textWidth = Math.ceil(textEl.scrollWidth || textEl.getBoundingClientRect().width);
+        const overflowDistance = textWidth - containerWidth;
+
+        wrap._textEl = textEl;
+
+        if (overflowDistance > 4) {
+            wrap.classList.add("is-overflowing");
+            wrap._overflowDistance = overflowDistance;
+            wrap._duration = Math.max(3.0, overflowDistance / 26);
         } else {
             wrap.classList.remove("is-overflowing");
+            wrap._overflowDistance = 0;
+            if (wrap._marqueeTl) {
+                wrap._marqueeTl.kill();
+                wrap._marqueeTl = null;
+            }
+            gsap.killTweensOf(textEl);
             gsap.set(textEl, { x: 0 });
         }
     };
@@ -63,11 +150,9 @@
         const root = containerList || (indexScope ? indexScope.querySelector(".index-list") : null) || document.querySelector(".index-list");
         if (!root || typeof gsap === "undefined") return;
 
-        killIndexMarquees();
-
         const rows = root.querySelectorAll(".index-row");
         rows.forEach((row) => {
-            // 1. Client text marquee
+            // 1. Client text wrap
             let clientWrap = row.querySelector(".index-client-wrap");
             const clientEl = row.querySelector(".index-col-client");
             if (!clientWrap && clientEl) {
@@ -77,10 +162,10 @@
                 clientWrap.appendChild(clientEl);
             }
             if (clientWrap && clientEl) {
-                createIndexMarquee(clientWrap, clientEl);
+                measureWrapOverflow(clientWrap, clientEl);
             }
 
-            // 2. Sub-title text marquee
+            // 2. Sub-title text wrap
             let titleWrap = row.querySelector(".index-title-wrap");
             const titleEl = row.querySelector(".index-col-title");
             if (!titleWrap && titleEl) {
@@ -90,19 +175,23 @@
                 titleWrap.appendChild(titleEl);
             }
             if (titleWrap && titleEl) {
-                createIndexMarquee(titleWrap, titleEl);
+                measureWrapOverflow(titleWrap, titleEl);
+            }
+
+            // Only currently active row should animate; all other rows stay at default position (x: 0)
+            const isRowActive = (!isMobileLayout() && (row.classList.contains("is-hovered") || row.matches(":hover"))) ||
+                                (isMobileLayout() && row.classList.contains("is-expanded"));
+            if (isRowActive) {
+                startRowMarquee(row);
+            } else {
+                stopRowMarquee(row, true);
             }
         });
     };
 
     const BUNNY_STREAM_BASE = "https://vz-ada4eb16-135.b-cdn.net";
     const PREVIEW_FILENAME = "play_480p.mp4";
-    const TABLET_PORTRAIT_BREAKPOINT = 1024;
     const projectMediaCache = new Map();
-
-    const isMobileLayout = () => {
-        return window.matchMedia ? window.matchMedia("(max-width: 1024px)").matches : window.innerWidth <= TABLET_PORTRAIT_BREAKPOINT;
-    };
 
     const padTwoDigits = (val) => {
         if (val === undefined || val === null) return "";
@@ -284,6 +373,7 @@
                     if (hoveredRow && !isMobileLayout()) {
                         list.classList.add("has-hovered-item");
                         hoveredRow.classList.add("is-hovered");
+                        startRowMarquee(hoveredRow);
 
                         const slug = getProjectSlug(hoveredRow);
                         const desktopMediaContainer = hoveredRow.querySelector(".index-media-desktop");
@@ -361,6 +451,7 @@
         // Subtle GSAP appear animation for columns: numbers -> client name -> subtitle
         // When coming from Project Details, appear instantly without any floating animation
         if (!scope._deferAppear && !window.__mgEnteringFromHome && !isComingFromDetail) {
+            setupIndexMarquees(list);
             playAppearAnimation(list);
         } else if (isComingFromDetail) {
             if (appearTimeline) {
@@ -753,6 +844,7 @@
             activeMobileRow = row;
             row.classList.add("is-expanded");
             list.classList.add("has-active-mobile");
+            startRowMarquee(row);
 
             const drawer = row.querySelector(".index-row-drawer");
             if (!drawer) return;
@@ -785,6 +877,7 @@
         const collapseRow = (row) => {
             if (!row) return;
             row.classList.remove("is-expanded");
+            stopRowMarquee(row);
 
             const drawer = row.querySelector(".index-row-drawer");
             if (drawer) {
@@ -985,6 +1078,7 @@
                 if (isAppearAnimating || list.classList.contains("is-appearing")) return;
                 list.classList.add("has-hovered-item");
                 row.classList.add("is-hovered");
+                startRowMarquee(row);
 
                 const slug = getProjectSlug(row);
                 const desktopMediaContainer = row.querySelector(".index-media-desktop");
@@ -1006,6 +1100,7 @@
             row.addEventListener("pointerleave", () => {
                 if (isMobileLayout()) return;
                 row.classList.remove("is-hovered");
+                stopRowMarquee(row);
                 hideDesktopPreview();
 
                 const desktopMediaContainer = row.querySelector(".index-media-desktop");
@@ -1097,6 +1192,7 @@
                 activeMobileRow = targetRow;
                 targetRow.classList.add("is-expanded");
                 list.classList.add("has-active-mobile");
+                startRowMarquee(targetRow);
 
                 const drawer = targetRow.querySelector(".index-row-drawer");
                 if (drawer) {
@@ -1153,7 +1249,10 @@
             if (isMobileLayout()) {
                 hideDesktopPreview();
                 list.classList.remove("has-hovered-item");
-                list.querySelectorAll(".index-row.is-hovered").forEach((r) => r.classList.remove("is-hovered"));
+                list.querySelectorAll(".index-row.is-hovered").forEach((r) => {
+                    r.classList.remove("is-hovered");
+                    stopRowMarquee(r, true);
+                });
             } else if (activeMobileRow) {
                 collapseRow(activeMobileRow);
             }
