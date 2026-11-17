@@ -431,9 +431,9 @@
         };
 
         const getCardSequence = (el) => {
-            const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "0";
+            const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
             const parsed = parseInt(numText, 10);
-            return !isNaN(parsed) ? parsed : 999999;
+            return !isNaN(parsed) && parsed > 0 ? parsed : 999999;
         };
 
         const seenProjectKeys = new Set();
@@ -447,14 +447,19 @@
         }
 
         const candidateCards = allTrackWrappers.length > 0
-            ? allTrackWrappers.flatMap((w) => Array.from(w.querySelectorAll(".project-card, .w-dyn-item")))
+            ? allTrackWrappers.flatMap((w) => {
+                const subTrack = w.querySelector(".projects-track, .w-dyn-items") || w;
+                return Array.from(subTrack.children);
+            })
             : Array.from(track.children);
 
         const rawCards = candidateCards.filter((el) => {
             if (!el.classList.contains("project-card") && !el.classList.contains("w-dyn-item")) return false;
             if (el.getAttribute("aria-hidden") === "true") return false;
+            if (!el.querySelector(".project-link") && !el.querySelector(".project-media-wrap") && !el.querySelector("img")) return false;
 
             const key = getCardKey(el);
+            if (!key || key === "||") return false;
             if (seenProjectKeys.has(key)) return false;
             seenProjectKeys.add(key);
             el.dataset.uniqueKey = key;
@@ -2238,15 +2243,17 @@
                     const html = await resp.text();
                     const doc = new DOMParser().parseFromString(html, "text/html");
                     const newCandidateCards = Array.from(
-                        doc.querySelectorAll(".projects-track-wrapper .project-card, .projects-track .project-card, .projects-track .w-dyn-item, .projects-track-wrapper .w-dyn-item, .project-card")
+                        doc.querySelectorAll(".projects-track > .project-card, .projects-track > .w-dyn-item, .projects-track-wrapper .projects-track > div, .project-card")
                     );
                     let addedCount = 0;
 
                     newCandidateCards.forEach((card) => {
                         if (!card.classList.contains("project-card") && !card.classList.contains("w-dyn-item")) return;
                         if (card.getAttribute("aria-hidden") === "true") return;
+                        if (!card.querySelector(".project-link") && !card.querySelector(".project-media-wrap") && !card.querySelector("img")) return;
 
                         const key = getCardKey(card);
+                        if (!key || key === "||") return;
                         if (seenProjectKeys.has(key)) return;
                         seenProjectKeys.add(key);
                         card.dataset.uniqueKey = key;
