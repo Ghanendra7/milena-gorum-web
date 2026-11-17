@@ -1080,7 +1080,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
    Positions seek bar in center and controls at bottom-right
    ======================================================== */
 .swiper-slide.is-portrait-video .seek-container {
-    position: fixed !important;
     inset: auto !important;
     left: 50% !important;
     top: 50% !important;
@@ -1095,7 +1094,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 .swiper-slide.is-portrait-video .controls-container {
-    position: fixed !important;
     inset: auto !important;
     right: var(--padding, 16px) !important;
     bottom: var(--padding, 16px) !important;
