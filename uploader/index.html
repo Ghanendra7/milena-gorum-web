@@ -76,10 +76,6 @@
           </div>
 
           <div class="workspace-nav-actions">
-            <button id="selectAllProjectsBtn" type="button" class="btn btn-ghost btn-sm" hidden>Select All</button>
-            <button id="deleteSelectedProjectsBtn" type="button" class="btn btn-danger btn-sm" hidden>Delete Selected (0)</button>
-            <button id="projectSelectModeBtn" type="button" class="btn btn-ghost btn-sm">Select</button>
-
             <span id="orderDirtyCount" class="badge-dirty" hidden></span>
             <button id="resetOrderBtn" type="button" class="btn btn-ghost btn-sm" hidden>Discard Order</button>
             <button id="saveOrderBtn" type="button" class="btn btn-primary btn-sm" hidden>Save Order</button>
@@ -106,14 +102,22 @@
           </div>
           <div class="dir-toolbar-footer">
             <p id="dirOrderHint" class="field-hint"></p>
-            <label id="dirAutoSortGroup" class="dir-auto-sort" for="dirSortSelect">
-              <span class="muted"># Order:</span>
-              <select id="dirSortSelect" aria-label="Project number order">
-                <option value="manual">Manual</option>
-                <option value="alpha">A to Z</option>
-                <option value="newest">Newest first</option>
-              </select>
-            </label>
+            <div class="dir-toolbar-right">
+              <label id="dirAutoSortGroup" class="dir-auto-sort" for="dirSortSelect">
+                <span class="muted"># Order:</span>
+                <select id="dirSortSelect" aria-label="Project number order">
+                  <option value="manual">Manual</option>
+                  <option value="alpha">A to Z</option>
+                  <option value="newest">Newest first</option>
+                </select>
+              </label>
+
+              <div class="dir-select-actions">
+                <button id="selectAllProjectsBtn" type="button" class="btn btn-ghost btn-sm" hidden>Select All</button>
+                <button id="deleteSelectedProjectsBtn" type="button" class="btn btn-danger btn-sm" hidden>Delete Selected (0)</button>
+                <button id="projectSelectModeBtn" type="button" class="btn btn-ghost btn-sm">Select</button>
+              </div>
+            </div>
           </div>
         </section>
 

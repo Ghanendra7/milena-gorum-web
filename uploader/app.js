@@ -2056,7 +2056,13 @@
     const sortMode = els.dirSortSelect ? els.dirSortSelect.value : "manual";
     const isManualSort = sortMode === "manual";
 
-    if (filtersActive) {
+    if (els.dirSortSelect) {
+      els.dirSortSelect.disabled = state.projectSelectMode;
+    }
+
+    if (state.projectSelectMode) {
+      els.dirOrderHint.textContent = "Select projects to delete, or click 'Select All' to choose all visible projects.";
+    } else if (filtersActive) {
       els.dirOrderHint.textContent = "Clear filters to drag-and-drop reorder Project Numbers.";
     } else if (isHomeMode) {
       els.dirOrderHint.textContent =

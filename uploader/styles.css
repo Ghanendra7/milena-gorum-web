@@ -726,6 +726,31 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.dir-toolbar-footer .field-hint {
+  flex: 1 1 260px;
+}
+
+.dir-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.dir-select-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dir-select-actions .btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
 .dir-auto-sort {
   display: inline-flex;
   align-items: center;
