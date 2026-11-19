@@ -1262,7 +1262,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
     .swiper-slide.is-fill-slide .controls-container {
         right: var(--padding, 16px) !important;
-        bottom: 13px !important;
+        bottom: 14.5px !important;
         left: auto !important;
         top: auto !important;
         display: flex !important;
