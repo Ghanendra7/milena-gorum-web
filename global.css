@@ -549,7 +549,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
-    position: relative !important;
 }
 
 .project-number-text,
@@ -569,44 +568,35 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     margin-top: -4px !important;
     padding-bottom: 8px !important;
     margin-bottom: -8px !important;
-    -webkit-clip-path: inset(0 0 0 0);
-    clip-path: inset(0 0 0 0);
 }
 
 /* Subtle End-Fade Gradient on Overflowing Project Header Text */
-.project-header.is-overflowing::after,
 .project-texts-wrap.is-overflowing::after {
     content: "";
     position: absolute;
     top: 0;
-    right: -4px;
+    right: -2px;
     bottom: 0;
     width: 36px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 75%, #ffffff 100%);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 80%, #ffffff 100%);
     pointer-events: none !important;
     opacity: 1;
     transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    z-index: 3;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
-    will-change: opacity, transform;
+    z-index: 2;
 }
 
 /* Hover: Fade disappears gracefully */
-.project-card.is-hovered .project-header::after,
 .project-card.is-hovered .project-texts-wrap::after {
     opacity: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .project-card:hover .project-header::after,
     .project-card:hover .project-texts-wrap::after {
         opacity: 0;
     }
 }
 
 /* When zoomed out to minimum size and unhovered, hide fade */
-.projects-section.is-min-size .project-card:not(.is-hovered) .project-header::after,
 .projects-section.is-min-size .project-card:not(.is-hovered) .project-texts-wrap::after {
     opacity: 0 !important;
 }
@@ -1459,8 +1449,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
-    -webkit-clip-path: inset(0 0 0 0);
-    clip-path: inset(0 0 0 0);
 }
 
 .index-title-wrap {
@@ -1470,8 +1458,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     position: relative !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
-    -webkit-clip-path: inset(0 0 0 0);
-    clip-path: inset(0 0 0 0);
 }
 
 /* Subtle End-Fade Gradient on Overflowing Client Name and Sub-title */
@@ -1483,14 +1469,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     right: -2px;
     bottom: 0;
     width: 36px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 75%, #ffffff 100%);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 80%, #ffffff 100%);
     pointer-events: none !important;
     opacity: 1;
     transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     z-index: 2;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
-    will-change: opacity, transform;
 }
 
 /* Hover on Desktop or Expand on Mobile: Fade disappears gracefully */
