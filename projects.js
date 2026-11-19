@@ -649,8 +649,12 @@
                         const containerWidth = textsWrap.clientWidth;
                         if (clientWidth >= containerWidth - 6) {
                             textsWrap.classList.add("is-overflowing");
+                            card.classList.add("is-overflowing");
+                            if (header) header.classList.add("is-overflowing");
                         } else {
                             textsWrap.classList.remove("is-overflowing");
+                            card.classList.remove("is-overflowing");
+                            if (header) header.classList.remove("is-overflowing");
                         }
                     }
                 }
