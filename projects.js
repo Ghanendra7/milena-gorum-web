@@ -647,7 +647,7 @@
                     if (client) {
                         const clientWidth = Math.ceil(client.scrollWidth || client.getBoundingClientRect().width);
                         const containerWidth = textsWrap.clientWidth;
-                        if (clientWidth - containerWidth > 4) {
+                        if (clientWidth >= containerWidth - 6) {
                             textsWrap.classList.add("is-overflowing");
                         } else {
                             textsWrap.classList.remove("is-overflowing");
@@ -814,7 +814,7 @@
             const textWidth = Math.ceil(inner.scrollWidth || inner.getBoundingClientRect().width);
             const overflowDistance = textWidth - containerWidth;
 
-            if (overflowDistance > 4) {
+            if (overflowDistance > 1) {
                 activeHeaderMarqueeCard = card;
 
                 // Subtle reading speed ~26px/sec, minimum 3.0s duration (matching Index page)

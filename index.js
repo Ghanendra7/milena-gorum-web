@@ -49,7 +49,7 @@
         wraps.forEach((wrap) => {
             const textEl = wrap._textEl || wrap.querySelector(".index-col-client, .index-col-title");
             const overflowDistance = wrap._overflowDistance;
-            if (!textEl || !overflowDistance || overflowDistance <= 4) return;
+            if (!textEl || !overflowDistance || overflowDistance <= 1) return;
 
             if (wrap._marqueeTl) {
                 wrap._marqueeTl.kill();
@@ -130,10 +130,10 @@
 
         wrap._textEl = textEl;
 
-        if (overflowDistance > 4) {
+        if (overflowDistance >= -6) {
             wrap.classList.add("is-overflowing");
-            wrap._overflowDistance = overflowDistance;
-            wrap._duration = Math.max(3.0, overflowDistance / 26);
+            wrap._overflowDistance = Math.max(0, overflowDistance);
+            wrap._duration = Math.max(3.0, wrap._overflowDistance / 26);
         } else {
             wrap.classList.remove("is-overflowing");
             wrap._overflowDistance = 0;
