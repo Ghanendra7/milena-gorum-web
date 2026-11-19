@@ -575,10 +575,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     content: "";
     position: absolute;
     top: 0;
-    right: -2px;
+    right: 0;
     bottom: 0;
     width: 36px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 80%, #ffffff 100%);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 70%, #ffffff 100%);
     pointer-events: none !important;
     opacity: 1;
     transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -608,10 +608,13 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     white-space: nowrap !important;
     width: max-content !important;
     max-width: none !important;
-    will-change: transform;
     line-height: normal !important;
     padding-bottom: 4px !important;
     margin-bottom: -4px !important;
+}
+
+.project-card.is-hovered .project-texts-inner {
+    will-change: transform;
 }
 
 .project-texts-inner .project-client,
@@ -1466,10 +1469,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     content: "";
     position: absolute;
     top: 0;
-    right: -2px;
+    right: 0;
     bottom: 0;
     width: 36px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 80%, #ffffff 100%);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 70%, #ffffff 100%);
     pointer-events: none !important;
     opacity: 1;
     transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -1499,8 +1502,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     display: inline-block !important;
     width: max-content !important;
     max-width: none !important;
-    will-change: transform;
+}
 
+.index-row.is-hovered .index-col-client,
+.index-row.is-expanded .index-col-client {
+    will-change: transform;
 }
 
 .index-col-title {
@@ -1511,8 +1517,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     display: inline-block !important;
     width: max-content !important;
     max-width: none !important;
-    will-change: transform;
+}
 
+.index-row.is-hovered .index-col-title,
+.index-row.is-expanded .index-col-title {
+    will-change: transform;
 }
 
 /* Desktop Horizontal Media Numbers */
