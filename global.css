@@ -648,7 +648,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
         flex-direction: column;
         justify-content: flex-end;
         overflow: hidden;
-        padding-top: 60px;
+        padding-top: 102px;
         box-sizing: border-box;
     }
 
