@@ -570,6 +570,37 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     margin-bottom: -8px !important;
 }
 
+/* Subtle End-Fade Gradient on Overflowing Project Header Text */
+.project-texts-wrap.is-overflowing::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none !important;
+    opacity: 1;
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: 2;
+}
+
+/* Hover: Fade disappears gracefully */
+.project-card.is-hovered .project-texts-wrap::after {
+    opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .project-card:hover .project-texts-wrap::after {
+        opacity: 0;
+    }
+}
+
+/* When zoomed out to minimum size and unhovered, hide fade */
+.projects-section.is-min-size .project-card:not(.is-hovered) .project-texts-wrap::after {
+    opacity: 0 !important;
+}
+
 .project-texts-inner {
     display: inline-flex !important;
     align-items: baseline !important;

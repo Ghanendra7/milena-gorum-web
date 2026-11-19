@@ -640,6 +640,20 @@
                     baseHeaderWidth,
                     fullHeaderWidth
                 };
+
+                const textsWrap = card.querySelector(".project-texts-wrap");
+                if (textsWrap) {
+                    const client = textsWrap.querySelector(".project-client");
+                    if (client) {
+                        const clientWidth = Math.ceil(client.scrollWidth || client.getBoundingClientRect().width);
+                        const containerWidth = textsWrap.clientWidth;
+                        if (clientWidth - containerWidth > 4) {
+                            textsWrap.classList.add("is-overflowing");
+                        } else {
+                            textsWrap.classList.remove("is-overflowing");
+                        }
+                    }
+                }
             }
 
             if (isDesktopInfinite && total > activeFilteredCount) {
@@ -761,15 +775,21 @@
                 const inner = targetCard.querySelector(".project-texts-inner");
                 if (inner) {
                     gsap.killTweensOf(inner);
-                    gsap.to(inner, {
-                        x: 0,
-                        duration: 0.35,
-                        ease: "power2.out",
-                        overwrite: "auto",
-                        onComplete: () => {
-                            gsap.set(inner, { clearProps: "transform,x" });
-                        }
-                    });
+                    const currentX = gsap.getProperty(inner, "x") || 0;
+                    if (Math.abs(currentX) > 0.5) {
+                        gsap.to(inner, {
+                            x: 0,
+                            duration: 0.35,
+                            ease: "power2.out",
+                            force3D: true,
+                            overwrite: "auto",
+                            onComplete: () => {
+                                gsap.set(inner, { clearProps: "transform,x" });
+                            }
+                        });
+                    } else {
+                        gsap.set(inner, { clearProps: "transform,x" });
+                    }
                 }
             }
             activeHeaderMarqueeCard = null;
@@ -797,26 +817,28 @@
             if (overflowDistance > 4) {
                 activeHeaderMarqueeCard = card;
 
-                // Subtle reading speed ~28px/sec, minimum 3.0s duration
-                const duration = Math.max(3.0, overflowDistance / 28);
+                // Subtle reading speed ~26px/sec, minimum 3.0s duration (matching Index page)
+                const duration = Math.max(3.0, overflowDistance / 26);
 
                 activeHeaderMarqueeTimeline = gsap.timeline({
                     repeat: -1
                 });
 
+                // Match Index page: 0.6s initial pause (for fade to disappear gracefully),
+                // roll to -overflowDistance, pause 1.2s at end, roll back to 0, pause 1.2s at start
                 activeHeaderMarqueeTimeline
                     .to(inner, {
                         x: -overflowDistance,
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=0.8")
+                    }, "+=0.6")
                     .to(inner, {
                         x: 0,
                         duration: duration,
                         ease: "sine.inOut",
                         force3D: true
-                    }, "+=0.8");
+                    }, "+=1.2");
             } else {
                 gsap.set(inner, { x: 0 });
             }
@@ -2465,6 +2487,14 @@
                 }
             }
         }, { signal });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                if (!isMobileLayout()) {
+                    measureDesktopMetrics();
+                }
+            }).catch(() => { });
+        }
 
         window.addEventListener("mg-transition-complete", () => {
             if (isMobileLayout()) {
