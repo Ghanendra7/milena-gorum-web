@@ -559,7 +559,7 @@ function initOsmoBoilerplate() {
                         const cardLeft = card.offsetLeft - (taggedCards[0]?.offsetLeft || 0);
                         return cardLeft < viewportWidth + 120;
                     });
-                    visibleCards = onScreen.length ? onScreen : taggedCards.slice(0, 5);
+                    visibleCards = onScreen.length ? onScreen.slice(0, 7) : taggedCards.slice(0, 5);
                 } else {
                     const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
                     const setSize = Math.floor(allCards.length / 3);

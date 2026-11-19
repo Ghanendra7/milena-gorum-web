@@ -2270,15 +2270,46 @@
 
                         updateAvailableSubFilterButtons();
 
-                        const wasInteracted = userHasInteractedDesktop;
-                        const prevScroll = scrollPos;
-                        applyFilters();
+                        const commitPagination = () => {
+                            if (!isMobileLayout()) {
+                                const wasInteracted = userHasInteractedDesktop;
+                                const oldSingleSetWidth = singleSetWidth;
+                                const oldInitPos = oldSingleSetWidth > 0 ? (oldSingleSetWidth - getInitialStartOffset()) : 0;
+                                const scrollDelta = scrollPos - oldInitPos;
+                                const prevScroll = scrollPos;
 
-                        if (wasInteracted) {
-                            userHasInteractedDesktop = true;
-                            scrollPos = prevScroll;
-                            targetPos = prevScroll;
-                            rawTargetPos = prevScroll;
+                                applyFilters();
+
+                                if (wasInteracted) {
+                                    userHasInteractedDesktop = true;
+                                    scrollPos = prevScroll;
+                                    targetPos = prevScroll;
+                                    rawTargetPos = prevScroll;
+                                } else {
+                                    const newInitPos = getInitialScrollPos();
+                                    const newScroll = newInitPos + scrollDelta;
+                                    scrollPos = newScroll;
+                                    targetPos = newScroll;
+                                    rawTargetPos = newScroll;
+                                }
+                                track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                            } else {
+                                applyFilters();
+                            }
+                        };
+
+                        const isTransitioning = Boolean(
+                            window.__mgIsTransitioning ||
+                            window.__mgEnteringFromHome ||
+                            (section && section.classList.contains("is-marquee-paused"))
+                        );
+
+                        if (isTransitioning) {
+                            window.addEventListener("mg-transition-complete", () => {
+                                commitPagination();
+                            }, { once: true, signal });
+                        } else {
+                            commitPagination();
                         }
                     }
 

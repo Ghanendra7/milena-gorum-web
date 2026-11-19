@@ -16,9 +16,22 @@
 
   function initHome(container) {
     const scope = container || document.querySelector(".home-section") || document;
+    const section = (scope && scope.classList && scope.classList.contains("home-section")) ? scope : (scope ? scope.querySelector(".home-section") : null);
+    if (!section) return;
     if (scope && scope._isHomeMounted) return;
-    if (scope) scope._isHomeMounted = true;
-    homeScope = scope;
+    if (section && section._isHomeMounted) return;
+
+    destroyHome();
+
+    if (scope) {
+      scope._isHomeMounted = true;
+      scope._isMounted = true;
+    }
+    if (section) {
+      section._isHomeMounted = true;
+      section._isMounted = true;
+    }
+    homeScope = section;
 
     const BUNNY_CDN_HOST = "vz-ada4eb16-135.b-cdn.net";
     const MAX_VIDEO_SECONDS = 30;
@@ -52,7 +65,6 @@
       return;
     }
 
-    destroyHome();
     homeAbortController = new AbortController();
     const { signal } = homeAbortController;
 
@@ -1030,6 +1042,7 @@
   function destroyHome() {
     if (homeScope) {
       homeScope._isHomeMounted = false;
+      homeScope._isMounted = false;
       if (homeScope.classList) {
         homeScope.classList.remove("is-marquee-active");
       }
