@@ -212,6 +212,16 @@
     cancelConfirmModalBtn: document.getElementById("cancelConfirmModalBtn"),
     okConfirmModalBtn: document.getElementById("okConfirmModalBtn"),
 
+    unsavedChangesModal: document.getElementById("unsavedChangesModal"),
+    unsavedChangesTitle: document.getElementById("unsavedChangesTitle"),
+    unsavedChangesDesc: document.getElementById("unsavedChangesDesc"),
+    unsavedChangesPrompt: document.getElementById("unsavedChangesPrompt"),
+    unsavedChangesList: document.getElementById("unsavedChangesList"),
+    closeUnsavedChangesBtn: document.getElementById("closeUnsavedChangesBtn"),
+    discardChangesBtn: document.getElementById("discardChangesBtn"),
+    keepEditingBtn: document.getElementById("keepEditingBtn"),
+    saveAndLeaveBtn: document.getElementById("saveAndLeaveBtn"),
+
     bioLinkModal: document.getElementById("bioLinkModal"),
     bioLinkForm: document.getElementById("bioLinkForm"),
     bioLinkInput: document.getElementById("bioLinkInput"),
@@ -413,16 +423,178 @@
     if (activeConfirmCleanup) activeConfirmCleanup(false);
   }
 
-  async function showProjectsView() {
-    if (state.queue.length > 0 && state.activeView === "editor") {
-      const confirmed = await showConfirmModal({
-        title: "Discard Queued Slides?",
-        message: "Leave this project? Your queued (not yet uploaded) slides will be cleared.",
-        confirmText: "Discard & Leave",
-        isDanger: true,
-      });
-      if (!confirmed) return;
+  function hasUnsavedEditorChanges() {
+    if (state.activeView !== "editor") return false;
+    const p = getSelectedProject();
+    if (!p) return false;
+    const isDetailsDirty = Boolean(state.projectDirty);
+    const isOrderDirty = isGalleryOrderDirty();
+    const isSlidesDirty = Object.values(state.existingEdits || {}).some((edit) => edit && edit.dirty);
+    const isQueueDirty = (state.queue || []).length > 0;
+    return isDetailsDirty || isOrderDirty || isSlidesDirty || isQueueDirty;
+  }
+
+  function promptUnsavedChangesModal() {
+    return new Promise((resolve) => {
+      const p = getSelectedProject();
+      const projName = p ? p.name : "Project";
+
+      els.unsavedChangesTitle.textContent = "Unsaved Changes";
+      els.unsavedChangesDesc.textContent = `You have unsaved changes on "${projName}".`;
+      els.unsavedChangesPrompt.textContent = "What would you like to do before leaving?";
+
+      els.unsavedChangesList.innerHTML = "";
+      const dirtyItems = [];
+      if (state.projectDirty) dirtyItems.push("Project Details (Title, Subtitle, Category, or Credits)");
+      if (isGalleryOrderDirty()) dirtyItems.push("Slide Order (Gallery sequence changed)");
+      const dirtySlideCount = Object.values(state.existingEdits || {}).filter((e) => e && e.dirty).length;
+      if (dirtySlideCount > 0) dirtyItems.push(`${dirtySlideCount} edited slide(s) (Title, video, or focal point)`);
+      if (state.queue.length > 0) dirtyItems.push(`${state.queue.length} queued upload(s) (will be discarded)`);
+
+      for (const item of dirtyItems) {
+        const li = document.createElement("li");
+        li.textContent = item;
+        els.unsavedChangesList.appendChild(li);
+      }
+
+      const hasEditsToSave = state.projectDirty || isGalleryOrderDirty() || dirtySlideCount > 0;
+      els.saveAndLeaveBtn.style.display = hasEditsToSave ? "" : "none";
+
+      const cleanup = (result) => {
+        els.unsavedChangesModal.hidden = true;
+        els.saveAndLeaveBtn.removeEventListener("click", onSave);
+        els.discardChangesBtn.removeEventListener("click", onDiscard);
+        els.keepEditingBtn.removeEventListener("click", onKeep);
+        els.closeUnsavedChangesBtn.removeEventListener("click", onKeep);
+        resolve(result);
+      };
+
+      const onSave = () => cleanup("save");
+      const onDiscard = () => cleanup("discard");
+      const onKeep = () => cleanup("cancel");
+
+      els.saveAndLeaveBtn.addEventListener("click", onSave);
+      els.discardChangesBtn.addEventListener("click", onDiscard);
+      els.keepEditingBtn.addEventListener("click", onKeep);
+      els.closeUnsavedChangesBtn.addEventListener("click", onKeep);
+
+      els.unsavedChangesModal.hidden = false;
+    });
+  }
+
+  async function saveAllPendingEditorChanges() {
+    const p = getSelectedProject();
+    if (!p) return false;
+
+    els.saveAndLeaveBtn.disabled = true;
+    els.saveAndLeaveBtn.textContent = "Saving…";
+
+    try {
+      if (state.projectDirty) {
+        const name = els.editProjName.value.trim();
+        if (!name) {
+          showBanner("Project Title is required to save details.", "err");
+          return false;
+        }
+        await apiJson("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update",
+            projectId: p.id,
+            publishMode: els.publishMode.value,
+            fieldMapOverride: state.fieldOverride,
+            project: {
+              name,
+              slug: slugify(els.editProjSlug.value || name) || p.slug,
+              sequence: els.editProjSeq.value.trim() === "" ? null : Number(els.editProjSeq.value),
+              subtitle: els.editProjSubtitle.value.trim(),
+              details: els.editProjDetails.value,
+              projectType: els.editProjType.value,
+              categoryIds: getSelectedCategoryIds(els.editProjCategories),
+              coverId: els.editProjCover.value || null,
+              featured: els.editProjFeatured.checked,
+              featuredSequence:
+                els.editProjFeaturedSeq.value.trim() === "" ? null : Number(els.editProjFeaturedSeq.value),
+            },
+          }),
+        });
+      }
+
+      if (isGalleryOrderDirty()) {
+        await apiJson("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update",
+            projectId: p.id,
+            publishMode: els.publishMode.value,
+            fieldMapOverride: state.fieldOverride,
+            project: { galleryIds: state.galleryIds },
+          }),
+        });
+      }
+
+      const dirtySlideIds = Object.keys(state.existingEdits).filter((id) => state.existingEdits[id]?.dirty);
+      for (const mediaId of dirtySlideIds) {
+        const edit = state.existingEdits[mediaId];
+        if (!edit) continue;
+        await apiJson("/api/media", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update",
+            mediaId,
+            publishMode: els.publishMode.value,
+            fieldMapOverride: state.fieldOverride,
+            slide: {
+              name: edit.name.trim() || state.mediaById[mediaId]?.name,
+              videoId: edit.videoId ? extractVideoId(edit.videoId) : "",
+              fillDesktop: edit.fillDesktop,
+              fillMobile: edit.fillMobile,
+              focusX: edit.focusX,
+              focusY: edit.focusY,
+            },
+          }),
+        });
+        delete state.existingEdits[mediaId];
+      }
+
       clearQueue();
+      await loadBootstrap(p.id);
+      const isLive = !p.isDraft && els.publishMode.value === "live";
+      showBanner(`Saved ${isLive ? "& published live " : ""}all changes on "${p.name}".`, "ok");
+      return true;
+    } catch (err) {
+      showBanner(err.message, "err");
+      return false;
+    } finally {
+      els.saveAndLeaveBtn.disabled = false;
+      els.saveAndLeaveBtn.textContent = "Save & Leave";
+    }
+  }
+
+  function discardAllPendingEditorChanges() {
+    clearQueue();
+    const p = getSelectedProject();
+    if (p) {
+      syncEditorFromSelectedProject();
+    }
+  }
+
+  async function showProjectsView() {
+    if (state.activeView === "editor" && hasUnsavedEditorChanges()) {
+      const decision = await promptUnsavedChangesModal();
+      if (decision === "cancel") {
+        syncUrlHash();
+        return false;
+      }
+      if (decision === "save") {
+        const ok = await saveAllPendingEditorChanges();
+        if (!ok) return false;
+      } else if (decision === "discard") {
+        discardAllPendingEditorChanges();
+      }
     }
     if (state.orderMode === "info") {
       state.orderMode = "all";
@@ -435,9 +607,25 @@
     els.actionBar.hidden = true;
     syncUrlHash();
     renderProjectOrderList();
+    return true;
   }
 
-  function openProjectEditor(projectId) {
+  async function openProjectEditor(projectId) {
+    if (state.activeView === "editor" && state.selectedProjectId && state.selectedProjectId !== projectId) {
+      if (hasUnsavedEditorChanges()) {
+        const decision = await promptUnsavedChangesModal();
+        if (decision === "cancel") {
+          syncUrlHash();
+          return;
+        }
+        if (decision === "save") {
+          const ok = await saveAllPendingEditorChanges();
+          if (!ok) return;
+        } else if (decision === "discard") {
+          discardAllPendingEditorChanges();
+        }
+      }
+    }
     const target = state.projects.find((p) => p.id === projectId);
     if (!target) {
       showProjectsView();
@@ -550,8 +738,10 @@
     els.topbarTitle.textContent = p.name;
     els.projectStatusPill.textContent = p.isDraft ? "Draft" : "Live";
     els.projectStatusPill.className = `status-pill ${p.isDraft ? "" : "is-ok"}`;
-    els.publishProjectBtn.textContent = p.isDraft ? "Publish Project & Media" : "Re-publish Project & Media";
-    els.unpublishProjectBtn.disabled = p.isDraft;
+    els.publishProjectBtn.hidden = !p.isDraft;
+    els.publishProjectBtn.textContent = "Publish Project";
+    els.unpublishProjectBtn.hidden = Boolean(p.isDraft);
+    els.unpublishProjectBtn.disabled = Boolean(p.isDraft);
     els.projectMeta.textContent = `/projects/${p.slug} · ${p.existingSlideCount} slide(s)`;
   }
 
@@ -664,12 +854,12 @@
 
   async function saveProjectDetails() {
     const p = getSelectedProject();
-    if (!p) return;
+    if (!p) return false;
 
     const name = els.editProjName.value.trim();
     if (!name) {
       showBanner("Project Title is required.", "err");
-      return;
+      return false;
     }
 
     els.saveProjectDetailsBtn.disabled = true;
@@ -702,14 +892,16 @@
 
       await loadBootstrap(p.id);
       const pubNote = res.published
-        ? "Published live."
+        ? "Saved & published live."
         : res.skippedPublishBecauseDraft
-          ? "Saved (project is Draft — click Publish Project when ready)."
+          ? "Saved as Draft (click Publish Project when ready)."
           : "Saved as staged.";
       showBanner(`Updated "${name}". ${pubNote}`, "ok");
+      return true;
     } catch (err) {
       showBanner(err.message, "err");
       els.saveProjectDetailsBtn.disabled = false;
+      return false;
     } finally {
       els.saveProjectDetailsBtn.textContent = "Save Details";
     }
@@ -1073,7 +1265,8 @@
       });
       delete state.existingEdits[mediaId];
       await loadBootstrap(p.id);
-      showBanner(`Saved slide "${edit.name}".`, "ok");
+      const isLive = !p.isDraft && els.publishMode.value === "live";
+      showBanner(`Saved ${isLive ? "& published live " : ""}slide "${edit.name}".`, "ok");
     } catch (err) {
       edit.busy = false;
       renderExistingGallery();
@@ -1156,11 +1349,11 @@
 
   async function saveGalleryOrder() {
     const p = getSelectedProject();
-    if (!p) return;
+    if (!p) return false;
     els.saveGalleryOrderBtn.disabled = true;
     els.saveGalleryOrderBtn.textContent = "Saving…";
     try {
-      await apiJson("/api/projects", {
+      const res = await apiJson("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1172,9 +1365,12 @@
         }),
       });
       await loadBootstrap(p.id);
-      showBanner(`Saved new slide order for "${p.name}".`, "ok");
+      const isLive = res?.published || (!p.isDraft && els.publishMode.value === "live");
+      showBanner(`Saved ${isLive ? "& published live " : ""}slide order for "${p.name}".`, "ok");
+      return true;
     } catch (err) {
       showBanner(err.message, "err");
+      return false;
     } finally {
       els.saveGalleryOrderBtn.disabled = false;
       els.saveGalleryOrderBtn.textContent = "Save Gallery Order";
@@ -3077,7 +3273,27 @@
   });
 
   els.backToProjectsBtn.addEventListener("click", showProjectsView);
-  window.addEventListener("hashchange", () => {
+  window.addEventListener("hashchange", async () => {
+    if (state.activeView === "editor" && hasUnsavedEditorChanges()) {
+      const currentHash = `#project=${encodeURIComponent(state.selectedProjectId)}`;
+      if (window.location.hash !== currentHash) {
+        const decision = await promptUnsavedChangesModal();
+        if (decision === "cancel") {
+          history.replaceState(null, "", currentHash);
+          return;
+        }
+        if (decision === "save") {
+          const ok = await saveAllPendingEditorChanges();
+          if (!ok) {
+            history.replaceState(null, "", currentHash);
+            return;
+          }
+        } else if (decision === "discard") {
+          discardAllPendingEditorChanges();
+        }
+      }
+    }
+
     if (window.location.hash === "#information" && state.bootstrap?.collections?.information) {
       state.activeView = "projects";
       state.orderMode = "info";
@@ -3095,7 +3311,26 @@
     }
   });
 
-  els.refreshBtn.addEventListener("click", () => loadBootstrap(state.activeView === "editor" ? state.selectedProjectId : null));
+  window.addEventListener("beforeunload", (e) => {
+    if (hasUnsavedEditorChanges()) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
+  els.refreshBtn.addEventListener("click", async () => {
+    if (state.activeView === "editor" && hasUnsavedEditorChanges()) {
+      const decision = await promptUnsavedChangesModal();
+      if (decision === "cancel") return;
+      if (decision === "save") {
+        const ok = await saveAllPendingEditorChanges();
+        if (!ok) return;
+      } else if (decision === "discard") {
+        discardAllPendingEditorChanges();
+      }
+    }
+    await loadBootstrap(state.activeView === "editor" ? state.selectedProjectId : null);
+  });
 
   els.publishMode.addEventListener("change", () => {
     try {

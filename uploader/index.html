@@ -186,8 +186,7 @@
           </div>
 
           <div class="editor-hero-actions">
-            <button id="publishProjectBtn" type="button" class="btn btn-secondary btn-sm">Publish Project &amp;
-              Media</button>
+            <button id="publishProjectBtn" type="button" class="btn btn-primary btn-sm">Publish Project</button>
             <button id="unpublishProjectBtn" type="button" class="btn btn-ghost btn-sm">Move to Draft</button>
             <button id="deleteProjectBtn" type="button" class="btn btn-ghost btn-sm btn-danger-text">Delete</button>
           </div>
@@ -512,6 +511,30 @@
       <div class="modal-footer" style="justify-content: flex-end; gap: 8px;">
         <button id="cancelConfirmModalBtn" type="button" class="btn btn-secondary btn-sm">Cancel</button>
         <button id="okConfirmModalBtn" type="button" class="btn btn-primary btn-sm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unsaved Changes Modal -->
+  <div id="unsavedChangesModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="unsavedChangesTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="unsavedChangesTitle">Unsaved Changes</h3>
+          <p id="unsavedChangesDesc" class="muted">You have unsaved changes on this project.</p>
+        </div>
+        <button id="closeUnsavedChangesBtn" type="button" class="btn btn-ghost btn-sm" aria-label="Close">✕</button>
+      </div>
+      <div class="schema-body">
+        <p id="unsavedChangesPrompt" style="margin:0;">What would you like to do before leaving?</p>
+        <ul id="unsavedChangesList" class="field-hint" style="margin: 8px 0 0 18px; padding: 0;"></ul>
+      </div>
+      <div class="modal-footer">
+        <button id="discardChangesBtn" type="button" class="btn btn-ghost btn-danger-text btn-sm">Discard Changes</button>
+        <div class="modal-footer-actions">
+          <button id="keepEditingBtn" type="button" class="btn btn-secondary btn-sm">Keep Editing</button>
+          <button id="saveAndLeaveBtn" type="button" class="btn btn-primary btn-sm">Save &amp; Leave</button>
+        </div>
       </div>
     </div>
   </div>

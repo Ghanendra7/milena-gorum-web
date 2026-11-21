@@ -116,6 +116,20 @@ export async function onRequestPost({ request, env }) {
         if (updated?.isDraft) {
           skippedPublishBecauseDraft = true;
         } else {
+          const mediaIdsToPublish = Array.from(
+            new Set([
+              ...(Array.isArray(data.galleryIds) ? data.galleryIds : []),
+              ...(data.coverId ? [data.coverId] : []),
+            ].filter(Boolean))
+          );
+          if (mediaIdsToPublish.length > 0 && mediaCollection?.id) {
+            try {
+              await publishCollectionItems(env, mediaCollection.id, mediaIdsToPublish);
+            } catch (mediaPubErr) {
+              console.warn("Could not publish referenced media items:", mediaPubErr);
+            }
+          }
+
           await publishCollectionItems(env, projectsCollection.id, [projectId]);
           published = true;
         }

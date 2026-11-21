@@ -1983,3 +1983,15 @@ textarea:focus {
   justify-content: flex-end;
   gap: 8px;
 }
+
+#unsavedChangesModal .modal-footer {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#unsavedChangesModal .modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
