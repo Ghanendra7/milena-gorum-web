@@ -2246,7 +2246,7 @@
     const filtersActive = hasActiveDirFilters();
     els.clearDirFiltersBtn.hidden = !filtersActive;
     if (els.dirAutoSortGroup) {
-      els.dirAutoSortGroup.hidden = isHomeMode || filtersActive;
+      els.dirAutoSortGroup.hidden = true;
     }
 
     const sortMode = els.dirSortSelect ? els.dirSortSelect.value : "manual";
