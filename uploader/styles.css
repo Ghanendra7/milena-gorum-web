@@ -973,8 +973,13 @@ textarea:focus {
   border-radius: 5px;
   background: transparent !important;
   font-size: 13px;
-  text-overflow: ellipsis;
+  font-family: inherit;
   transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.inline-input::placeholder {
+  color: #ceced2 !important;
+  opacity: 1 !important;
 }
 
 .inline-input:hover {
@@ -991,6 +996,21 @@ textarea:focus {
 .inline-input-title {
   font-weight: 600;
   color: var(--text);
+  text-overflow: ellipsis;
+}
+
+.inline-input-area {
+  height: 42px !important;
+  line-height: 1.35;
+  padding: 4px 7px !important;
+  resize: none;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.inline-input-area::-webkit-scrollbar {
+  display: none;
 }
 
 .inline-input-sub {

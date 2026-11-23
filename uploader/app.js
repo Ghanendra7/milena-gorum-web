@@ -2469,18 +2469,18 @@
       titleInput.placeholder = "Title *";
       titleInput.title = p.name;
 
-      const subInput = document.createElement("input");
-      subInput.type = "text";
-      subInput.className = "inline-input inline-input-sub";
+      const subInput = document.createElement("textarea");
+      subInput.rows = 2;
+      subInput.className = "inline-input inline-input-area inline-input-sub";
       subInput.value = p.subtitle || "";
-      subInput.placeholder = "Sub-title (optional)";
+      subInput.placeholder = "Sub-title";
       subInput.title = p.subtitle || "Sub-title";
 
-      const detailsInput = document.createElement("input");
-      detailsInput.type = "text";
-      detailsInput.className = "inline-input inline-input-details";
+      const detailsInput = document.createElement("textarea");
+      detailsInput.rows = 2;
+      detailsInput.className = "inline-input inline-input-area inline-input-details";
       detailsInput.value = p.details || "";
-      detailsInput.placeholder = "Credits (optional)";
+      detailsInput.placeholder = "Credits";
       detailsInput.title = p.details || "Credits";
 
       inputsRow.appendChild(titleInput);
@@ -2609,8 +2609,8 @@
       subInput.addEventListener("input", checkTextDirty);
       detailsInput.addEventListener("input", checkTextDirty);
       titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
-      subInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
-      detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
+      subInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
+      detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
       inlineSaveBtn.addEventListener("click", commitTextChanges);
 
       info.appendChild(metaLine);
