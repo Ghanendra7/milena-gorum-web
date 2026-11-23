@@ -985,12 +985,17 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     }
 }
 
-.video-wrapper,
-.slide-video,
 .btn-play,
 .btn-sound,
 .btn-fullscreen {
     cursor: pointer;
+}
+
+@media screen and (max-width: 1024px) {
+    .video-wrapper,
+    .slide-video {
+        cursor: pointer;
+    }
 }
 
 .controls-container,

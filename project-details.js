@@ -598,6 +598,97 @@
             handleSlideMedia();
         }, { signal });
 
+        // ----------------------------------------------------
+        // DESKTOP GALLERY NAVIGATION: Click Left/Right & Scroll
+        // ----------------------------------------------------
+        const mainStage = scope.querySelector(".main-stage") || mainEl;
+        let pointerStartX = 0;
+        let pointerStartY = 0;
+
+        mainStage.addEventListener("pointerdown", (e) => {
+            pointerStartX = e.clientX;
+            pointerStartY = e.clientY;
+        }, { signal, passive: true });
+
+        mainStage.addEventListener("click", (e) => {
+            // Desktop only
+            if (window.innerWidth <= 1024) return;
+            if (totalSlides <= 1) return;
+
+            // Ignore drag gestures (>8px movement)
+            const moveDist = Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY);
+            if (moveDist > 8) return;
+
+            // Ignore clicks on video controls, seek bar, buttons, links, etc.
+            if (e.target.closest(
+                ".controls-container, " +
+                ".seek-container, " +
+                ".btn-project-details, " +
+                ".bottom-stage, " +
+                ".top-bar, " +
+                "button, " +
+                "a, " +
+                "input, " +
+                "select, " +
+                "textarea, " +
+                "[role='button']"
+            )) {
+                return;
+            }
+
+            if (!mainSwiperInstance) return;
+
+            const rect = mainStage.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const isLeftHalf = clickX < rect.width / 2;
+
+            if (isLeftHalf) {
+                mainSwiperInstance.slidePrev(0);
+            } else {
+                mainSwiperInstance.slideNext(0);
+            }
+            handleSlideMedia();
+        }, { signal });
+
+        let isWheelLocked = false;
+        let wheelIdleTimer = null;
+
+        const galleryTarget = gallerySection || mainStage;
+        galleryTarget.addEventListener("wheel", (e) => {
+            // Desktop only
+            if (window.innerWidth <= 1024) return;
+            if (totalSlides <= 1) return;
+            if (e.ctrlKey || e.metaKey) return;
+
+            // Ignore scroll inside bottom stage (e.g. thumb gallery)
+            if (e.target.closest(".bottom-stage")) return;
+
+            let delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            if (e.deltaMode === 1) delta *= 32;
+            else if (e.deltaMode === 2) delta *= window.innerHeight;
+
+            if (Math.abs(delta) < 12) return;
+
+            e.preventDefault();
+
+            clearTimeout(wheelIdleTimer);
+            wheelIdleTimer = setTimeout(() => {
+                isWheelLocked = false;
+            }, 200);
+
+            if (isWheelLocked) return;
+            if (!mainSwiperInstance) return;
+
+            isWheelLocked = true;
+
+            if (delta > 0) {
+                mainSwiperInstance.slideNext(0);
+            } else {
+                mainSwiperInstance.slidePrev(0);
+            }
+            handleSlideMedia();
+        }, { signal, passive: false });
+
         const processedVideos = new Set();
         const allVideoElements = Array.from(mainEl.querySelectorAll("video.slide-video, video"));
 
@@ -911,6 +1002,7 @@
             let touchStartTime = 0;
 
             const handleVideoWrapperTap = (e) => {
+                if (window.innerWidth > 1024) return; // Desktop uses left/right click navigation instead
                 if (e.target.closest(".controls-container") || e.target.closest(".seek-container")) return;
                 if (performance.now() - lastTapTime < 400) return;
                 lastTapTime = performance.now();
