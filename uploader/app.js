@@ -2459,8 +2459,11 @@
       const info = document.createElement("div");
       info.className = "project-row-info";
 
-      const titleCol = document.createElement("div");
-      titleCol.className = "project-title-col";
+      const mainInfo = document.createElement("div");
+      mainInfo.className = "project-main-info";
+
+      const titleSubRow = document.createElement("div");
+      titleSubRow.className = "project-title-sub-row";
 
       const titleInput = document.createElement("input");
       titleInput.type = "text";
@@ -2469,12 +2472,16 @@
       titleInput.placeholder = "Title *";
       titleInput.title = p.name;
 
-      const subInput = document.createElement("textarea");
-      subInput.rows = 2;
-      subInput.className = "inline-input inline-input-area inline-input-sub";
+      const subInput = document.createElement("input");
+      subInput.type = "text";
+      subInput.className = "inline-input inline-input-sub";
       subInput.value = p.subtitle || "";
       subInput.placeholder = "Sub-title";
       subInput.title = p.subtitle || "Sub-title";
+
+      titleSubRow.appendChild(titleInput);
+      titleSubRow.appendChild(subInput);
+      mainInfo.appendChild(titleSubRow);
 
       const detailsInput = document.createElement("textarea");
       detailsInput.rows = 2;
@@ -2604,15 +2611,13 @@
       subInput.addEventListener("input", checkTextDirty);
       detailsInput.addEventListener("input", checkTextDirty);
       titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
-      subInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
+      subInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
       detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
       inlineSaveBtn.addEventListener("click", commitTextChanges);
 
-      titleCol.appendChild(titleInput);
-      titleCol.appendChild(metaLine);
+      mainInfo.appendChild(metaLine);
 
-      info.appendChild(titleCol);
-      info.appendChild(subInput);
+      info.appendChild(mainInfo);
       info.appendChild(detailsInput);
       row.appendChild(info);
 

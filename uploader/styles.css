@@ -954,17 +954,23 @@ textarea:focus {
 .project-row-info {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr);
-  gap: 8px;
+  grid-template-columns: minmax(260px, 1.8fr) minmax(160px, 1.2fr);
+  gap: 10px;
   align-items: center;
 }
 
-.project-title-col {
+.project-main-info {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+  gap: 3px;
+}
+
+.project-title-sub-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr);
+  gap: 6px;
+  align-items: center;
 }
 
 .inline-input {
@@ -1002,8 +1008,14 @@ textarea:focus {
   text-overflow: ellipsis;
 }
 
+.inline-input-sub {
+  height: 26px !important;
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+
 .inline-input-area {
-  height: 40px !important;
+  height: 42px !important;
   line-height: 1.35;
   padding: 4px 7px !important;
   resize: none;
@@ -1015,10 +1027,6 @@ textarea:focus {
 
 .inline-input-area::-webkit-scrollbar {
   display: none;
-}
-
-.inline-input-sub {
-  color: var(--text);
 }
 
 .inline-input-details {
@@ -1720,6 +1728,11 @@ textarea:focus {
   .project-row-info {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .project-title-sub-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .project-row> :nth-child(n+5) {
