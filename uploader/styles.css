@@ -1344,7 +1344,7 @@ textarea::placeholder {
   transform: scale(1.08);
 }
 
-.slide-thumb-wrap .slide-select-wrap ~ .slide-order-badge {
+.slide-thumb-wrap .slide-select-wrap~.slide-order-badge {
   left: 32px;
 }
 
@@ -1671,7 +1671,7 @@ textarea::placeholder {
 }
 
 .schema-body {
-  padding: 18px;
+  padding: 0px 18px 18px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2015,6 +2015,5 @@ textarea::placeholder {
 
 #newProjectModal .modal-header {
   border-bottom: none;
-  padding-bottom: 4px;
+  padding-bottom: 0px;
 }
-
