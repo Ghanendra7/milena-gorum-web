@@ -650,8 +650,12 @@
             handleSlideMedia();
         }, { signal });
 
-        let isWheelLocked = false;
-        let wheelIdleTimer = null;
+        // Continuous, flowing scroll-to-switch with smooth threshold accumulator
+        let wheelAccumulator = 0;
+        let wheelDecayTimer = null;
+        let lastWheelSlideTime = 0;
+        const WHEEL_THRESHOLD = 45;       // Accumulated scroll delta to trigger 1 slide
+        const MIN_WHEEL_INTERVAL = 60;     // Min ms between slides (~16 slides/sec max for fast flowing browsing)
 
         const galleryTarget = gallerySection || mainStage;
         galleryTarget.addEventListener("wheel", (e) => {
@@ -667,26 +671,36 @@
             if (e.deltaMode === 1) delta *= 32;
             else if (e.deltaMode === 2) delta *= window.innerHeight;
 
-            if (Math.abs(delta) < 12) return;
+            if (Math.abs(delta) < 2) return;
 
             e.preventDefault();
 
-            clearTimeout(wheelIdleTimer);
-            wheelIdleTimer = setTimeout(() => {
-                isWheelLocked = false;
-            }, 200);
-
-            if (isWheelLocked) return;
-            if (!mainSwiperInstance) return;
-
-            isWheelLocked = true;
-
-            if (delta > 0) {
-                mainSwiperInstance.slideNext(0);
-            } else {
-                mainSwiperInstance.slidePrev(0);
+            // Reset accumulator if user reverses scroll direction
+            if ((wheelAccumulator > 0 && delta < 0) || (wheelAccumulator < 0 && delta > 0)) {
+                wheelAccumulator = 0;
             }
-            handleSlideMedia();
+
+            wheelAccumulator += delta;
+
+            clearTimeout(wheelDecayTimer);
+            wheelDecayTimer = setTimeout(() => {
+                wheelAccumulator = 0;
+            }, 160);
+
+            const now = performance.now();
+            if (now - lastWheelSlideTime < MIN_WHEEL_INTERVAL) return;
+
+            if (wheelAccumulator >= WHEEL_THRESHOLD) {
+                mainSwiperInstance.slideNext(0);
+                handleSlideMedia();
+                wheelAccumulator = 0;
+                lastWheelSlideTime = now;
+            } else if (wheelAccumulator <= -WHEEL_THRESHOLD) {
+                mainSwiperInstance.slidePrev(0);
+                handleSlideMedia();
+                wheelAccumulator = 0;
+                lastWheelSlideTime = now;
+            }
         }, { signal, passive: false });
 
         const processedVideos = new Set();
