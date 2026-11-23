@@ -321,6 +321,12 @@ textarea:focus {
   outline-offset: -1px;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #bfbfc5;
+  opacity: 1;
+}
+
 .topbar-tabs {
   display: inline-flex;
   gap: 4px;
@@ -953,22 +959,14 @@ textarea:focus {
 
 .project-row-info {
   min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(260px, 1.8fr) minmax(160px, 1.2fr);
-  gap: 10px;
-  align-items: center;
-}
-
-.project-main-info {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.project-title-sub-row {
+.project-row-inputs {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr);
+  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr);
   gap: 6px;
   align-items: center;
 }
@@ -981,13 +979,14 @@ textarea:focus {
   border-radius: 5px;
   background: transparent !important;
   font-size: 13px;
-  font-family: inherit;
+  text-overflow: ellipsis;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .inline-input::placeholder {
-  color: #ceced2 !important;
+  color: #c8c8ce !important;
   opacity: 1 !important;
+  font-weight: 400;
 }
 
 .inline-input:hover {
@@ -1002,35 +1001,16 @@ textarea:focus {
 }
 
 .inline-input-title {
-  height: 26px !important;
   font-weight: 600;
   color: var(--text);
-  text-overflow: ellipsis;
 }
 
 .inline-input-sub {
-  height: 26px !important;
-  color: var(--text);
-  text-overflow: ellipsis;
-}
-
-.inline-input-area {
-  height: 42px !important;
-  line-height: 1.35;
-  padding: 4px 7px !important;
-  resize: none;
-  overflow-y: auto;
-  font-family: inherit;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.inline-input-area::-webkit-scrollbar {
-  display: none;
+  color: var(--muted);
 }
 
 .inline-input-details {
-  color: var(--text);
+  color: var(--muted);
 }
 
 .inline-select {
@@ -1725,14 +1705,8 @@ textarea:focus {
     grid-template-columns: 20px 46px 50px 1fr;
   }
 
-  .project-row-info {
+  .project-row-inputs {
     grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .project-title-sub-row {
-    grid-template-columns: 1fr;
-    gap: 4px;
   }
 
   .project-row> :nth-child(n+5) {

@@ -1123,7 +1123,7 @@
       videoInput.className = "slide-video-input";
       videoInput.value = edit.videoId;
       videoInput.disabled = edit.busy;
-      videoInput.placeholder = "Bunny Video ID (optional)";
+      videoInput.placeholder = "Bunny Video ID";
       videoInput.addEventListener("input", () => {
         edit.videoId = videoInput.value.trim();
         edit.dirty = true;
@@ -2455,15 +2455,12 @@
       thumbBtn.addEventListener("click", () => openProjectEditor(p.id));
       row.appendChild(thumbBtn);
 
-      // Inline editable Title + Sub-title + Credits + Meta badges
+      // Inline editable Title + Sub-title + Meta badges
       const info = document.createElement("div");
       info.className = "project-row-info";
 
-      const mainInfo = document.createElement("div");
-      mainInfo.className = "project-main-info";
-
-      const titleSubRow = document.createElement("div");
-      titleSubRow.className = "project-title-sub-row";
+      const inputsRow = document.createElement("div");
+      inputsRow.className = "project-row-inputs";
 
       const titleInput = document.createElement("input");
       titleInput.type = "text";
@@ -2479,16 +2476,17 @@
       subInput.placeholder = "Sub-title";
       subInput.title = p.subtitle || "Sub-title";
 
-      titleSubRow.appendChild(titleInput);
-      titleSubRow.appendChild(subInput);
-      mainInfo.appendChild(titleSubRow);
-
-      const detailsInput = document.createElement("textarea");
-      detailsInput.rows = 2;
-      detailsInput.className = "inline-input inline-input-area inline-input-details";
+      const detailsInput = document.createElement("input");
+      detailsInput.type = "text";
+      detailsInput.className = "inline-input inline-input-details";
       detailsInput.value = p.details || "";
       detailsInput.placeholder = "Credits";
       detailsInput.title = p.details || "Credits";
+
+      inputsRow.appendChild(titleInput);
+      inputsRow.appendChild(subInput);
+      inputsRow.appendChild(detailsInput);
+      info.appendChild(inputsRow);
 
       const metaLine = document.createElement("div");
       metaLine.className = "project-row-meta";
@@ -2612,13 +2610,10 @@
       detailsInput.addEventListener("input", checkTextDirty);
       titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
       subInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
-      detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
+      detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
       inlineSaveBtn.addEventListener("click", commitTextChanges);
 
-      mainInfo.appendChild(metaLine);
-
-      info.appendChild(mainInfo);
-      info.appendChild(detailsInput);
+      info.appendChild(metaLine);
       row.appendChild(info);
 
       // Inline Project Type selector
@@ -2717,13 +2712,13 @@
   // Information Page CMS Helpers
   const INFO_COLUMNS = [
     [
-      { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Link (Optional)" },
-      { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Link (Optional)" },
-      { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "Link (Optional)" },
-      { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "Link (Optional)" },
+      { key: "servicesRows", title: "Services", textPlaceholder: "e.g. Set Design", urlPlaceholder: "Link" },
+      { key: "locationRows", title: "Location", textPlaceholder: "e.g. New York", urlPlaceholder: "Link" },
+      { key: "contactRows", title: "Contact", textPlaceholder: "e.g. mail@milenagorum.com", urlPlaceholder: "Link" },
+      { key: "interviewsRows", title: "Interviews", textPlaceholder: "e.g. Interview 1, Another", urlPlaceholder: "Link" },
     ],
     [
-      { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "Link (Optional)" },
+      { key: "pressRows", title: "Press", textPlaceholder: "e.g. Exibart", urlPlaceholder: "Link" },
     ],
   ];
   const INFO_SECTIONS = INFO_COLUMNS.flat();
