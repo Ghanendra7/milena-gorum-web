@@ -2012,3 +2012,9 @@ textarea::placeholder {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+#newProjectModal .modal-header {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+

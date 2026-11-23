@@ -3802,7 +3802,7 @@
       els.newProjError.hidden = false;
     } finally {
       els.submitNewProjectBtn.disabled = false;
-      els.submitNewProjectBtn.textContent = "Create & Open Project";
+      els.submitNewProjectBtn.textContent = "Create Project";
     }
   });
 
