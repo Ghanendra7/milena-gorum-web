@@ -2455,12 +2455,12 @@
       thumbBtn.addEventListener("click", () => openProjectEditor(p.id));
       row.appendChild(thumbBtn);
 
-      // Inline editable Title + Sub-title + Meta badges
+      // Inline editable Title + Sub-title + Credits + Meta badges
       const info = document.createElement("div");
       info.className = "project-row-info";
 
-      const inputsRow = document.createElement("div");
-      inputsRow.className = "project-row-inputs";
+      const titleCol = document.createElement("div");
+      titleCol.className = "project-title-col";
 
       const titleInput = document.createElement("input");
       titleInput.type = "text";
@@ -2482,11 +2482,6 @@
       detailsInput.value = p.details || "";
       detailsInput.placeholder = "Credits";
       detailsInput.title = p.details || "Credits";
-
-      inputsRow.appendChild(titleInput);
-      inputsRow.appendChild(subInput);
-      inputsRow.appendChild(detailsInput);
-      info.appendChild(inputsRow);
 
       const metaLine = document.createElement("div");
       metaLine.className = "project-row-meta";
@@ -2613,7 +2608,12 @@
       detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitTextChanges(); } });
       inlineSaveBtn.addEventListener("click", commitTextChanges);
 
-      info.appendChild(metaLine);
+      titleCol.appendChild(titleInput);
+      titleCol.appendChild(metaLine);
+
+      info.appendChild(titleCol);
+      info.appendChild(subInput);
+      info.appendChild(detailsInput);
       row.appendChild(info);
 
       // Inline Project Type selector

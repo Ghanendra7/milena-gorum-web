@@ -953,16 +953,18 @@ textarea:focus {
 
 .project-row-info {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.project-row-inputs {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr);
-  gap: 6px;
+  gap: 8px;
   align-items: center;
+}
+
+.project-title-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
 }
 
 .inline-input {
@@ -994,17 +996,19 @@ textarea:focus {
 }
 
 .inline-input-title {
+  height: 26px !important;
   font-weight: 600;
   color: var(--text);
   text-overflow: ellipsis;
 }
 
 .inline-input-area {
-  height: 42px !important;
+  height: 40px !important;
   line-height: 1.35;
   padding: 4px 7px !important;
   resize: none;
   overflow-y: auto;
+  font-family: inherit;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1014,11 +1018,11 @@ textarea:focus {
 }
 
 .inline-input-sub {
-  color: var(--muted);
+  color: var(--text);
 }
 
 .inline-input-details {
-  color: var(--muted);
+  color: var(--text);
 }
 
 .inline-select {
@@ -1713,8 +1717,9 @@ textarea:focus {
     grid-template-columns: 20px 46px 50px 1fr;
   }
 
-  .project-row-inputs {
+  .project-row-info {
     grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .project-row> :nth-child(n+5) {
