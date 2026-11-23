@@ -1416,6 +1416,10 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     color: #000000;
 }
 
+.index-row.is-hovered {
+    z-index: 10;
+}
+
 /* Dimming: When another row is hovered (Desktop) or expanded (Mobile) */
 .index-list.has-hovered-item .index-row:not(.is-hovered),
 .index-list.has-active-mobile .index-row:not(.is-expanded) {
@@ -1530,7 +1534,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
-    row-gap: 8px;
+    height: 19px !important;
+    min-height: 19px !important;
+    max-height: 19px !important;
+    overflow: visible !important;
+    row-gap: 0px !important;
+    line-height: 19px !important;
     column-gap: 24px;
     opacity: 0;
     pointer-events: none;
@@ -1538,12 +1547,26 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
+    position: relative;
 }
 
 .index-row.is-hovered .index-media-desktop {
     display: flex;
     opacity: 1;
     pointer-events: auto;
+}
+
+/* Hit-zone for wrapped media numbers: covers line 1 & overflowing line 2/3 */
+.index-row.is-hovered .index-media-desktop::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--media-overflow-height, 100%);
+    pointer-events: auto;
+    cursor: default;
+    z-index: 0;
 }
 
 /* Media Item Buttons */
@@ -1561,6 +1584,15 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     transition: color 0.15s ease;
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
+}
+
+.index-media-desktop .index-media-item {
+    height: 19px !important;
+    line-height: 19px !important;
+    display: inline-block !important;
+    vertical-align: baseline !important;
+    position: relative;
+    z-index: 1;
 }
 
 .index-media-item:hover,

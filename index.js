@@ -379,6 +379,10 @@
                         const desktopMediaContainer = hoveredRow.querySelector(".index-media-desktop");
                         const currentMedia = hoveredRow._mediaItems || [];
                         if (desktopMediaContainer && currentMedia.length) {
+                            const fullHeight = desktopMediaContainer.scrollHeight;
+                            if (fullHeight > 19) {
+                                desktopMediaContainer.style.setProperty("--media-overflow-height", `${fullHeight}px`);
+                            }
                             desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
                                 b.classList.toggle("is-active", idx === 0);
                             });
@@ -531,7 +535,39 @@
                     navigateToProject(slug, idx);
                 }
             }, { signal });
+
+            previewStage.addEventListener("pointerleave", (e) => {
+                if (isMobileLayout()) return;
+                if (e.relatedTarget && (list.contains(e.relatedTarget) || previewStage.contains(e.relatedTarget))) return;
+                list.querySelectorAll(".index-row.is-hovered").forEach((r) => {
+                    r.classList.remove("is-hovered");
+                    stopRowMarquee(r);
+                    const d = r.querySelector(".index-media-desktop");
+                    if (d) {
+                        d.style.removeProperty("--media-overflow-height");
+                        d.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
+                    }
+                });
+                list.classList.remove("has-hovered-item");
+                hideDesktopPreview();
+            }, { signal });
         }
+
+        list.addEventListener("pointerleave", (e) => {
+            if (isMobileLayout()) return;
+            if (e.relatedTarget && (list.contains(e.relatedTarget) || (previewStage && previewStage.contains(e.relatedTarget)))) return;
+            list.querySelectorAll(".index-row.is-hovered").forEach((r) => {
+                r.classList.remove("is-hovered");
+                stopRowMarquee(r);
+                const d = r.querySelector(".index-media-desktop");
+                if (d) {
+                    d.style.removeProperty("--media-overflow-height");
+                    d.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
+                }
+            });
+            list.classList.remove("has-hovered-item");
+            hideDesktopPreview();
+        }, { signal });
 
         // ----------------------------------------------------
         // MEDIA DATA EXTRACTION
@@ -970,6 +1006,13 @@
 
                     desktopMediaContainer.appendChild(btn);
                 });
+
+                if (row.classList.contains("is-hovered")) {
+                    const fullHeight = desktopMediaContainer.scrollHeight;
+                    if (fullHeight > 19) {
+                        desktopMediaContainer.style.setProperty("--media-overflow-height", `${fullHeight}px`);
+                    }
+                }
             }
 
             // 2. Mobile buttons
@@ -1083,9 +1126,23 @@
             buildMediaButtons(row, mediaItems, signal);
 
             // Desktop Hover Handlers
-            row.addEventListener("pointerenter", () => {
+            const activateRow = (targetMediaIdx = 0) => {
                 if (isMobileLayout()) return;
                 if (isAppearAnimating || list.classList.contains("is-appearing")) return;
+
+                // Deactivate any currently hovered row that isn't this row
+                list.querySelectorAll(".index-row.is-hovered").forEach((r) => {
+                    if (r !== row) {
+                        r.classList.remove("is-hovered");
+                        stopRowMarquee(r);
+                        const rDesktopMedia = r.querySelector(".index-media-desktop");
+                        if (rDesktopMedia) {
+                            rDesktopMedia.style.removeProperty("--media-overflow-height");
+                            rDesktopMedia.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
+                        }
+                    }
+                });
+
                 list.classList.add("has-hovered-item");
                 row.classList.add("is-hovered");
                 startRowMarquee(row);
@@ -1095,19 +1152,23 @@
                 const currentMedia = row._mediaItems || [];
 
                 if (desktopMediaContainer && currentMedia.length) {
-                    const hoveredBtn = desktopMediaContainer.querySelector(".index-media-item:hover");
-                    const targetIdx = hoveredBtn ? parseInt(hoveredBtn.getAttribute("data-media-idx") || "0", 10) : 0;
-                    const safeIdx = (targetIdx >= 0 && targetIdx < currentMedia.length) ? targetIdx : 0;
+                    const fullHeight = desktopMediaContainer.scrollHeight;
+                    if (fullHeight > 19) {
+                        desktopMediaContainer.style.setProperty("--media-overflow-height", `${fullHeight}px`);
+                    } else {
+                        desktopMediaContainer.style.removeProperty("--media-overflow-height");
+                    }
 
+                    const safeIdx = (targetMediaIdx >= 0 && targetMediaIdx < currentMedia.length) ? targetMediaIdx : 0;
                     desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
                         b.classList.toggle("is-active", idx === safeIdx);
                     });
 
                     showDesktopPreview(currentMedia[safeIdx], slug);
                 }
-            }, { signal });
+            };
 
-            row.addEventListener("pointerleave", () => {
+            const deactivateRow = () => {
                 if (isMobileLayout()) return;
                 row.classList.remove("is-hovered");
                 stopRowMarquee(row);
@@ -1115,33 +1176,46 @@
 
                 const desktopMediaContainer = row.querySelector(".index-media-desktop");
                 if (desktopMediaContainer) {
+                    desktopMediaContainer.style.removeProperty("--media-overflow-height");
                     desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b) => b.classList.remove("is-active"));
                 }
 
                 if (!list.querySelector(".index-row.is-hovered")) {
                     list.classList.remove("has-hovered-item");
                 }
-            }, { signal });
-
-            // If cursor moves back from media buttons to the name or title on this line, re-highlight 1st image
-            const nameStack = row.querySelector(".index-details-stack");
-            const titleCol = row.querySelector(".index-col-title");
-            const reHighlightFirstMedia = () => {
-                if (isMobileLayout()) return;
-                if (isAppearAnimating || list.classList.contains("is-appearing")) return;
-                const desktopMediaContainer = row.querySelector(".index-media-desktop");
-                const currentMedia = row._mediaItems || [];
-                const slug = getProjectSlug(row);
-                if (!desktopMediaContainer || !currentMedia.length) return;
-
-                desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
-                    b.classList.toggle("is-active", idx === 0);
-                });
-                showDesktopPreview(currentMedia[0], slug);
             };
 
-            if (nameStack) nameStack.addEventListener("pointerenter", reHighlightFirstMedia, { signal });
-            if (titleCol) titleCol.addEventListener("pointerenter", reHighlightFirstMedia, { signal });
+            // Project switching ONLY on hover over the green zone:
+            // index numbers (16, 18, etc.), client name, and credit / sub-title
+            const greenZoneElements = row.querySelectorAll(
+                ".index-col-num, .index-client-wrap, .index-col-client, .index-title-wrap, .index-col-title, .index-details-stack, .num-title-container"
+            );
+            greenZoneElements.forEach((el) => {
+                el.addEventListener("pointerenter", () => {
+                    if (!row.classList.contains("is-hovered")) {
+                        activateRow(0);
+                    } else {
+                        // Re-highlight first image when cursor returns to green zone
+                        const desktopMediaContainer = row.querySelector(".index-media-desktop");
+                        const currentMedia = row._mediaItems || [];
+                        const slug = getProjectSlug(row);
+                        if (desktopMediaContainer && currentMedia.length) {
+                            desktopMediaContainer.querySelectorAll(".index-media-item").forEach((b, idx) => {
+                                b.classList.toggle("is-active", idx === 0);
+                            });
+                            showDesktopPreview(currentMedia[0], slug);
+                        }
+                    }
+                }, { signal });
+            });
+
+            // Pointerleave on row: deactivates row when leaving row area
+            row.addEventListener("pointerleave", (e) => {
+                if (isMobileLayout()) return;
+                if (e.relatedTarget && row.contains(e.relatedTarget)) return;
+                if (e.relatedTarget && previewStage && previewStage.contains(e.relatedTarget)) return;
+                deactivateRow();
+            }, { signal });
 
             // Row Click Handler: Mobile accordion expand/collapse OR Desktop project link (opens image 01)
             const rowHeader = row.querySelector(".index-row-header") || row;
