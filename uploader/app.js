@@ -2091,6 +2091,7 @@
 
       if (patch.name !== undefined) project.name = patch.name;
       if (patch.subtitle !== undefined) project.subtitle = patch.subtitle;
+      if (patch.details !== undefined) project.details = patch.details;
       if (patch.projectType !== undefined) project.projectType = patch.projectType;
       if (typeof patch.featured === "boolean") {
         project.featured = patch.featured;
@@ -2134,7 +2135,7 @@
       const p = byId.get(id);
       if (!p) return false;
       if (isHomeMode) return true;
-      if (search && !`${p.sequence} ${p.name} ${p.subtitle} ${p.slug}`.toLowerCase().includes(search)) {
+      if (search && !`${p.sequence} ${p.name} ${p.subtitle} ${p.details || ""} ${p.slug}`.toLowerCase().includes(search)) {
         return false;
       }
       if (typeFilter && p.projectType !== typeFilter) return false;
@@ -2271,7 +2272,7 @@
         "Sorted by Newest first. Project numbers (#01–#41) have updated. Click 'Save Order' to publish live, or switch to 'Manual' to drag and fine-tune.";
     } else {
       els.dirOrderHint.textContent =
-        "Drag rows to reorder Project Numbers, edit Title / Sub-title inline, or click any project to manage its gallery & upload media.";
+        "Drag rows to reorder Project Numbers, edit Title / Sub-title / Credits inline, or click any project to manage its gallery & upload media.";
     }
 
     const sourceIds = isHomeMode ? state.orderDraftHome : state.orderDraftAll;
@@ -2466,15 +2467,25 @@
       titleInput.className = "inline-input inline-input-title";
       titleInput.value = p.name;
       titleInput.placeholder = "Title *";
+      titleInput.title = p.name;
 
       const subInput = document.createElement("input");
       subInput.type = "text";
       subInput.className = "inline-input inline-input-sub";
       subInput.value = p.subtitle || "";
       subInput.placeholder = "Sub-title (optional)";
+      subInput.title = p.subtitle || "Sub-title";
+
+      const detailsInput = document.createElement("input");
+      detailsInput.type = "text";
+      detailsInput.className = "inline-input inline-input-details";
+      detailsInput.value = p.details || "";
+      detailsInput.placeholder = "Credits (optional)";
+      detailsInput.title = p.details || "Credits";
 
       inputsRow.appendChild(titleInput);
       inputsRow.appendChild(subInput);
+      inputsRow.appendChild(detailsInput);
       info.appendChild(inputsRow);
 
       const metaLine = document.createElement("div");
@@ -2557,30 +2568,49 @@
       const commitTextChanges = async () => {
         const nextName = titleInput.value.trim();
         const nextSub = subInput.value.trim();
+        const nextDetails = detailsInput.value.trim();
         if (!nextName) {
           showBanner("Project Title cannot be empty.", "err");
           titleInput.value = p.name;
           inlineSaveBtn.hidden = true;
           return;
         }
-        if (nextName === p.name && nextSub === (p.subtitle || "")) {
+        if (
+          nextName === p.name &&
+          nextSub === (p.subtitle || "") &&
+          nextDetails === (p.details || "")
+        ) {
           inlineSaveBtn.hidden = true;
           return;
         }
         inlineSaveBtn.disabled = true;
-        const ok = await inlinePatchProjectRow(p, { name: nextName, subtitle: nextSub }, rowSavePill);
+        const ok = await inlinePatchProjectRow(
+          p,
+          { name: nextName, subtitle: nextSub, details: nextDetails },
+          rowSavePill
+        );
         inlineSaveBtn.disabled = false;
-        if (ok) inlineSaveBtn.hidden = true;
+        if (ok) {
+          titleInput.title = nextName;
+          subInput.title = nextSub || "Sub-title";
+          detailsInput.title = nextDetails || "Credits";
+          inlineSaveBtn.hidden = true;
+        }
       };
 
       const checkTextDirty = () => {
-        const changed = titleInput.value.trim() !== p.name || subInput.value.trim() !== (p.subtitle || "");
+        const changed =
+          titleInput.value.trim() !== p.name ||
+          subInput.value.trim() !== (p.subtitle || "") ||
+          detailsInput.value.trim() !== (p.details || "");
         inlineSaveBtn.hidden = !changed;
       };
       titleInput.addEventListener("input", checkTextDirty);
       subInput.addEventListener("input", checkTextDirty);
+      detailsInput.addEventListener("input", checkTextDirty);
       titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
       subInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
+      detailsInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitTextChanges(); } });
       inlineSaveBtn.addEventListener("click", commitTextChanges);
 
       info.appendChild(metaLine);

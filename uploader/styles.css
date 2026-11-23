@@ -852,7 +852,7 @@ textarea:focus {
 
 .project-row {
   display: grid;
-  grid-template-columns: 20px 44px 65px minmax(220px, 1.8fr) 130px auto auto;
+  grid-template-columns: 20px 44px 65px minmax(280px, 1fr) 130px auto auto;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
@@ -960,7 +960,7 @@ textarea:focus {
 
 .project-row-inputs {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.3fr);
+  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr);
   gap: 6px;
   align-items: center;
 }
@@ -973,6 +973,7 @@ textarea:focus {
   border-radius: 5px;
   background: transparent !important;
   font-size: 13px;
+  text-overflow: ellipsis;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 
@@ -993,6 +994,10 @@ textarea:focus {
 }
 
 .inline-input-sub {
+  color: var(--muted);
+}
+
+.inline-input-details {
   color: var(--muted);
 }
 
