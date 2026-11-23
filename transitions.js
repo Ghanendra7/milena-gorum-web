@@ -1457,7 +1457,9 @@ function initOsmoBoilerplate() {
                     mobileStage.style.transition = "none";
                 }
             }
-            window.dispatchEvent(new Event("resize"));
+            if (!container?._isFromProjectDetail && !window.__mgEnteringFromDetail) {
+                window.dispatchEvent(new Event("resize"));
+            }
         } else if (ns === "home") {
             const curtain = container?.querySelector(".home-curtain");
             if (curtain) {

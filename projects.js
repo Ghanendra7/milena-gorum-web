@@ -13,6 +13,7 @@
     let mobileMainSwiper = null;
     let activeHeaderMarqueeTimeline = null;
     let activeHeaderMarqueeCard = null;
+    let cachedPaginatedCards = [];
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -260,6 +261,9 @@
         let restoredFilterSub = "";
         try {
             isRestoreFromDetail = sessionStorage.getItem("mg_restore_from_detail") === "true";
+            if (!isRestoreFromDetail && (scope?._isFromProjectDetail || window.__mgEnteringFromDetail)) {
+                isRestoreFromDetail = true;
+            }
             if (isRestoreFromDetail) {
                 restoreSlug = (sessionStorage.getItem("mg_restore_project_slug") || "").trim().toLowerCase();
                 restoreUrl = (sessionStorage.getItem("mg_restore_project_url") || "").trim().toLowerCase();
@@ -344,7 +348,12 @@
             if (!img || !wrap) return;
             const apply = () => {
                 if (img.naturalWidth && img.naturalHeight) {
-                    wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    wrap.style.aspectRatio = aspect;
+                    const card = wrap.closest(".project-card, .mobile-thumb-item");
+                    const linkHref = (card?.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                    const slug = linkHref.split("/").filter(Boolean).pop() || "";
+                    if (slug) KNOWN_PROJECT_ASPECTS[slug] = aspect;
                     if (callback) callback();
                 }
             };
@@ -400,8 +409,14 @@
             const mediaWrap = card.querySelector(".project-media-wrap");
             const link = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
             const slug = link.split("/").filter(Boolean).pop() || "";
-            if (mediaWrap && KNOWN_PROJECT_ASPECTS[slug]) {
-                mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+            if (mediaWrap) {
+                if (KNOWN_PROJECT_ASPECTS[slug]) {
+                    mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+                } else if (img && img.naturalWidth && img.naturalHeight) {
+                    const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    mediaWrap.style.aspectRatio = aspect;
+                    KNOWN_PROJECT_ASPECTS[slug] = aspect;
+                }
             }
             if (img) {
                 img.classList.add("project-img");
@@ -471,6 +486,16 @@
         rawCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
 
         const masterCards = rawCards.map((card) => card.cloneNode(true));
+        if (cachedPaginatedCards.length > 0) {
+            cachedPaginatedCards.forEach((card) => {
+                const key = getCardKey(card);
+                if (key && !seenProjectKeys.has(key)) {
+                    seenProjectKeys.add(key);
+                    masterCards.push(card.cloneNode(true));
+                }
+            });
+            masterCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
+        }
         let activeFilteredCount = masterCards.length;
         let isDesktopInfinite = activeFilteredCount > MIN_LOOP_THRESHOLD;
         let isGalleryRevealed = false;
@@ -567,6 +592,7 @@
         let initialFirstCardIndex = -1;
         let lastFrameTime = performance.now();
         let renderedTrackPos = null;
+        let allowScrollRatioScale = false;
 
         const getInitialScrollPos = () => {
             if (isDesktopInfinite) {
@@ -668,7 +694,7 @@
                     targetPos = initPos;
                     rawTargetPos = initPos;
                     if (restored !== null) userHasInteractedDesktop = true;
-                } else if (prevSetWidth > 0 && singleSetWidth > 0 && Math.abs(singleSetWidth - prevSetWidth) > 0.5) {
+                } else if (allowScrollRatioScale && prevSetWidth > 0 && singleSetWidth > 0 && Math.abs(singleSetWidth - prevSetWidth) > 0.5) {
                     const ratio = singleSetWidth / prevSetWidth;
                     scrollPos *= ratio;
                     targetPos *= ratio;
@@ -864,8 +890,14 @@
             const mediaWrap = card.querySelector(".project-media-wrap");
             const linkHref = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
             const slug = linkHref.split("/").filter(Boolean).pop() || "";
-            if (mediaWrap && KNOWN_PROJECT_ASPECTS[slug]) {
-                mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+            if (mediaWrap) {
+                if (KNOWN_PROJECT_ASPECTS[slug]) {
+                    mediaWrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+                } else if (img && img.naturalWidth && img.naturalHeight) {
+                    const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    mediaWrap.style.aspectRatio = aspect;
+                    KNOWN_PROJECT_ASPECTS[slug] = aspect;
+                }
             }
             if (img && mediaWrap) {
                 lockNaturalAspect(img, mediaWrap, scheduleMetricsRecalc);
@@ -1044,6 +1076,7 @@
                 currentMarqueeSpeed = 0;
             }
             track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+            renderedTrackPos = scrollPos;
 
             requestAnimationFrame(() => {
                 measureDesktopMetrics();
@@ -1216,7 +1249,9 @@
                     );
                     currentVh = targetVh;
                     updateZoomUI(currentVh);
+                    allowScrollRatioScale = true;
                     measureDesktopMetrics();
+                    allowScrollRatioScale = false;
                     checkHeaderCollisions();
                     sessionStorage.setItem(STORAGE_KEY, targetVh.toFixed(2));
                 }
@@ -1227,14 +1262,18 @@
 
                     currentVh = zoomStartVh + (targetVh - zoomStartVh) * eased;
                     updateZoomUI(currentVh);
+                    allowScrollRatioScale = true;
                     measureDesktopMetrics();
+                    allowScrollRatioScale = false;
                     checkHeaderCollisions();
 
                     if (progress >= 1) {
                         isZoomAnimating = false;
                         currentVh = targetVh;
                         updateZoomUI(currentVh);
+                        allowScrollRatioScale = true;
                         measureDesktopMetrics();
+                        allowScrollRatioScale = false;
                         checkHeaderCollisions();
                     }
                 }
@@ -2252,7 +2291,7 @@
             };
 
             let nextLink = scope.querySelector(".w-pagination-next, a[href*='_page='], a.w-pagination-next");
-            if (!nextLink) return;
+            if (!nextLink || cachedPaginatedCards.length > 0) return;
 
             let nextPageUrl = resolveUrl(nextLink.getAttribute("href") || "");
             const visitedUrls = new Set([window.location.href, window.location.origin + window.location.pathname]);
@@ -2281,7 +2320,9 @@
                         card.dataset.uniqueKey = key;
 
                         prepareCard(card);
-                        masterCards.push(card.cloneNode(true));
+                        const clone = card.cloneNode(true);
+                        masterCards.push(clone);
+                        cachedPaginatedCards.push(clone.cloneNode(true));
                         addedCount++;
                     });
 
@@ -2354,8 +2395,16 @@
                     trackCards.forEach((card) => {
                         const img = card.querySelector(".project-img");
                         const wrap = card.querySelector(".project-media-wrap");
-                        if (img && wrap && img.naturalWidth && img.naturalHeight) {
-                            wrap.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                        const linkHref = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+                        const slug = linkHref.split("/").filter(Boolean).pop() || "";
+                        if (wrap) {
+                            if (KNOWN_PROJECT_ASPECTS[slug]) {
+                                wrap.style.aspectRatio = KNOWN_PROJECT_ASPECTS[slug];
+                            } else if (img && img.naturalWidth && img.naturalHeight) {
+                                const aspect = `${img.naturalWidth} / ${img.naturalHeight}`;
+                                wrap.style.aspectRatio = aspect;
+                                KNOWN_PROJECT_ASPECTS[slug] = aspect;
+                            }
                         }
                     });
 
@@ -2365,6 +2414,7 @@
                         scrollPos = restored;
                         targetPos = restored;
                         rawTargetPos = restored;
+                        renderedTrackPos = restored;
                         userHasInteractedDesktop = true;
                     } else if (!userHasInteractedDesktop) {
                         const initPos = getInitialScrollPos();
@@ -2375,6 +2425,7 @@
                     clearRestorationState();
 
                     track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                    renderedTrackPos = scrollPos;
                     checkHeaderCollisions();
                 } else {
                     measureMobileThumbMetrics();
@@ -2389,8 +2440,8 @@
                 startMarqueeDelay();
             };
 
-            // If section was already prepared by page transition, reveal immediately without Safari decode delay
-            if (section.classList.contains("is-ready")) {
+            // If section was already prepared by page transition or returning from project detail, reveal immediately without Safari decode delay
+            if (isRestoreFromDetail || section.classList.contains("is-ready")) {
                 reveal();
                 if (!isMobileLayout()) {
                     let desktopMeasureTimer = null;
@@ -2450,8 +2501,12 @@
         revealGalleryWhenReady();
 
         let lastLayoutIsMobile = isMobileLayout();
+        let lastWindowWidth = window.innerWidth;
         window.addEventListener("resize", () => {
             const currentIsMobile = isMobileLayout();
+            const widthChanged = Math.abs(window.innerWidth - lastWindowWidth) > 1;
+            lastWindowWidth = window.innerWidth;
+
             if (currentIsMobile !== lastLayoutIsMobile) {
                 lastLayoutIsMobile = currentIsMobile;
                 const filteredToUse = currentFiltered.length ? currentFiltered : masterCards;
@@ -2465,7 +2520,9 @@
             }
 
             if (!currentIsMobile) {
+                allowScrollRatioScale = widthChanged;
                 measureDesktopMetrics();
+                allowScrollRatioScale = false;
                 checkHeaderCollisions();
                 if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
                     startHeaderMarquee(trackCards[hoveredCardIndex]);
