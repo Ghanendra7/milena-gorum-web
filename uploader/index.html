@@ -392,10 +392,7 @@
   <div id="newProjectModal" class="modal-backdrop" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="newProjectModalTitle">
       <div class="modal-header">
-        <div>
-          <h3 id="newProjectModalTitle">Create New Project</h3>
-          <p class="muted">Creates the Webflow Project item and opens it so you can drop slides right away.</p>
-        </div>
+        <h3 id="newProjectModalTitle">Create New Project</h3>
         <button id="closeNewProjectBtn" type="button" class="btn btn-ghost btn-sm">Cancel</button>
       </div>
       <form id="newProjectForm" class="schema-body">
@@ -428,7 +425,7 @@
             </label>
           </div>
           <div class="field field-span-2">
-            <label for="newProjDetails">Project Details (Credits)</label>
+            <label for="newProjDetails">Description / Credits</label>
             <textarea id="newProjDetails" rows="2" placeholder="Credits or description"></textarea>
           </div>
           <div class="field field-span-2">
@@ -437,8 +434,7 @@
           </div>
         </div>
         <p id="newProjError" class="error-text" hidden></p>
-        <div class="modal-footer" style="padding: 14px 0 0; border-top: 1px solid var(--border);">
-          <span class="field-hint">Created as Draft until its first Cover/Gallery slide is added.</span>
+        <div class="modal-footer" style="padding: 14px 0 0; border-top: 1px solid var(--border); justify-content: flex-end;">
           <button id="submitNewProjectBtn" type="submit" class="btn btn-primary btn-sm">Create &amp; Open
             Project</button>
         </div>
