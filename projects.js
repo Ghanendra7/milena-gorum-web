@@ -1055,9 +1055,10 @@
 
             if (wasInteracted) {
                 userHasInteractedDesktop = true;
-                scrollPos = prevScroll;
-                targetPos = prevScroll;
-                rawTargetPos = prevScroll;
+                const initPos = getInitialScrollPos();
+                scrollPos = initPos;
+                targetPos = initPos;
+                rawTargetPos = initPos;
                 track.classList.remove("is-at-start");
             } else {
                 const restored = getRestoredScrollPos();
@@ -1114,6 +1115,13 @@
                 if (isMobileLayout()) return;
                 if (e.ctrlKey || e.metaKey) return;
 
+                const isTransitionActive = Boolean(
+                    window.__mgIsTransitioning ||
+                    window.__mgEnteringFromHome ||
+                    (section && section.classList.contains("is-marquee-paused"))
+                );
+                if (isTransitionActive) return;
+
                 e.preventDefault();
                 userHasInteractedDesktop = true;
                 if (isMarqueeDelayed) {
@@ -1166,6 +1174,14 @@
 
         trackWrapper.addEventListener("pointerdown", (e) => {
             if (isMobileLayout() || e.button !== 0) return;
+
+            const isTransitionActive = Boolean(
+                window.__mgIsTransitioning ||
+                window.__mgEnteringFromHome ||
+                (section && section.classList.contains("is-marquee-paused"))
+            );
+            if (isTransitionActive) return;
+
             userHasInteractedDesktop = true;
             if (isMarqueeDelayed) {
                 isMarqueeDelayed = false;
@@ -2339,23 +2355,28 @@
                                 const oldSingleSetWidth = singleSetWidth;
                                 const oldInitPos = oldSingleSetWidth > 0 ? (oldSingleSetWidth - getInitialStartOffset()) : 0;
                                 const scrollDelta = scrollPos - oldInitPos;
-                                const prevScroll = scrollPos;
 
                                 applyFilters();
 
+                                const newInitPos = getInitialScrollPos();
+                                const newScroll = newInitPos + scrollDelta;
+                                scrollPos = newScroll;
+                                targetPos = newScroll;
+                                rawTargetPos = newScroll;
+                                renderedTrackPos = newScroll;
+
                                 if (wasInteracted) {
                                     userHasInteractedDesktop = true;
-                                    scrollPos = prevScroll;
-                                    targetPos = prevScroll;
-                                    rawTargetPos = prevScroll;
-                                } else {
-                                    const newInitPos = getInitialScrollPos();
-                                    const newScroll = newInitPos + scrollDelta;
-                                    scrollPos = newScroll;
-                                    targetPos = newScroll;
-                                    rawTargetPos = newScroll;
+                                    track.classList.remove("is-at-start");
+                                    isMarqueeDelayed = false;
+                                    if (projectsMarqueeDelayTimer) {
+                                        clearTimeout(projectsMarqueeDelayTimer);
+                                        projectsMarqueeDelayTimer = null;
+                                    }
                                 }
+
                                 track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                                checkHeaderCollisions();
                             } else {
                                 applyFilters();
                             }
@@ -2368,9 +2389,14 @@
                         );
 
                         if (isTransitioning) {
-                            window.addEventListener("mg-transition-complete", () => {
+                            let committed = false;
+                            const doCommit = () => {
+                                if (committed) return;
+                                committed = true;
                                 commitPagination();
-                            }, { once: true, signal });
+                            };
+                            window.addEventListener("mg-transition-complete", doCommit, { once: true, signal });
+                            setTimeout(doCommit, 2500);
                         } else {
                             commitPagination();
                         }
