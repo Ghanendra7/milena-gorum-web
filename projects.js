@@ -2343,20 +2343,22 @@
 
                         prepareCard(card);
                         const clone = card.cloneNode(true);
-                        masterCards.push(clone);
-                        cachedPaginatedCards.push(clone.cloneNode(true));
                         newAddedClones.push(clone);
                     });
 
                     if (newAddedClones.length > 0) {
                         const addedCount = newAddedClones.length;
-                        masterCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
-                        activeFilteredCount = masterCards.length;
-                        isDesktopInfinite = activeFilteredCount > MIN_LOOP_THRESHOLD;
-
-                        updateAvailableSubFilterButtons();
 
                         const commitPagination = () => {
+                            newAddedClones.forEach((clone) => {
+                                masterCards.push(clone);
+                                cachedPaginatedCards.push(clone.cloneNode(true));
+                            });
+                            masterCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
+                            activeFilteredCount = masterCards.length;
+                            isDesktopInfinite = activeFilteredCount > MIN_LOOP_THRESHOLD;
+                            updateAvailableSubFilterButtons();
+
                             if (!isMobileLayout()) {
                                 const wasInteracted = userHasInteractedDesktop;
                                 const oldSingleSetWidth = singleSetWidth;
@@ -2364,56 +2366,64 @@
                                 const scrollDelta = scrollPos - oldInitPos;
 
                                 // Non-destructive in-place append if viewing default "all" filter and track is already mounted
-                                const canInsertInPlace = activeParent === "all" && activeSub === "all" && isDesktopInfinite && trackCards.length > 0 && addedCount > 0;
+                                const prevCount = masterCards.length - addedCount;
+                                const setsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / activeFilteredCount) + 2));
+                                const prevSetsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / prevCount) + 2));
+                                const canInsertInPlace = activeParent === "all" && activeSub === "all" && isDesktopInfinite && trackCards.length === prevCount * setsNeeded && setsNeeded === prevSetsNeeded && addedCount > 0;
 
                                 if (canInsertInPlace) {
-                                    const prevCount = masterCards.length - addedCount;
                                     const newTemplates = newAddedClones;
-                                    const setsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / activeFilteredCount) + 2));
-                                    const prevSetsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / prevCount) + 2));
 
-                                    if (setsNeeded === prevSetsNeeded && trackCards.length === prevCount * setsNeeded) {
-                                        for (let s = setsNeeded - 1; s >= 0; s--) {
-                                            const insertBeforeEl = s < setsNeeded - 1 ? trackCards[(s + 1) * prevCount] : null;
-                                            const frag = document.createDocumentFragment();
-                                            newTemplates.forEach((tpl) => {
-                                                const clone = tpl.cloneNode(true);
-                                                if (s > 0) clone.setAttribute("aria-hidden", "true");
-                                                bindDesktopCard(clone, trackCards.length);
-                                                frag.appendChild(clone);
-                                            });
-                                            if (insertBeforeEl) {
-                                                track.insertBefore(frag, insertBeforeEl);
-                                            } else {
-                                                track.appendChild(frag);
-                                            }
+                                    for (let s = setsNeeded - 1; s >= 0; s--) {
+                                        const insertBeforeEl = s < setsNeeded - 1 ? trackCards[(s + 1) * prevCount] : null;
+                                        const frag = document.createDocumentFragment();
+                                        newTemplates.forEach((tpl) => {
+                                            const clone = tpl.cloneNode(true);
+                                            if (s > 0) clone.setAttribute("aria-hidden", "true");
+                                            bindDesktopCard(clone, trackCards.length);
+                                            frag.appendChild(clone);
+                                        });
+                                        if (insertBeforeEl) {
+                                            track.insertBefore(frag, insertBeforeEl);
+                                        } else {
+                                            track.appendChild(frag);
                                         }
+                                    }
 
-                                        trackCards = Array.from(track.children);
-                                        initialFirstCardIndex = isDesktopInfinite ? activeFilteredCount : 0;
-                                        measureDesktopMetrics();
+                                    trackCards = Array.from(track.children);
+                                    initialFirstCardIndex = isDesktopInfinite ? activeFilteredCount : 0;
+                                    measureDesktopMetrics();
 
+                                    if (!wasInteracted) {
+                                        const initPos = getInitialScrollPos();
+                                        scrollPos = initPos;
+                                        targetPos = initPos;
+                                        rawTargetPos = initPos;
+                                        renderedTrackPos = initPos;
+                                        track.style.transform = `translate3d(${-initPos}px, 0, 0)`;
+                                        track.classList.add("is-at-start");
+                                    } else {
                                         const setWidthDiff = singleSetWidth - oldSingleSetWidth;
                                         scrollPos += setWidthDiff;
                                         targetPos += setWidthDiff;
                                         rawTargetPos += setWidthDiff;
                                         renderedTrackPos = scrollPos;
                                         track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
-                                        checkHeaderCollisions();
-                                        return;
                                     }
+                                    checkHeaderCollisions();
+                                    return;
                                 }
 
                                 applyFilters();
 
-                                const newInitPos = getInitialScrollPos();
-                                const newScroll = newInitPos + scrollDelta;
-                                scrollPos = newScroll;
-                                targetPos = newScroll;
-                                rawTargetPos = newScroll;
-                                renderedTrackPos = newScroll;
-
-                                if (wasInteracted) {
+                                if (!wasInteracted) {
+                                    const initPos = getInitialScrollPos();
+                                    scrollPos = initPos;
+                                    targetPos = initPos;
+                                    rawTargetPos = initPos;
+                                    renderedTrackPos = initPos;
+                                    track.classList.add("is-at-start");
+                                } else {
                                     userHasInteractedDesktop = true;
                                     track.classList.remove("is-at-start");
                                     isMarqueeDelayed = false;
@@ -2421,6 +2431,12 @@
                                         clearTimeout(projectsMarqueeDelayTimer);
                                         projectsMarqueeDelayTimer = null;
                                     }
+                                    const newInitPos = getInitialScrollPos();
+                                    const newScroll = newInitPos + scrollDelta;
+                                    scrollPos = newScroll;
+                                    targetPos = newScroll;
+                                    rawTargetPos = newScroll;
+                                    renderedTrackPos = newScroll;
                                 }
 
                                 track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
