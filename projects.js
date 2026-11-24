@@ -14,6 +14,42 @@
     let activeHeaderMarqueeTimeline = null;
     let activeHeaderMarqueeCard = null;
     let cachedPaginatedCards = [];
+    let isPrefetchingPagination = false;
+
+    function prefetchProjectsPagination() {
+        if (cachedPaginatedCards.length > 0 || isPrefetchingPagination) return;
+        isPrefetchingPagination = true;
+        fetch("/projects?_page=2")
+            .then((res) => (res.ok ? res.text() : ""))
+            .then((html) => {
+                if (!html) return;
+                const doc = new DOMParser().parseFromString(html, "text/html");
+                const candidateCards = Array.from(
+                    doc.querySelectorAll(".projects-track > .project-card, .projects-track > .w-dyn-item, .projects-track-wrapper .projects-track > div, .project-card")
+                );
+                candidateCards.forEach((card) => {
+                    if (!card.classList.contains("project-card") && !card.classList.contains("w-dyn-item")) return;
+                    if (card.getAttribute("aria-hidden") === "true") return;
+                    if (!card.querySelector(".project-link") && !card.querySelector(".project-media-wrap") && !card.querySelector("img")) return;
+                    cachedPaginatedCards.push(card.cloneNode(true));
+                });
+            })
+            .catch(() => {})
+            .finally(() => {
+                isPrefetchingPagination = false;
+            });
+    }
+
+    function bindProjectsPrefetch() {
+        const triggers = document.querySelectorAll('a[href="/projects"], a[href*="/projects"], .project-nav-link, .nav-reset-scale');
+        triggers.forEach((el) => {
+            if (el._hasPrefetchBound) return;
+            el._hasPrefetchBound = true;
+            el.addEventListener("pointerenter", prefetchProjectsPagination, { passive: true, once: true });
+            el.addEventListener("touchstart", prefetchProjectsPagination, { passive: true, once: true });
+            el.addEventListener("focus", prefetchProjectsPagination, { passive: true, once: true });
+        });
+    }
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -488,9 +524,11 @@
         const masterCards = rawCards.map((card) => card.cloneNode(true));
         if (cachedPaginatedCards.length > 0) {
             cachedPaginatedCards.forEach((card) => {
+                prepareCard(card);
                 const key = getCardKey(card);
                 if (key && !seenProjectKeys.has(key)) {
                     seenProjectKeys.add(key);
+                    card.dataset.uniqueKey = key;
                     masterCards.push(card.cloneNode(true));
                 }
             });
@@ -1251,7 +1289,7 @@
                     const metric = cachedCardMetrics[initialFirstCardIndex];
                     const cardLeft = metric.left - scrollPos;
                     const cardRight = cardLeft + metric.width;
-                    if (cardRight <= 0 || cardLeft >= window.innerWidth) {
+                    if (metric.width > 0 && (cardRight <= 0 || cardLeft >= window.innerWidth)) {
                         track.classList.remove("is-at-start");
                     }
                 }
@@ -2356,6 +2394,47 @@
                                 const oldInitPos = oldSingleSetWidth > 0 ? (oldSingleSetWidth - getInitialStartOffset()) : 0;
                                 const scrollDelta = scrollPos - oldInitPos;
 
+                                // Non-destructive in-place append if viewing default "all" filter and track is already mounted
+                                const canInsertInPlace = activeParent === "all" && activeSub === "all" && isDesktopInfinite && trackCards.length > 0 && addedCount > 0;
+
+                                if (canInsertInPlace) {
+                                    const prevCount = masterCards.length - addedCount;
+                                    const newTemplates = masterCards.filter((c) => getCardSequence(c) > prevCount);
+                                    const setsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / activeFilteredCount) + 2));
+                                    const prevSetsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / prevCount) + 2));
+
+                                    if (setsNeeded === prevSetsNeeded && trackCards.length === prevCount * setsNeeded) {
+                                        for (let s = setsNeeded - 1; s >= 0; s--) {
+                                            const insertBeforeEl = s < setsNeeded - 1 ? trackCards[(s + 1) * prevCount] : null;
+                                            const frag = document.createDocumentFragment();
+                                            newTemplates.forEach((tpl) => {
+                                                const clone = tpl.cloneNode(true);
+                                                if (s > 0) clone.setAttribute("aria-hidden", "true");
+                                                bindDesktopCard(clone, trackCards.length);
+                                                frag.appendChild(clone);
+                                            });
+                                            if (insertBeforeEl) {
+                                                track.insertBefore(frag, insertBeforeEl);
+                                            } else {
+                                                track.appendChild(frag);
+                                            }
+                                        }
+
+                                        trackCards = Array.from(track.children);
+                                        initialFirstCardIndex = isDesktopInfinite ? activeFilteredCount : 0;
+                                        measureDesktopMetrics();
+
+                                        const setWidthDiff = singleSetWidth - oldSingleSetWidth;
+                                        scrollPos += setWidthDiff;
+                                        targetPos += setWidthDiff;
+                                        rawTargetPos += setWidthDiff;
+                                        renderedTrackPos = scrollPos;
+                                        track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                                        checkHeaderCollisions();
+                                        return;
+                                    }
+                                }
+
                                 applyFilters();
 
                                 const newInitPos = getInitialScrollPos();
@@ -2635,9 +2714,12 @@
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
+            bindProjectsPrefetch();
             if (document.querySelector(".projects-section")) initProjects();
         });
     } else {
+        bindProjectsPrefetch();
         if (document.querySelector(".projects-section")) initProjects();
     }
+    window.addEventListener("mg-transition-complete", bindProjectsPrefetch);
 })();
