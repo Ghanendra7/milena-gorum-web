@@ -563,6 +563,9 @@
                     triggerSteppedZoom(dir);
                 } else {
                     sessionStorage.setItem(STORAGE_KEY, targetVh.toFixed(2));
+                    if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
+                        startHeaderMarquee(trackCards[hoveredCardIndex]);
+                    }
                 }
                 holdDirection = 0;
                 isHolding = false;
@@ -843,7 +846,16 @@
             gsap.set(inner, { x: 0 });
 
             const containerWidth = textsWrap.clientWidth;
-            const textWidth = Math.ceil(inner.scrollWidth || inner.getBoundingClientRect().width);
+            const isMinSize = Boolean(section && section.classList.contains("is-min-size"));
+            const client = inner.querySelector(".project-client");
+            let textWidth;
+
+            if (isMinSize && client) {
+                textWidth = Math.ceil(client.scrollWidth || client.getBoundingClientRect().width);
+            } else {
+                textWidth = Math.ceil(inner.scrollWidth || inner.getBoundingClientRect().width);
+            }
+
             const overflowDistance = textWidth - containerWidth;
 
             if (overflowDistance > 1) {
@@ -1297,6 +1309,9 @@
                         measureDesktopMetrics();
                         allowScrollRatioScale = false;
                         checkHeaderCollisions();
+                        if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
+                            startHeaderMarquee(trackCards[hoveredCardIndex]);
+                        }
                     }
                 }
 
