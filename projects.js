@@ -14,42 +14,6 @@
     let activeHeaderMarqueeTimeline = null;
     let activeHeaderMarqueeCard = null;
     let cachedPaginatedCards = [];
-    let isPrefetchingPagination = false;
-
-    function prefetchProjectsPagination() {
-        if (cachedPaginatedCards.length > 0 || isPrefetchingPagination) return;
-        isPrefetchingPagination = true;
-        fetch("/projects?_page=2")
-            .then((res) => (res.ok ? res.text() : ""))
-            .then((html) => {
-                if (!html) return;
-                const doc = new DOMParser().parseFromString(html, "text/html");
-                const candidateCards = Array.from(
-                    doc.querySelectorAll(".projects-track > .project-card, .projects-track > .w-dyn-item, .projects-track-wrapper .projects-track > div, .project-card")
-                );
-                candidateCards.forEach((card) => {
-                    if (!card.classList.contains("project-card") && !card.classList.contains("w-dyn-item")) return;
-                    if (card.getAttribute("aria-hidden") === "true") return;
-                    if (!card.querySelector(".project-link") && !card.querySelector(".project-media-wrap") && !card.querySelector("img")) return;
-                    cachedPaginatedCards.push(card.cloneNode(true));
-                });
-            })
-            .catch(() => {})
-            .finally(() => {
-                isPrefetchingPagination = false;
-            });
-    }
-
-    function bindProjectsPrefetch() {
-        const triggers = document.querySelectorAll('a[href="/projects"], a[href*="/projects"], .project-nav-link, .nav-reset-scale');
-        triggers.forEach((el) => {
-            if (el._hasPrefetchBound) return;
-            el._hasPrefetchBound = true;
-            el.addEventListener("pointerenter", prefetchProjectsPagination, { passive: true, once: true });
-            el.addEventListener("touchstart", prefetchProjectsPagination, { passive: true, once: true });
-            el.addEventListener("focus", prefetchProjectsPagination, { passive: true, once: true });
-        });
-    }
 
     function initProjects(container) {
         const scope = container || document.querySelector(".projects-section") || document;
@@ -475,10 +439,14 @@
         };
 
         const getCardKey = (el) => {
-            const linkHref = el.querySelector(".project-link")?.getAttribute("href") || "";
+            const linkHref = (el.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase().trim();
+            const slug = linkHref.split("/").filter(Boolean).pop() || "";
+            if (slug) return slug;
+            const clientText = (el.querySelector(".project-client")?.textContent || "").toLowerCase().trim();
             const numText = el.querySelector(".project-number-text, .project-num, .project-number")?.textContent?.trim() || "";
-            const clientText = el.querySelector(".project-client")?.textContent?.trim() || "";
-            return `${linkHref}|${numText}|${clientText}`;
+            const parsed = parseInt(numText, 10);
+            const numKey = !isNaN(parsed) ? String(parsed) : numText;
+            return `${linkHref}|${numKey}|${clientText}`;
         };
 
         const getCardSequence = (el) => {
@@ -2360,7 +2328,7 @@
                     const newCandidateCards = Array.from(
                         doc.querySelectorAll(".projects-track > .project-card, .projects-track > .w-dyn-item, .projects-track-wrapper .projects-track > div, .project-card")
                     );
-                    let addedCount = 0;
+                    const newAddedClones = [];
 
                     newCandidateCards.forEach((card) => {
                         if (!card.classList.contains("project-card") && !card.classList.contains("w-dyn-item")) return;
@@ -2377,10 +2345,11 @@
                         const clone = card.cloneNode(true);
                         masterCards.push(clone);
                         cachedPaginatedCards.push(clone.cloneNode(true));
-                        addedCount++;
+                        newAddedClones.push(clone);
                     });
 
-                    if (addedCount > 0) {
+                    if (newAddedClones.length > 0) {
+                        const addedCount = newAddedClones.length;
                         masterCards.sort((a, b) => getCardSequence(a) - getCardSequence(b));
                         activeFilteredCount = masterCards.length;
                         isDesktopInfinite = activeFilteredCount > MIN_LOOP_THRESHOLD;
@@ -2399,7 +2368,7 @@
 
                                 if (canInsertInPlace) {
                                     const prevCount = masterCards.length - addedCount;
-                                    const newTemplates = masterCards.filter((c) => getCardSequence(c) > prevCount);
+                                    const newTemplates = newAddedClones;
                                     const setsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / activeFilteredCount) + 2));
                                     const prevSetsNeeded = Math.max(3, Math.min(5, Math.ceil(30 / prevCount) + 2));
 
@@ -2714,12 +2683,9 @@
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
-            bindProjectsPrefetch();
             if (document.querySelector(".projects-section")) initProjects();
         });
     } else {
-        bindProjectsPrefetch();
         if (document.querySelector(".projects-section")) initProjects();
     }
-    window.addEventListener("mg-transition-complete", bindProjectsPrefetch);
 })();
