@@ -559,11 +559,11 @@ function initOsmoBoilerplate() {
                         const cardLeft = card.offsetLeft - (taggedCards[0]?.offsetLeft || 0);
                         return cardLeft < viewportWidth + 120;
                     });
-                    visibleCards = onScreen.length ? onScreen.slice(0, 7) : taggedCards.slice(0, 5);
+                    visibleCards = onScreen.length ? onScreen.slice(0, 15) : taggedCards.slice(0, 5);
                 } else {
                     const allCards = Array.from(section.querySelectorAll(".desktop-gallery-stage .project-card"));
                     const setSize = Math.floor(allCards.length / 3);
-                    visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 5) : allCards.slice(0, 5);
+                    visibleCards = setSize >= 1 ? allCards.slice(setSize, setSize + 15) : allCards.slice(0, 5);
                 }
             }
 
@@ -683,11 +683,14 @@ function initOsmoBoilerplate() {
             // Stagger entrance plays as the page rises into the viewport
             const cardsStart = isMobile ? 0.55 : 0.85;
             if (visibleCards.length) {
+                const cardStagger = visibleCards.length > 6
+                    ? Math.max(0.045, 0.60 / (visibleCards.length - 1))
+                    : 0.10;
                 tl.to(visibleCards, {
                     opacity: 1,
                     yPercent: 0,
                     duration: 0.85,
-                    stagger: 0.10,
+                    stagger: cardStagger,
                     ease: "power2.out",
                     force3D: true,
                     onComplete: () => {
