@@ -308,6 +308,10 @@ function initOsmoBoilerplate() {
                 resolve();
             };
 
+            if (next && window.__mgEnteringFromDetail) {
+                next._isFromProjectDetail = true;
+            }
+
             mountPage(next);
 
             if (reducedMotion) {
@@ -1176,32 +1180,26 @@ function initOsmoBoilerplate() {
             document.body.classList.remove("homepage");
         }
 
-        const isInstantTransition = nextNs === "project-detail" || currentNs === "project-detail";
+        const initialProps = {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            force3D: true,
+        };
 
-        if (!isInstantTransition) {
-            const initialProps = {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-                overflow: "hidden",
-                force3D: true,
-            };
-
-            if (
-                (nextNs === "projects" || nextNs === "index" || nextNs === "information" || nextNs === "info") &&
-                currentNs === "home"
-            ) {
-                initialProps.yPercent = 100;
-            }
-
-            gsap.set(data.next.container, initialProps);
-        } else {
-            gsap.set(data.next.container, { autoAlpha: 1 });
+        if (
+            (nextNs === "projects" || nextNs === "index" || nextNs === "information" || nextNs === "info") &&
+            currentNs === "home"
+        ) {
+            initialProps.yPercent = 100;
         }
+
+        gsap.set(data.next.container, initialProps);
 
         if (lenis && typeof lenis.stop === "function") {
             lenis.stop();
@@ -1320,10 +1318,10 @@ function initOsmoBoilerplate() {
                 sync: true,
                 to: { namespace: ["project-detail"] },
                 async leave(data) {
-                    return runInstantLeave(data.current.container, data.next.container);
+                    return runPageLeaveAnimation(data.current.container, data.next.container);
                 },
                 async enter(data) {
-                    return runInstantEnter(data.next.container);
+                    return runPageEnterAnimation(data.next.container);
                 },
             },
             {
@@ -1331,7 +1329,7 @@ function initOsmoBoilerplate() {
                 sync: true,
                 from: { namespace: ["project-detail"] },
                 async leave(data) {
-                    return runInstantLeave(data.current.container, data.next.container);
+                    return runPageLeaveAnimation(data.current.container, data.next.container);
                 },
                 async enter(data) {
                     if (data.next?.container) {
@@ -1339,7 +1337,7 @@ function initOsmoBoilerplate() {
                     }
                     window.__mgEnteringFromDetail = true;
                     try {
-                        return await runInstantEnter(data.next.container);
+                        return await runPageEnterAnimation(data.next.container);
                     } finally {
                         window.__mgEnteringFromDetail = false;
                     }
