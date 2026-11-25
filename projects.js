@@ -366,6 +366,9 @@
 
         const prepareCard = (card) => {
             card.classList.add("project-card");
+            card.setAttribute("draggable", "false");
+            const initialLink = card.querySelector(".project-link");
+            if (initialLink) initialLink.setAttribute("draggable", "false");
             const numEl = card.querySelector(".project-number-text, .project-num, .project-number");
             if (numEl) numEl.textContent = formatNum(numEl.textContent);
 
@@ -899,14 +902,17 @@
                 if (hoveredCardIndex !== -1 && trackCards[hoveredCardIndex]) {
                     startHeaderMarquee(trackCards[hoveredCardIndex]);
                 }
-                track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                track.style.transform = `translate3d(${(-scrollPos).toFixed(2)}px, 0, 0)`;
             });
         };
 
         const bindDesktopCard = (card, cardIdx) => {
+            card.setAttribute("draggable", "false");
             const img = card.querySelector(".project-img");
             const mediaWrap = card.querySelector(".project-media-wrap");
-            const linkHref = (card.querySelector(".project-link")?.getAttribute("href") || "").toLowerCase();
+            const cardLink = card.querySelector(".project-link");
+            if (cardLink) cardLink.setAttribute("draggable", "false");
+            const linkHref = (cardLink?.getAttribute("href") || "").toLowerCase();
             const slug = linkHref.split("/").filter(Boolean).pop() || "";
             if (mediaWrap) {
                 if (KNOWN_PROJECT_ASPECTS[slug]) {
@@ -1094,7 +1100,7 @@
             if (!isDesktopInfinite) {
                 currentMarqueeSpeed = 0;
             }
-            track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+            track.style.transform = `translate3d(${(-scrollPos).toFixed(2)}px, 0, 0)`;
             renderedTrackPos = scrollPos;
 
             requestAnimationFrame(() => {
@@ -1106,7 +1112,7 @@
                     rawTargetPos = refreshedInitPos;
                 }
                 checkHeaderCollisions();
-                track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                track.style.transform = `translate3d(${(-scrollPos).toFixed(2)}px, 0, 0)`;
             });
         };
 
@@ -1189,6 +1195,13 @@
             },
             { passive: false, signal }
         );
+
+        trackWrapper.addEventListener("dragstart", (e) => e.preventDefault(), { signal });
+        window.addEventListener("dragstart", (e) => {
+            if (e.target && e.target.closest && e.target.closest(".projects-section, .projects-track-wrapper, .project-card, .project-link, .desktop-gallery-stage")) {
+                e.preventDefault();
+            }
+        }, { signal });
 
         trackWrapper.addEventListener("pointerdown", (e) => {
             if (isMobileLayout() || e.button !== 0) return;
@@ -1336,11 +1349,23 @@
                         targetPos = rawTargetPos;
                         const dragAlpha = 1 - Math.pow(1 - DRAG_LERP_FACTOR, dtScale);
                         scrollPos += (targetPos - scrollPos) * dragAlpha;
-                    } else {
+                    } else if (isWheelActive) {
                         const stage1Alpha = 1 - Math.pow(1 - WHEEL_SMOOTH_STAGE1, dtScale);
                         const stage2Alpha = 1 - Math.pow(1 - WHEEL_SMOOTH_STAGE2, dtScale);
                         targetPos += (rawTargetPos - targetPos) * stage1Alpha;
                         scrollPos += (targetPos - scrollPos) * stage2Alpha;
+                    } else {
+                        const distToTarget = Math.abs(rawTargetPos - targetPos);
+                        const distToScroll = Math.abs(targetPos - scrollPos);
+                        if (distToTarget > 0.05 || distToScroll > 0.05) {
+                            const stage1Alpha = 1 - Math.pow(1 - WHEEL_SMOOTH_STAGE1, dtScale);
+                            const stage2Alpha = 1 - Math.pow(1 - WHEEL_SMOOTH_STAGE2, dtScale);
+                            targetPos += (rawTargetPos - targetPos) * stage1Alpha;
+                            scrollPos += (targetPos - scrollPos) * stage2Alpha;
+                        } else {
+                            targetPos = rawTargetPos;
+                            scrollPos = rawTargetPos;
+                        }
                     }
 
                     if (singleSetWidth > 0) {
@@ -1365,7 +1390,7 @@
                 }
 
                 if (renderedTrackPos === null || Math.abs(renderedTrackPos - scrollPos) > 0.02) {
-                    track.style.transform = `translate3d(${-scrollPos}px, 0, 0)`;
+                    track.style.transform = `translate3d(${(-scrollPos).toFixed(2)}px, 0, 0)`;
                     renderedTrackPos = scrollPos;
                 }
             }

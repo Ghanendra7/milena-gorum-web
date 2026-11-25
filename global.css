@@ -381,14 +381,24 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 /* ========================================================
    3. PROJECTS OVERVIEW STYLES
    ======================================================== */
+.project-card,
 .project-img,
 .project-link,
+.project-header,
+.project-texts-wrap,
+.project-media-wrap,
 .btn-zoom-in,
 .btn-zoom-out,
 .filter-btn,
 .sub-btn {
     -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
     -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
@@ -438,10 +448,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
 .project-card {
     flex-shrink: 0;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
 }
 
 .projects-track.is-wheel-scrolling .project-card {
@@ -471,10 +477,6 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     min-width: calc(var(--card-height, 50vh) * (9 / 16));
     overflow: hidden;
     background-color: var(--media-bg-color);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
 }
 
 .project-img {
