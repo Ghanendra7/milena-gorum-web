@@ -1440,7 +1440,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-row-header {
     align-items: baseline;
     box-sizing: border-box;
-    cursor: pointer;
+    cursor: default;
 }
 
 .index-details-stack,
@@ -1451,6 +1451,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-col-client,
 .index-col-title {
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .index-col-num {

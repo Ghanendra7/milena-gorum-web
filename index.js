@@ -1232,9 +1232,14 @@
                     return;
                 }
 
-                // Desktop Click: Clicking the name or any part of the line opens image 01
+                // Desktop Click: Only clicking the project info (name, sequence number, credit/title) opens the project
                 if (e.target.closest("a")) return;
                 if (e.target.closest(".index-media-desktop")) return; // Individual media buttons handle their own click
+
+                const isProjectInfo = e.target.closest(
+                    ".index-col-num, .index-client-wrap, .index-col-client, .index-title-wrap, .index-col-title, .index-details-stack, .num-title-container"
+                );
+                if (!isProjectInfo) return;
 
                 const slug = getProjectSlug(row);
                 if (slug) {
