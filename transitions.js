@@ -110,7 +110,8 @@ function initOsmoBoilerplate() {
     // -----------------------------------------
     const STANDALONE_X_RE = /(\s|^)[xX](?=\s|$)/g;
     const OPEN_DOUBLE_FROM_SINGLE_RE = /(^|[\s(\[{—–\u201C\u2018])''(?=\S)/g;
-    const OPEN_SINGLE_QUOTE_RE = /(^|[\s(\[{—–\u201C])'(?=\S)/g;
+    const INTRA_WORD_APOSTROPHE_RE = /([A-Za-z0-9\u00C0-\u024F])'([A-Za-z0-9\u00C0-\u024F])/g;
+    const PAIRED_SINGLE_QUOTE_RE = /(^|[\s(\[{—–\u201C])'(\S(?:[^'\n]*?\S)?)'(?=$|[\s.,!?:;)\]}—–])/g;
     const TYPOGRAPHY_SKIP_SELECTOR = "script, style, noscript, textarea, input, [contenteditable]";
 
     function normalizeTypographyText(str) {
@@ -124,11 +125,15 @@ function initOsmoBoilerplate() {
             out = out.replace(STANDALONE_X_RE, "$1\u00D7");
         }
         if (hasQuote) {
-            // Convert ''...'' to curly double quotes “...” first, then single '...' / apostrophes to ‘...’ / ’
+            // 1. ''Title'' -> “Title”
+            // 2. Intra-word apostrophes (Victoria's -> Victoria’s)
+            // 3. Paired 'Title' -> “Title”
+            // 4. Remaining apostrophes (FW '25 -> FW ’25, Clients' -> Clients’)
             out = out
                 .replace(OPEN_DOUBLE_FROM_SINGLE_RE, "$1\u201C")
                 .replace(/''/g, "\u201D")
-                .replace(OPEN_SINGLE_QUOTE_RE, "$1\u2018")
+                .replace(INTRA_WORD_APOSTROPHE_RE, "$1\u2019$2")
+                .replace(PAIRED_SINGLE_QUOTE_RE, "$1\u201C$2\u201D")
                 .replace(/'/g, "\u2019");
         }
         return out;
