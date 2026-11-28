@@ -49,6 +49,17 @@ body {
     -webkit-tap-highlight-color: transparent !important;
 }
 
+/* OpenType Case-Sensitive Forms: raises hyphen.case to visual center for numbers & all-caps */
+.project-number-text,
+.project-num,
+.project-number,
+.index-col-num,
+.mobile-thumb-num,
+.all-caps-heading,
+[data-font-case="true"] {
+    font-feature-settings: "case" 1;
+}
+
 /* Global Tap Highlight Color Reset */
 a,
 button,

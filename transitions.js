@@ -106,11 +106,55 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
+    // TYPOGRAPHY NORMALIZATION (STANDALONE x/X -> ×)
+    // -----------------------------------------
+    const STANDALONE_X_RE = /(\s|^)[xX](?=\s|$)/g;
+    const TYPOGRAPHY_SKIP_SELECTOR = "script, style, noscript, textarea, input, [contenteditable]";
+
+    function replaceStandaloneX(str) {
+        if (!str || (str.indexOf("x") === -1 && str.indexOf("X") === -1)) return str;
+        return str.replace(STANDALONE_X_RE, "$1\u00D7");
+    }
+
+    function normalizeWebsiteTypography(root) {
+        if (!root) return;
+        const scope = root === document ? document.body : root;
+        if (!scope) return;
+
+        // Normalize text-bearing data attributes used by page engines (e.g. home.js, projects.js)
+        if (scope.querySelectorAll) {
+            scope.querySelectorAll("[data-client], [data-subtitle], [data-title]").forEach((el) => {
+                ["data-client", "data-subtitle", "data-title"].forEach((attr) => {
+                    const val = el.getAttribute(attr);
+                    if (val) {
+                        const next = replaceStandaloneX(val);
+                        if (next !== val) el.setAttribute(attr, next);
+                    }
+                });
+            });
+        }
+
+        // Normalize visible text nodes while skipping form controls and scripts
+        if (typeof document.createTreeWalker === "function") {
+            const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+            let node;
+            while ((node = walker.nextNode())) {
+                const parent = node.parentElement;
+                if (parent && parent.closest(TYPOGRAPHY_SKIP_SELECTOR)) continue;
+                const val = node.nodeValue;
+                const next = replaceStandaloneX(val);
+                if (next !== val) node.nodeValue = next;
+            }
+        }
+    }
+
+    // -----------------------------------------
     // PAGE INITIALIZATION CONDUCTOR
     // -----------------------------------------
     function mountPage(container) {
         if (!container || container._isMounted) return;
         container._isMounted = true;
+        normalizeWebsiteTypography(container);
         const ns = container.getAttribute("data-barba-namespace") || "";
 
         if (ns === "home") {
@@ -155,6 +199,7 @@ function initOsmoBoilerplate() {
     function initOnceFunctions() {
         if (onceFunctionsInitialized) return;
         onceFunctionsInitialized = true;
+        normalizeWebsiteTypography(document.body);
         try {
             if (sessionStorage.getItem("mg_session_history_count") === null) {
                 sessionStorage.setItem("mg_session_history_count", "0");
