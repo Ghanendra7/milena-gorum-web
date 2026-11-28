@@ -137,7 +137,7 @@
       if (val.startsWith("http")) return val;
       const match = val.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
       const cleanId = match ? match[0] : val;
-      return "https://" + BUNNY_CDN_HOST + "/" + cleanId + "/play_720p.mp4";
+      return "https://" + BUNNY_CDN_HOST + "/" + cleanId + "/play_1080p.mp4";
     }
 
     function lockNaturalAspect(img, mediaWrap) {
@@ -331,6 +331,25 @@
       video.addEventListener("timeupdate", () => {
         if (video.currentTime >= MAX_VIDEO_SECONDS) {
           video.currentTime = 0.05;
+        }
+      });
+
+      const FALLBACK_QUALITIES = ["play_1080p.mp4", "play_720p.mp4", "play_480p.mp4", "play_360p.mp4"];
+      video.addEventListener("error", () => {
+        const currentSrc = video.getAttribute("src") || "";
+        const currentIdx = FALLBACK_QUALITIES.findIndex((q) => currentSrc.includes(q));
+        if (currentIdx === -1 || currentIdx >= FALLBACK_QUALITIES.length - 1) return;
+
+        const nextUrl = currentSrc.replace(FALLBACK_QUALITIES[currentIdx], FALLBACK_QUALITIES[currentIdx + 1]);
+        video.setAttribute("data-resolved-src", nextUrl);
+        const metric = slideMetrics.find((item) => item && item.video === video);
+        if (metric) metric.videoSrc = nextUrl;
+
+        video.src = nextUrl;
+        video.load();
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => { });
         }
       });
     });
