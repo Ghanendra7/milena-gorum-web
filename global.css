@@ -438,6 +438,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 .projects-track {
+    position: relative;
     padding-top: 38px;
     will-change: transform;
     -webkit-backface-visibility: hidden;

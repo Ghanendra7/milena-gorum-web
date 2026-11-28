@@ -617,6 +617,12 @@ function initOsmoBoilerplate() {
                 if (visibleCards.length) {
                     gsap.set(visibleCards, { clearProps: "opacity,transform,y,yPercent" });
                 }
+                if (isDesktop && section) {
+                    const currentCards = section.querySelectorAll(".desktop-gallery-stage .project-card");
+                    if (currentCards.length) {
+                        gsap.set(currentCards, { clearProps: "opacity,transform,y,yPercent" });
+                    }
+                }
                 if (mobileStage) {
                     gsap.set(mobileStage, { clearProps: "opacity,transform,y,yPercent" });
                 }
@@ -713,16 +719,6 @@ function initOsmoBoilerplate() {
                     },
                 }, cardsStart);
             }
-
-            // Release marquee movement right as cards arrive into place (no awkward static pause)
-            const marqueeReleaseTime = isMobile ? 1.20 : 1.60;
-            tl.add("releaseMarquee", marqueeReleaseTime);
-            tl.call(() => {
-                if (section) {
-                    section.classList.remove("is-marquee-paused");
-                    section.classList.add("is-marquee-active");
-                }
-            }, null, "releaseMarquee");
 
             const hitTopLead = isMobile ? 0.25 : 0.3;
             const hitTopTime = Math.max(0, transitionDuration - hitTopLead);
@@ -1075,6 +1071,7 @@ function initOsmoBoilerplate() {
                 if (isEnteringDetail) {
                     // Navigating detail-to-detail: clear exact saved scroll so returning to projects centers the newly viewed project
                     sessionStorage.removeItem("mg_projects_saved_scroll");
+                    sessionStorage.removeItem("mg_restore_anchor_screen_x");
                 }
                 // Navigating back from project detail
                 sessionStorage.setItem("mg_restore_from_detail", "true");
@@ -1092,6 +1089,7 @@ function initOsmoBoilerplate() {
                 if (nextPath === "/projects" || nextPath === "/projects/" || currentNs === "home" || nextPath === "/") {
                     sessionStorage.removeItem("mg_restore_from_detail");
                     sessionStorage.removeItem("mg_projects_saved_scroll");
+                    sessionStorage.removeItem("mg_restore_anchor_screen_x");
                     sessionStorage.removeItem("mg_restore_project_slug");
                     sessionStorage.removeItem("mg_restore_project_url");
                     sessionStorage.removeItem("mg_restore_project_num");
