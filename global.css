@@ -56,9 +56,11 @@ body {
 .index-col-num,
 .index-media-item,
 .mobile-thumb-num,
+.thumb-seq-label,
+.top-seq-item,
 .all-caps-heading,
 [data-font-case="true"] {
-    font-feature-settings: "case" 1 !important;
+    font-feature-settings: "case" 1, "tnum" 1 !important;
 }
 
 /* Global Tap Highlight Color Reset */
