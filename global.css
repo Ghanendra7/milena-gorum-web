@@ -1414,6 +1414,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 .index-wrapper {
     width: 100%;
     box-sizing: border-box;
+    z-index: auto;
 }
 
 .index-list-wrapper,
