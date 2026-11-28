@@ -1000,6 +1000,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 }
 
 @media screen and (max-width: 1024px) {
+
     .video-wrapper,
     .slide-video {
         cursor: pointer;
@@ -1611,7 +1612,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 
 .index-media-item:hover,
 .index-media-item.is-active {
-    color: #000000 !important;
+    color: #FFFFFF !important;
 }
 
 /* Desktop Fixed Top-Right Preview Stage */
@@ -1664,6 +1665,11 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
 @media (min-width: 1025px) {
     .index-row-drawer {
         display: none !important;
+    }
+
+    .index-media-item:hover,
+    .index-media-item.is-active {
+        color: #000000 !important;
     }
 }
 
