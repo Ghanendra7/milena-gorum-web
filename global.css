@@ -58,7 +58,7 @@ body {
 .mobile-thumb-num,
 .all-caps-heading,
 [data-font-case="true"] {
-    font-feature-settings: "case" 1;
+    font-feature-settings: "case" 1 !important;
 }
 
 /* Global Tap Highlight Color Reset */
@@ -1605,6 +1605,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     font: inherit;
     line-height: inherit;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "case" 1, "tnum" 1 !important;
     color: #cccccc;
     cursor: pointer;
     text-decoration: none;
