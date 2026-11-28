@@ -106,14 +106,32 @@ function initOsmoBoilerplate() {
     }
 
     // -----------------------------------------
-    // TYPOGRAPHY NORMALIZATION (STANDALONE x/X -> ×)
+    // TYPOGRAPHY NORMALIZATION (x/X -> ×, SMART QUOTES / APOSTROPHES)
     // -----------------------------------------
     const STANDALONE_X_RE = /(\s|^)[xX](?=\s|$)/g;
+    const OPEN_DOUBLE_FROM_SINGLE_RE = /(^|[\s(\[{—–\u201C\u2018])''(?=\S)/g;
+    const OPEN_SINGLE_QUOTE_RE = /(^|[\s(\[{—–\u201C])'(?=\S)/g;
     const TYPOGRAPHY_SKIP_SELECTOR = "script, style, noscript, textarea, input, [contenteditable]";
 
-    function replaceStandaloneX(str) {
-        if (!str || (str.indexOf("x") === -1 && str.indexOf("X") === -1)) return str;
-        return str.replace(STANDALONE_X_RE, "$1\u00D7");
+    function normalizeTypographyText(str) {
+        if (!str) return str;
+        const hasX = str.indexOf("x") !== -1 || str.indexOf("X") !== -1;
+        const hasQuote = str.indexOf("'") !== -1;
+        if (!hasX && !hasQuote) return str;
+
+        let out = str;
+        if (hasX) {
+            out = out.replace(STANDALONE_X_RE, "$1\u00D7");
+        }
+        if (hasQuote) {
+            // Convert ''...'' to curly double quotes “...” first, then single '...' / apostrophes to ‘...’ / ’
+            out = out
+                .replace(OPEN_DOUBLE_FROM_SINGLE_RE, "$1\u201C")
+                .replace(/''/g, "\u201D")
+                .replace(OPEN_SINGLE_QUOTE_RE, "$1\u2018")
+                .replace(/'/g, "\u2019");
+        }
+        return out;
     }
 
     function normalizeWebsiteTypography(root) {
@@ -127,7 +145,7 @@ function initOsmoBoilerplate() {
                 ["data-client", "data-subtitle", "data-title"].forEach((attr) => {
                     const val = el.getAttribute(attr);
                     if (val) {
-                        const next = replaceStandaloneX(val);
+                        const next = normalizeTypographyText(val);
                         if (next !== val) el.setAttribute(attr, next);
                     }
                 });
@@ -142,7 +160,7 @@ function initOsmoBoilerplate() {
                 const parent = node.parentElement;
                 if (parent && parent.closest(TYPOGRAPHY_SKIP_SELECTOR)) continue;
                 const val = node.nodeValue;
-                const next = replaceStandaloneX(val);
+                const next = normalizeTypographyText(val);
                 if (next !== val) node.nodeValue = next;
             }
         }
