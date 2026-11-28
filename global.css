@@ -1439,13 +1439,7 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     width: 100%;
     position: relative;
     transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
     color: #000000;
-}
-
-.index-row.is-hovered {
-    z-index: 10;
 }
 
 /* Dimming: When another row is hovered (Desktop) or expanded (Mobile) */
@@ -1583,6 +1577,8 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     display: flex;
     opacity: 1;
     pointer-events: auto;
+    z-index: 10;
+    mix-blend-mode: difference;
 }
 
 /* Hit-zone for wrapped media numbers: covers line 1 & overflowing line 2/3 */
@@ -1623,6 +1619,12 @@ video:not(.home-slide-video):not(.project-preview-video):not(.mobile-main-video)
     vertical-align: baseline !important;
     position: relative;
     z-index: 1;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.index-media-desktop .index-media-item:hover,
+.index-media-desktop .index-media-item.is-active {
+    color: #ffffff !important;
 }
 
 .index-media-item:hover,
